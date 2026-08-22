@@ -7,7 +7,6 @@
 
 from __future__ import annotations
 
-from functools import reduce
 
 import shapely
 from shapely.geometry import GeometryCollection
@@ -37,7 +36,16 @@ def robust_union(pieces: tuple[BaseGeometry, ...], *, scale_hint: float) -> Base
     tolerance = max(1.0, sum(piece.area for piece in ordered)) * 1e-12
     snapped_ok = _area_bounds_ok(snapped, ordered, tolerance)
 
-    pairwise = reduce(lambda left, right: left.union(right), ordered)
+    # 平衡树归约（2026-08-22 性能修复，留痕见 AUDIT_NOTE）：左结合 reduce 在
+    # 数百片时每步重并累积大几何，实测 574 片 150.7 s；树归约结果由并集结合律
+    # 与左结合完全一致（集合与面积），作为面积交叉校验的职责不变。
+    layer = list(ordered)
+    while len(layer) > 1:
+        paired = [layer[i].union(layer[i + 1]) for i in range(0, len(layer) - 1, 2)]
+        if len(layer) % 2:
+            paired.append(layer[-1])
+        layer = paired
+    pairwise = layer[0]
     pairwise_ok = _area_bounds_ok(pairwise, ordered, tolerance)
     if snapped_ok and pairwise_ok:
         # 面积上下界只能发现“大块丢失”，抓不住 precision grid 自身对旋转不变性的微扰。
