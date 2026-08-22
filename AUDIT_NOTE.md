@@ -1538,3 +1538,71 @@ Minkowski 对偶包含加速 + ULP 闭合容差（72e2878 / 514bd2e / bbd8f21 / 
 - **F2C 侧转移五项分解**（§4.7）：SWIG binding 不暴露 State/PathSection，
   golden 只有标量——单侧分解已文档化，闭合依赖上游。
 - **H1 检验**：按预注册留 Block D，本轮只交语料与前沿图，不出检验结论。
+
+## 零地头定理与一项主张收回（v7 复核后续，2026-08-22）
+
+**收回的主张**：加入 Reeds-Shepp 时的理由之一「Dubins 前进-only 强制要地头，
+RS 允许倒车可以不要地头」。该主张被 v7 自身数据证伪：零地头+RS 在可倒车
+机具上 2 350 行 0 ok（见终章「诚实披露」节）。书面出处 ITERATION_REPORT.md
+O1/O3 行已按迭代纪律加勘误指针。**RS 保留的理由改为「不同的可行集/目标轴」**
+（槽 A 在可倒车机具上 1 508 ok、有效池上限 11→12），与零地头可行性无关。
+
+**定理（最短路径形式下零地头不可达）**：任意转弯半径 R>0 的非完整约束机具，
+行中心线端点位于车体中心可行域边界（零地头的构造性后果）时，**最短路径
+形式**的 Dubins/RS 掉头必然越出可行域。前进-only Dubins 反平行掉头的最大
+越界深度（外部复核解析推导，方向独立确认）：
+
+| 行距 d/R | 最优字 | 越界深度/R |
+|---:|:---:|---:|
+| 0.0 | LRL | (1+√3) ≈ 2.7321 |
+| ≥ 2.0 | LSL | 1.0000 |
+
+越界深度对任意 R>0 恒 ≥ R > 0——零地头不可行是**可证的**，不是「跑了
+2 350 行都失败」的经验归纳。RS 的 48 词给的是最短路径不是最贴走廊路径，
+多次换向的平行泊车式机动理论可在极窄纵向空间完成横移、但不在最短词解集内，
+故精确表述为「零地头在**最短路径形式**的 Dubins/RS 转移下不可达」。
+v7 实测与解析一致：48 词无一可全含于内缩走廊（带地头时「等长孪生词优先
+收进场内」机制生效——槽 A 1 508 ok 即证），回退最短词必然外凸。
+
+**可发表的观察（勿埋进实现细节）**：等长孪生词选择（在时间反演孪生中挑把
+掉头收进界内的那个）是「最短路径形式内尽量贴走廊」的**部分解**——它在有
+地头时生效、零地头时无孪生可选。这个生效/失效边界本身就是最短词族能力的
+刻画，论文限制章节应写。
+
+## derived_status：分析层唯一状态入口（v7 复核后续，2026-08-22）
+
+复核裁定接受「不改 v7」但要求把「Block D 可按 failure_reason 重切」从可以
+变成**必须**：`runstatus` 与 `failure_reason` 是两个真相、后者更细，留一个
+只有读过本文件才知道的陷阱等于留雷。落地：
+
+- 新模块 `corpus/derived_status.py`：`derive_status(runstatus, failure_reason)`
+  ——validator 拒绝事实优先于运行时归并（`validator_rejected:<class>` 前缀即
+  派生为该类，未知类当场抛错；无 validator 理由的自由文本状态原样通过）。
+- 聚合器 `summarize_pareto` 两处状态判断改经 `derive_status`；结构性测试钉住
+  aggregate.py 中 runstatus 不得与字面量直接比较分叉。
+- 未来运行的 manifest 新增 `derived_status_definition` / `derived_status_counts` /
+  `runstatus_vs_derived_diff_counts`（分歧逐类计数，空 dict = 显式无分歧）。
+  v7 的既有 manifest 生成于此改动之前，其分歧计数由
+  `evidence/v7/status_crosstab.json` 的 `derived_vs_runstatus_diff_counts` 补载
+  （实测：`not_applicable->outside_area`: 2 020，恰为已知 carve 行数）。
+- 测试 7 条（tests/block_c/test_derived_status.py）：validator 事实压过归并、
+  自由文本状态直通、未知类响亮失败、词表与 runner 双向钉住、分歧计数、
+  聚合路径结构性断言、manifest 契约。
+
+## config × 机具 × 状态交叉表与有效池分布（H1 前置，v7 复核后续）
+
+`scripts/status_crosstab.py`（状态一律 derived_status）在 v7 上实算，
+产物 `evidence/v7/status_crosstab.{json,md}`。要点：
+
+- **ok 率按配置-机具摆明**：Dubins 各槽 52.3%–68.9%，RS 槽 A（可倒车）
+  64.2%，`boustrophedon_cells` 分解槽 23.8%（NA 1 660 行 = 小田 8 m 地头
+  塌缩，配对性 NA 非缺陷），RS 槽 B（零地头）**0%——100% 具名拒绝，
+  事实上出池**。「名义 13 / 事实有效」要这样报。
+- **有效池完整分布（不只中位）**：零 ok 924、≤1 共 1 192、min 0 / Q1 1 /
+  中位（全实例口径，含零 ok）**8.0** / 中位（仅 ≥1 ok，manifest 口径）10.0 /
+  Q3 11 / max 12；**均值 6.63 < 两口径中位 = 重低尾**（直方图双峰：
+  0–9 平缓 + 10–12 集中 2 148 个）。只报中位会盖住 924 个零 ok 实例的尾巴，
+  H1 检验前必须看这张表。
+- 双口径中位并报是刻意的：manifest 的 `effective_pool_size_by_instance`
+  只含 ≥1 ok 实例（3 776 键），全实例口径把 924 个零拉进来——两者都是真话，
+  分歧在分母，读数必须知道自己在读哪个。

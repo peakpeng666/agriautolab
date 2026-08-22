@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from agriautolab.contracts.protocol import HypervolumeReference
+from agriautolab.corpus.derived_status import derive_status
 from agriautolab.pareto.front import ObjectiveVector, pareto_front, pool_hash
 from agriautolab.pareto.hypervolume import hypervolume
 
@@ -88,14 +89,15 @@ def summarize_pareto(runs_parquet: str | Path, *, reference: HypervolumeReferenc
     config_ids = sorted({str(row["config_id"]) for row in rows})
     has_ref_columns = bool(rows) and all(column in rows[0] for column in _REFERENCE_COLUMNS)
 
-    # 有效池按实例统计：产出 ok 行的配置数（与 manifest 的口径一致，但从 parquet
-    # 独立重算——manifest 与聚合各自可错，互不采信）。
+    # 状态一律经 derived_status（validator 事实优先于运行时归并，单一真相源）：
+    # 零地头 carve 归并出的 not_applicable 若带 validator_rejected 理由，
+    # 在这里按它真实的拒绝类参与统计，不许被读成「没跑过」。
     effective_pool: dict[str, int] = {}
     instances_in_corpus: set[str] = set()
     for row in rows:
         instance_id = str(row["instance_id"])
         instances_in_corpus.add(instance_id)
-        if row.get("runstatus") == "ok":
+        if derive_status(str(row["runstatus"]), row.get("failure_reason")) == "ok":
             effective_pool[instance_id] = effective_pool.get(instance_id, 0) + 1
 
     reference_of_instance: dict[str, HypervolumeReference] = {}
@@ -106,7 +108,7 @@ def summarize_pareto(runs_parquet: str | Path, *, reference: HypervolumeReferenc
 
     by_instance: dict[str, dict[str, ObjectiveVector]] = {}
     for row in rows:
-        if row.get("runstatus") != "ok":
+        if derive_status(str(row["runstatus"]), row.get("failure_reason")) != "ok":
             continue
         values = (row.get("path_length"), row.get("headland_turns"), row.get("row_crossings"))
         if any(value is None for value in values):

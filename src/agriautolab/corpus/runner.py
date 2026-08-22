@@ -388,6 +388,16 @@ class CorpusRunner:
         for row in selected:
             status = str(row["runstatus"])
             counts[status] = counts.get(status, 0) + 1
+        # runstatus 是运行时归并决策；derived_status 由 failure_reason 派生（validator
+        # 事实优先）。两者分歧逐类进 manifest——「归并了什么」必须可见，不许只活在
+        # AUDIT_NOTE 里（v7 复核：2 020 行 not_applicable 实为 outside_area 拒绝）。
+        from agriautolab.corpus.derived_status import (
+            DERIVED_STATUS_DEFINITION, derive_status, status_diff_counts,
+        )
+        derived_counts: dict[str, int] = {}
+        for row in selected:
+            derived = derive_status(str(row["runstatus"]), row.get("failure_reason"))
+            derived_counts[derived] = derived_counts.get(derived, 0) + 1
         nominal_pool = len(configs)
         # 有效池/退化池统计一律取聚合器的结果（单一真相源）。
         # v4 实测教训：runner 自算的 effective_pool 只含 >=1 ok 的实例，450 个零 ok
@@ -412,6 +422,9 @@ class CorpusRunner:
             ),
             "n_runs": len(selected),
             "runstatus_counts": counts,
+            "derived_status_definition": DERIVED_STATUS_DEFINITION,
+            "derived_status_counts": derived_counts,
+            "runstatus_vs_derived_diff_counts": status_diff_counts(selected),
             "nominal_pool_size": nominal_pool,
             "pool_hash": pool_hash(config.config_id() for config in configs),
             "pool_file_sha256": pool_file_sha256,
