@@ -41,7 +41,15 @@ def _sample_arc(pose: Pose2D, angle: float, *, left: bool, radius: float, step: 
 
 
 def _sample_straight(pose: Pose2D, length: float, step: float):
-    """直线采样：负长度 = 倒车（沿航向反方向）。"""
+    """直线采样：负长度 = 倒车（沿航向反方向）。
+
+    UTM 坐标 ~5e6 下双精度步长 ~1e-9 m：低于它的绝对长度起终点舍入为同一点，
+    2 点重合的 LineString 被判「点数不足」（v5 全量实测 ee_field_37 path-00263，
+    与 Dubins 侧同族缺陷）。坐标尺度阈值内原地保持位姿。
+    """
+    coordinate_epsilon = 1e-9 * max(abs(pose.x), abs(pose.y), 1.0)
+    if abs(length) <= coordinate_epsilon:
+        return (pose.point(), pose.point()), pose
     end = Pose2D(
         x=pose.x + length * math.cos(pose.yaw_rad),
         y=pose.y + length * math.sin(pose.yaw_rad),
@@ -86,23 +94,45 @@ def _sample_word_polyline(start: Pose2D, word, radius: float, per_segment: int =
     return points
 
 
-def _contained_word(start: Pose2D, goal: Pose2D, radius: float, body_width_m: float, allowed_region):
+def _eroded_corridor(allowed_region, body_width_m: float):
+    """Minkowski 对偶的一次性腐蚀：polyline ⊆ region⊖disk(w/2) ⟺ sweep ⊆ region。
+
+    v5 实测：逐词 buffer 扫掠在真实地块上是 O(词数×连接段) 次 buffer，
+    单字段分钟级（ee_field_37 单 run 数百秒）。对偶把 48 次 buffer 换成
+    一次腐蚀 + 逐词 covers（廉价）；离散化在凸角处的微小差异由精确回验兜底。
+    """
+    from agriautolab.geometry.footprint import QUAD_SEGS
+
+    return allowed_region.buffer(
+        -body_width_m / 2.0, cap_style="round", join_style="round", quad_segs=QUAD_SEGS,
+    )
+
+
+def _contained_word(start: Pose2D, goal: Pose2D, radius: float, body_width_m: float, allowed_region,
+                    eroded_corridor=None):
     """按代价升序取第一个车体扫掠不越出允许域的词。
 
     最短词常有等长孪生：先前进的版本向端点外鼓包（约 2R），先倒车的时间反演
     孪生把掉头收进作业走廊——长度完全相同（时间反演对称的直接推论）。
     没有任何词包含在域内时返回 None，调用方退回最短词、交给校验器裁决。
+
+    两级检查：腐蚀走廊 covers（廉价，可能因离散化漏掉贴边可接受词——只是
+    少一个候选，无损正确性）→ 命中后**精确回验**一次扫掠差面积（保证返回的词
+    与旧口径逐字同判）。任何返回词都经过精确判据，绝不因加速放水。
     """
     from shapely import LineString
-    from shapely.geometry.base import BaseGeometry as _BaseGeometry  # noqa: F401
     from agriautolab.geometry.footprint import QUAD_SEGS
 
+    if eroded_corridor is None:
+        eroded_corridor = _eroded_corridor(allowed_region, body_width_m)
     words = sorted(
         reeds_shepp_words(start, goal, radius),
         key=lambda word: (word.geometric_length(radius), word.name),
     )
     for word in words:
         polyline = LineString(_sample_word_polyline(start, word, radius))
+        if not eroded_corridor.covers(polyline):
+            continue
         sweep = polyline.buffer(body_width_m / 2.0, cap_style="round", join_style="round", quad_segs=QUAD_SEGS)
         if sweep.difference(allowed_region).area <= 1e-9:
             return word
@@ -111,9 +141,10 @@ def _contained_word(start: Pose2D, goal: Pose2D, radius: float, body_width_m: fl
 
 def _reeds_shepp_segments(start: Pose2D, goal: Pose2D, radius: float, step: float,
                           serial_start: int, cost_model: ReverseCostModel, allowed_region=None,
-                          body_width_m: float = 0.0):
+                          body_width_m: float = 0.0, eroded_corridor=None):
     if allowed_region is not None:
-        word = _contained_word(start, goal, radius, body_width_m, allowed_region)
+        word = _contained_word(start, goal, radius, body_width_m, allowed_region,
+                               eroded_corridor=eroded_corridor)
         if word is None:
             word = reeds_shepp_word(start, goal, radius, cost_model=cost_model)
     else:
@@ -145,6 +176,12 @@ def _reeds_shepp_segments(start: Pose2D, goal: Pose2D, radius: float, step: floa
         last = output[-1]
         patched = last.line.points[:-1] + (goal.point(),)
         output[-1] = last.model_copy(update={"line": last.line.model_copy(update={"points": patched})})
+    # 坐标尺度下的零长直线段被折叠成 2 个重合点：不携带几何，留在产物里只会让
+    # 校验器判「点数不足」（v5 实测）。过滤与 Dubins 侧同款。
+    output = [
+        segment for segment in output
+        if len(segment.line.points) != 2 or segment.line.points[0] != segment.line.points[1]
+    ]
     return tuple(output), serial
 
 
@@ -167,6 +204,8 @@ class ReedsSheppTransit:
                 "reeds_shepp_transit 需要可倒车机具（can_reverse=True）；"
                 "纯前向车辆请使用 dubins_transit"
             )
+        # 走廊腐蚀每 run 一次（对偶加速的缓存载体；48 词共享同一腐蚀多边形）
+        corridor = _eroded_corridor(allowed_region, robot.body_width_m) if allowed_region is not None else None
         swath_by_id = {swath.swath_id: swath for swath in route.swaths}
         segments: list[PathSegment] = []
         serial = 0
@@ -182,6 +221,7 @@ class ReedsSheppTransit:
                     previous_end, start_pose, robot.min_turning_radius_m,
                     self.sample_step_m, serial, self.cost_model,
                     allowed_region=allowed_region, body_width_m=robot.body_width_m,
+                    eroded_corridor=corridor,
                 )
                 segments.extend(connector)
             segment_id = f"path-{serial:05d}"
