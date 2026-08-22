@@ -1456,3 +1456,85 @@ gzip 方案：跑完把 checkpoint.jsonl 压成 .gz 并删明文（mtime=0 保�
 **修法**：逐对路径由左结合改为**平衡树归约**（同一排序、两两配对、log 层归并）。
 并集满足结合律，任意括号化的结果集合与面积数学上完全一致——这是纯性能修复，
 不是语义改动；逐对路径作为独立面积交叉校验的既有职责不变（Block A 设计保留）。
+
+## §6.3 终章：Block D 前收口（v7 终跑，2026-08-22）
+
+**v7 = 最终语料产物。** 干净提交 `ed1bccb`（WSL 原生盘，非 /mnt 挂载），
+61 100 行 = 235 田 × 5 角 × 2 行距 × 2 机具 × 13 配置，产物在
+`~/agriautolab-data/out_v7/`（runs.parquet 1.15 GB / checkpoint.jsonl.gz 1.30 GB /
+manifest / ledger / holdout_seal）。
+
+### 状态桶终局（§4.1 目标达成）
+
+| 桶 | v4（单机具） | v7（双机具） |
+|---|---:|---:|
+| ok | 14 876 | **31 168** |
+| not_applicable | 6 360 | 10 040 |
+| outside_area（具名） | （other 内 6 054） | **12 718** |
+| collision（具名） | （other 内 3 260） | **7 174** |
+| other | 9 314 | **0** |
+| crash | 0 | **0** |
+
+四桶封闭、无兜底；v4 的 other 全部具名化，双机具下近似翻倍合理。
+
+**crash 轨迹全记录**：v4 单机具 1 852→1 002→10→0；v5 双机具暴露 RS 三缺陷
+（零长直线、48 次 buffer 包含检查、robust_union 逐对 O(n²)）逐一修复；
+v6 暴露 ULP 尺度闭合容差问题（66 crash：UTM 6.5e6 坐标下合法词闭合误差
+1.3 ULP，绝对 1e-9 阈值误杀），修复即 ed1bccb；v7 归零。
+**66 行去向逐一对账**：槽 A 46 行 → +30 ok / +12 outside_area / +4 collision；
+槽 B 20 行 → +20 not_applicable。修复的意义是「算得完、交验证器裁决」，
+不是「放行」——六成新路径仍被验证器正当拒绝并具名。
+
+### 实例口径（§4.3 机制吃到的红利）
+
+n_instances_in_corpus 4 700（v4 2 350 × 双机具）、零 ok 924、退化池 1 192、
+有效池中位 10 / **最大 12**（v4 最大 11：RS 槽 A 真跑解锁 +1）、前沿中位 3.0。
+
+### RS 专项收口（§4.4）
+
+- 槽 A（row_aligned+RS）× 可倒车机具 1（R=2.5）：2 350 行**真跑**——
+  ok 1 508 / outside_area 518（具名）/ collision 324（具名）；
+  机具 0（不可倒车）恒 not_applicable（算法-机具配对规则，KinematicModelError 路径）。
+- vehicles_hash 协议校验在 v7 实跑中通过（manifest 记录协议哈希与实跑核对）。
+
+### 诚实披露：零地头 carve 规则的真实适用面
+
+`_corpus_run_status` 对 CONSTRAINT_VIOLATION 的豁免条件是
+`no_headland ∧ min_turning_radius > 0`——**比 v4 注释所写「前进-only Dubins」更宽**。
+v7 实测：槽 B（no_headland+min_width+RS）在可倒车机具上 2 350 行 =
+**0 ok + 2 020 以 outside_area 理由归 not_applicable + 330 具名 collision**。
+机制：RS 转移允许域为 raw_free、零地头行中心线端点就在内缩边界上，
+48 词无一可全含（带地头时「等长孪生词优先收进场内」机制有效，槽 A 1 508 ok 即证），
+回退最短词必然外凸——最短词转移在零地头行端的结构必然，Dubins 与 RS 同物理。
+**不改代码的理由**：failure_reason 列逐行保留 `validator_rejected:outside_area`
+原文，细粒度真值未丢；改标签作废 v7 而零信息增益。已知映射不对称留痕：
+同一结构现象 collision 检查先命中得具名 collision（330 行），CONSTRAINT_VIOLATION
+先命中得 not_applicable——Block D 聚合若需要可按 failure_reason 重切。
+
+### 环境与几何可比性
+
+GEOS 3.13.1 + shapely 2.1.2 在 Windows 与 WSL 完全一致（evidence/env_geometry.json
+双环境验证），解析真值测试在 WSL 3.10.12 终环境全过（530 passed / 30 skipped）。
+requirements.lock 记录 numpy 差异（3.10 上限 2.2.6 vs 3.12 的 2.4.4）：
+GEOS 一致才是几何可比的关键，numpy 不进几何内核。
+
+### 冻结代码改动索引（本轮全部，各条前文已逐项留痕）
+
+Self 导入源替换与 requires-python ≥3.10（3.10 兼容）、corpus_13 哈希重钉 LF
+（字节级冻结平台无关化）、robust_union 平衡树归约（数学同一）、RS 零长直线守卫 +
+Minkowski 对偶包含加速 + ULP 闭合容差（72e2878 / 514bd2e / bbd8f21 / ed1bccb）。
+
+### 安装与静态自检（§6.1/§6.2）
+
+- scripts/install 五件套 + requirements.lock；幂等（二跑 no-op）、净室
+  `agri-clean` 实测 EXIT 0 / 九项自校验全 ✅ / 530 passed（docs/INSTALL_TRANSCRIPT.md）。
+- 静态：预注册 yaml sha256 `8d1326de…` 与封条逐字一致；机密扫描零命中；
+  json/toml/yaml 零 CRLF；预注册只增修订案、原文未动。
+
+### 未完成 / 待人裁定（明说）
+
+- **许可裁定**（§4.5）：docs/refs/licenses/fields2benchmark.md 已给原文与解读
+  （Zenodo LICENSE 文件 CC BY-SA 4.0 vs 元数据 CC-BY-4.0 不一致），裁定前不扩样本。
+- **F2C 侧转移五项分解**（§4.7）：SWIG binding 不暴露 State/PathSection，
+  golden 只有标量——单侧分解已文档化，闭合依赖上游。
+- **H1 检验**：按预注册留 Block D，本轮只交语料与前沿图，不出检验结论。
