@@ -21,3 +21,13 @@
 
 冻结措辞原样保留：**「AgriAutoLab 已具备严格对账能力 ≠ 已证明与 Fields2Cover 数值一致」**
 ——数值一致的正式表述以 `O2_EVIDENCE.md` §8 的配对残差表为准。
+
+## 数据来源与署名
+
+本目录的 golden/ours 指标文件衍生自 Fields2Benchmark 数据集
+（Zenodo 记录 14524735，LICENSE 为 CC BY-SA 4.0）。按该许可的署名要求：
+数据 © Fields2Cover 项目 / EuroCrops（原始地块：荷兰 PDOK/Nationaal-Georegister、
+爱沙尼亚 INSPIRE-EE；立陶宛地块未包含在本仓库任何衍生文件中）。
+原始数据获取：https://zenodo.org/records/14524735
+引用：Mier, Valente & de Bruin, "Fields2Cover: An Open-Source Coverage Path Planning
+Library for Unmanned Agricultural Vehicles", IEEE RA-L 2023, doi:10.1109/LRA.2023.3248439
