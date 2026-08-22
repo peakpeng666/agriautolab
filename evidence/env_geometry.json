@@ -1,0 +1,23 @@
+{
+  "note": "几何引擎指纹：换了 shapely/GEOS，产物就不是同一份产物（union_all 网格行为与 buffer 离散化随 GEOS 变）。解析真值（PI_DISCRETE、反曲角 w^2(1-pi_d/4)、障碍假阳性）全部依赖 buffer 离散行为。",
+  "verified": [
+    {
+      "python": "3.12.9",
+      "platform": "Windows-11",
+      "shapely": "2.1.2",
+      "geos_version": [3, 13, 1],
+      "geos_version_string": "3.13.1",
+      "verified_at": "2026-08-22",
+      "evidence": "全量 528 passed（含全部解析真值测试）"
+    },
+    {
+      "python": "3.10.12",
+      "platform": "WSL2-Ubuntu-22.04",
+      "shapely": "2.1.2",
+      "geos_version": [3, 13, 1],
+      "geos_version_string": "3.13.1",
+      "verified_at": "2026-08-22",
+      "evidence": "WSL 3.10 全量 524 passed（解析真值逐条复验一致——GEOS 相同，结论可沿用）"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+# 参考环境（WSL2 Ubuntu 22.04 / python3.10.12）的精确版本锁。
+# 由 pip freeze 生成并人工核对；安装脚本 03_python.sh 按此安装。
+# 分叉说明：numpy 2.4.4 无 cp310 wheel（3.10 上限 2.2.6），Windows/py3.12 侧为 2.4.4——
+# numpy 版本不影响几何结果（GEOS 才影响，两侧同为 3.13.1）；GEOS 对齐见 evidence/env_geometry.json。
+numpy==2.2.6
+shapely==2.1.2
+pydantic==2.12.5
+pyproj==3.7.1
+pyarrow==25.0.1
+pytest==9.1.1
+typing_extensions>=4.12
