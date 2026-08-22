@@ -160,7 +160,9 @@ def test_aggregate_global_fallback_and_missing_reference(tmp_path):
 
 # 冻结哈希基线随修正案更新（2026-08-21 O1 落地：RS 两槽位替换原零地头 Dubins 对照）。
 # 每次变更必须在 AUDIT_NOTE 留修正案记录——这个常量存在的意义就是让"顺手改一下"过不了测试。
-CORPUS_13_SHA256 = "9e898a3468b6a2f9afacbd7f11f2df2646c549ac6edaf3afd25078972803d2a4"
+# 2026-08-22 重钉：.gitattributes 强制 LF 后按 LF 字节重算（内容零变化，跨平台一致性）。
+# Windows 文本模式曾把文件写成 CRLF，冻结哈希钉了 CRLF 字节 → Linux 检出必炸。
+CORPUS_13_SHA256 = "502b1e9053b598d62daafa0b3a819f3cebc8385cb356aa908433582b93083a57"
 
 
 def _load_run_corpus():
