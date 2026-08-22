@@ -95,14 +95,54 @@ def field_record_to_problem(record: FieldRecord, row_scenario: RowScenario) -> C
     )
 
 
-def _aslib_status(status: RunStatus, *, config: PipelineConfig, vehicle: VehicleSpec) -> RunStatus:
-    if status in {RunStatus.OK, RunStatus.TIMEOUT, RunStatus.MEMOUT, RunStatus.CRASH}:
-        return status
-    if status in {RunStatus.UNSUPPORTED, RunStatus.INFEASIBLE, RunStatus.INFEASIBLE_KINEMATICS}:
-        return RunStatus.NOT_APPLICABLE
-    if status is RunStatus.CONSTRAINT_VIOLATION and config.headland == "no_headland" and vehicle.min_turning_radius_m > 0.0:
-        return RunStatus.NOT_APPLICABLE
-    return RunStatus.OTHER
+# validator 拒绝原因的封闭词典（与 validation/validator.py 的 failure_reason 一一对应）。
+# 分类完备性常设规则：任何 "other/misc" 兜底桶都是分类错误。v4 全量实测 9 314 行
+# other 里其实只有两类（outside_area 6 054 / collision 3 260），每行都带具名原因——
+# 兜底桶藏住的是映射的懒惰，不是数据的无类可归。
+_VALIDATOR_REJECTION_CLASSES = frozenset({
+    "empty_path", "discontinuous_endpoints", "collision", "curvature_limit",
+    "reverse_without_gear", "outside_area", "forbidden_crossing",
+    "coverage_threshold", "nonfinite_metric",
+})
+
+
+def _corpus_run_status(
+    status: RunStatus, failure_reason: str | None, *, config: PipelineConfig, vehicle: VehicleSpec
+) -> str:
+    """语料级具名状态：没有 other 桶，未知的拒绝原因当场抛错（响亮失败）。
+
+    ok/timeout/memout/crash/not_applicable 保持 ASlib 六值语义；
+    约束违反与数值错误升格为具名值（validator 拒绝原因原样成为状态名），
+    ASlib 导出层再做六值聚合（那层的 other 是格式词表的约束，不是我们的分类）。
+    """
+    if status in {RunStatus.OK, RunStatus.TIMEOUT, RunStatus.MEMOUT, RunStatus.CRASH,
+                  RunStatus.INVALID_INPUT}:
+        return status.value
+    if status in {RunStatus.UNSUPPORTED, RunStatus.INFEASIBLE, RunStatus.INFEASIBLE_KINEMATICS,
+                  RunStatus.NOT_APPLICABLE}:
+        return RunStatus.NOT_APPLICABLE.value
+    if status is RunStatus.COLLISION:
+        return "collision"
+    if status is RunStatus.NUMERICAL_ERROR:
+        return "numerical_error"
+    if status is RunStatus.CONSTRAINT_VIOLATION:
+        # 前进-only Dubins 在零地头上的掉头鼓包是算法-机具 pairing 的必然，
+        # 不是实例不可行：归 not_applicable（既定语义，保留）。
+        if config.headland == "no_headland" and vehicle.min_turning_radius_m > 0.0:
+            return RunStatus.NOT_APPLICABLE.value
+        reason = failure_reason or ""
+        if reason.startswith("validator_rejected:"):
+            klass = reason.split(":", 1)[1]
+            if klass in _VALIDATOR_REJECTION_CLASSES:
+                return klass
+            raise ValueError(
+                f"未知的 validator 拒绝原因 {klass!r}：请先把它加进 _VALIDATOR_REJECTION_CLASSES，"
+                "不许落进任何兜底桶（分类完备性规则）"
+            )
+        raise ValueError(
+            f"CONSTRAINT_VIOLATION 缺少可分类的 failure_reason（得到 {failure_reason!r}）"
+        )
+    raise ValueError(f"无法分类的 RunStatus: {status!r}——加具名映射，不许兜底")
 
 
 def _append_checkpoint(path: Path, row: dict[str, object]) -> None:
@@ -265,14 +305,17 @@ class CorpusRunner:
                                 continue
                             try:
                                 result = run_pipeline(problem, vehicle, config, benchmark_protocol, clock=self.clock)
-                                status = _aslib_status(result.validation.status, config=config, vehicle=vehicle)
+                                status = _corpus_run_status(
+                                    result.validation.status, result.validation.failure_reason,
+                                    config=config, vehicle=vehicle,
+                                )
                                 row: dict[str, object] = {
                                     "run_key": key,
                                     "field_id": record.field_id,
                                     "instance_id": run_instance_id,
                                     "vehicle_index": vehicle_index,
                                     "config_id": config.config_id(),
-                                    "runstatus": status.value,
+                                    "runstatus": status,
                                     "failure_reason": result.validation.failure_reason,
                                     "path_length": result.objectives.path_length if result.objectives else None,
                                     "headland_turns": result.objectives.headland_turns if result.objectives else None,

@@ -6,6 +6,16 @@ import hashlib
 from pathlib import Path
 
 
+# runs.parquet 的具名状态（无 other 桶，见 corpus/runner.py 的分类完备性规则）到
+# ASlib 六值词表的聚合映射。ARFF 词表是格式契约，容纳不下具名失败类；
+# 这层的 "other" 是格式聚合，不是我们的分类——细粒度真值在 parquet，勿在此解读。
+_ASLIB_DIRECT = frozenset({"ok", "timeout", "memout", "not_applicable", "crash"})
+
+
+def _aslib_runstatus(status: str) -> str:
+    return status if status in _ASLIB_DIRECT else "other"
+
+
 _OBJECTIVES = ("path_length", "headland_turns", "row_crossings")
 
 
@@ -102,7 +112,7 @@ def export_aslib_scenarios(
         for row in sorted(rows, key=lambda item: (str(item["instance_id"]), str(item["config_id"]))):
             run_rows.append((
                 row["instance_id"], 1, row["config_id"],
-                row.get("planning_s"), row["runstatus"], row.get(objective),
+                row.get("planning_s"), _aslib_runstatus(row["runstatus"]), row.get(objective),
             ))
         _write_arff(
             scenario / "algorithm_runs.arff",

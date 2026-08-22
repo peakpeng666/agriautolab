@@ -100,5 +100,71 @@ def test_headland_collapse_is_not_applicable_not_crash(tmp_path, c_benchmark):
     assert len(rows) == 2
     statuses = sorted((row["runstatus"], "塌缩" in (row["failure_reason"] or "")) for row in rows)
     assert ("not_applicable", True) in statuses
-    assert any(status in {"ok", "other", "constraint_violation"} and not collapsed
+    # 对照配置不塌缩：具名状态（ok 或任何具名失败类），且绝不能是 crash/other
+    assert any(status not in {"crash", "other"} and not collapsed
                for status, collapsed in statuses)
+
+
+def test_corpus_run_status_vocabulary_has_no_other_bucket():
+    """§4.1 分类完备性：具名状态映射必须覆盖 validator 全部拒绝原因，永不产出 other。
+
+    未知原因/缺原因当场抛 ValueError（响亮失败），这是对「新增拒绝原因忘了登记」
+    的结构性防御——兜底桶会把它静默吞掉。
+    """
+    from agriautolab.contracts.enums import RunStatus
+    from agriautolab.corpus.runner import _VALIDATOR_REJECTION_CLASSES, _corpus_run_status
+    from agriautolab.contracts.geometry import Point, PolygonSpec
+    from agriautolab.contracts.problem import CoverageProblem
+    from agriautolab.pipeline.config import PipelineConfig
+    from agriautolab.contracts.vehicle import VehicleSpec
+    from agriautolab.validation.validator import PathValidator
+
+    vehicle = VehicleSpec(working_width_m=10.0, body_width_m=2.0, min_turning_radius_m=3.0)
+    config = PipelineConfig("no_decomposition", "uniform_headland", "min_width",
+                            "boustrophedon_order", "dubins_transit", {"headland_width_m": 8.0})
+    field = PolygonSpec(geometry_id="f", exterior=(
+        Point(x=0.0, y=0.0), Point(x=100.0, y=0.0), Point(x=100.0, y=50.0),
+        Point(x=0.0, y=50.0), Point(x=0.0, y=0.0)))
+    problem = CoverageProblem(problem_id="vocab", field=field)
+
+    # 拒绝原因封闭词典与 validator 源码里的实际产出一一对应（结构性核对，
+    # 不靠人工同步：新增原因而未登记词典时，此测试必红）
+    import inspect
+    validator_source = inspect.getsource(PathValidator)
+    for klass in _VALIDATOR_REJECTION_CLASSES:
+        assert f"validator_rejected:{klass}" in validator_source, klass
+
+    for klass in _VALIDATOR_REJECTION_CLASSES:
+        mapped = _corpus_run_status(
+            RunStatus.CONSTRAINT_VIOLATION, f"validator_rejected:{klass}",
+            config=config, vehicle=vehicle,
+        )
+        assert mapped == klass and mapped != "other"
+
+    # 每个RunStatus 成员都可分类（except OTHER：validator 从不产出，出现即 bug）
+    for status in RunStatus:
+        if status is RunStatus.OTHER:
+            continue
+        mapped = _corpus_run_status(
+            status, "validator_rejected:outside_area" if status is RunStatus.CONSTRAINT_VIOLATION else None,
+            config=config, vehicle=vehicle,
+        )
+        assert mapped != "other"
+
+    # 未知原因与缺原因：响亮失败
+    with pytest.raises(ValueError, match="未知"):
+        _corpus_run_status(RunStatus.CONSTRAINT_VIOLATION, "validator_rejected:mystery",
+                           config=config, vehicle=vehicle)
+    with pytest.raises(ValueError):
+        _corpus_run_status(RunStatus.CONSTRAINT_VIOLATION, None, config=config, vehicle=vehicle)
+
+
+def test_manifest_runstatus_counts_have_no_other(tmp_path, c_record, c_vehicle, c_configs, c_benchmark, c_corpus_protocol):
+    """§4.1 验收：跑一轮混合语料，manifest 的 runstatus_counts 里 other 必须为 0。"""
+    import pyarrow.parquet as pq
+
+    root = tmp_path / "runs"
+    manifest = _run(root, c_record, c_vehicle, c_configs, c_benchmark, c_corpus_protocol)
+    assert manifest["runstatus_counts"].get("other", 0) == 0
+    rows = pq.read_table(root / "runs.parquet").to_pylist()
+    assert all(row["runstatus"] != "other" for row in rows)

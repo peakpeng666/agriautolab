@@ -1396,3 +1396,19 @@ CRLF 字节；git blob 实为 LF，Linux 检出后哈希必不匹配（WSL 3.10 
 523 passed + 1 failed 即此）。修复：`.gitattributes` 强制 LF + 文件重写为 LF +
 哈希重钉 `502b1e90…`。JSON 内容逐字节（除换行）零变化。**今后所有字节级
 冻结一律以 LF 为准**，CRLF 检查进安装自校验。
+
+## §4.1 other 归零（分类完备性规则命中案例）
+
+**分桶实测（v4 全量 9 314 行 other）**：仅 2 类——`validator_rejected:outside_area`
+**6 054**（样例 ee_field_105/vehicle0）与 `validator_rejected:collision`
+**3 260**（样例 ee_field_117/vehicle0）。每行都带具名原因，"没有失败原因"的说法
+不成立；缺的是有名字的状态桶（ASlib 六值映射把一切 constraint_violation 塞进 other）。
+
+**修法**：`_corpus_run_status` 具名映射——validator 拒绝原因原样升格为状态名
+（封闭词典 `_VALIDATOR_REJECTION_CLASSES` 与 validator 源码结构性核对，测试钉住）；
+未知原因/缺原因/不可分类状态**当场抛错**（对"新增原因忘登记"的结构性防御）；
+零地头+前进-only 的 carving 保留（算法-机具 pairing 必然，非实例不可行）。
+ASlib 导出层做六值格式聚合（那层的 other 是 ARFF 词表约束，细粒度真值在 parquet）。
+测试：`test_corpus_run_status_vocabulary_has_no_other_bucket`（词典↔源码核对+全 RunStatus
+全覆盖+未知响亮抛）与 `test_manifest_runstatus_counts_have_no_other`（混合语料 other==0）。
+重跑后的全语料 other 计数见本轮终章。

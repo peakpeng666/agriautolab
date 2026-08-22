@@ -74,6 +74,13 @@ Metaduomenys (Metadata) / Duomenų resursas (1) (Data Identification (1)) / Teis
 	Naudojimo apribojimai (Use Constraints): Autoriaus teisės (Copyright)
 ```
 
+**LT 原文出处**：Fields2Benchmark 的 README（Zenodo 14524735，本地存档
+`data/fields2benchmark/README.md`，2026-08-21 逐字节下载）转引 EuroCrops Wiki
+立陶宛页（https://github.com/maja601/EuroCrops/wiki/Lithuania ）所载
+geoportal.lt 元数据。上表为原文逐条摘录，未做任何改写。
+本仓库未直接访问 geoportal.lt 原站核对——若裁定需要最高置信度，
+应访问原站复核一次（往返立陶宛语页面的机翻路径已在 Wiki 存档）。
+
 ---
 
 ## 三、我的解读与依据
