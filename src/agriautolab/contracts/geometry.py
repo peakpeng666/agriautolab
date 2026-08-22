@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import math
-from typing import Self
+# typing_extensions.Self：3.10 兼容（见 AUDIT_NOTE 留痕）；pydantic 硬依赖，必然在场
+from typing_extensions import Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 

@@ -1372,3 +1372,18 @@ ee_field_103:principal_axis:0.0:0.75，10 点 3 在前沿）。全部产物在 `
 
 H1 前置观察（不作检验结论，检验按预注册在 Block D 出）：前沿中位大小等数字
 待分析阶段从 runs.parquet 正式聚合，此处只交付跑完的语料与前沿图。
+
+## 留痕：Python 下限 3.11→3.10 的两处冻结代码改动（WSL 迁移轮，改动前记录）
+
+**动机**：Ubuntu 22.04 LTS 系统 Python 为 3.10.12，Fields2Cover 的 SWIG binding
+绑在系统解释器上；下限降到 3.10 让 F2C 与本项目同解释器可用（升 3.11+ 则
+binding 不可见，这不是"顺手升级"能改的）。>=3.10 是下限不是钉死——3.11/3.12
+照跑，Windows 侧不受影响。
+
+| 文件 | 改动 | 性质 |
+|---|---|---|
+| `src/agriautolab/contracts/geometry.py` | `from typing import Self` → `from typing_extensions import Self` | 注解来源替换，零行为变化；typing_extensions 是 pydantic 硬依赖，任何可安装环境必然在场（全局规则第 4 条本轮已将其列入白名单） |
+| `pyproject.toml` | `requires-python = ">=3.11"` → `">=3.10"` | 放宽下限，不改任何已过断言 |
+
+按 §2.1 纪律：不靠 grep 找 3.11 语法，改完后在 Ubuntu 3.10 上**跑全套测试**，
+跑不过的才是要改的。
