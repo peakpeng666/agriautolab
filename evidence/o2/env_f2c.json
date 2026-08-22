@@ -1,0 +1,8 @@
+{
+  "fields2cover_binding": "/usr/lib/python3/dist-packages/fields2cover.py",
+  "fields2cover_source": "HEAD@3613525c241538fa9fd9df3e1209ae8184627958 (2025-04-23)",
+  "ortools": "unavailable: ortools 未安装（F2C 可能静态链接了 OR-Tools）",
+  "platform": "Linux-6.18.33.1-microsoft-standard-WSL2-x86_64-with-glibc2.35",
+  "python": "3.10.12",
+  "swig": "SWIG Version 4.0.2  Compiled with g++ [x86_64-pc-linux-gnu]  Configured options: +pcre  Please see http://www.swig.org for reporting bugs and further information"
+}

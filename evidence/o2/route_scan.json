@@ -1,0 +1,143 @@
+{
+  "route_algorithm_compared": "boustrophedon",
+  "route_scan_transit_rel_diff_vs_golden": {
+    "boustrophedon_order": {
+      "per_request": {
+        "f2b_000_ee_field_130": -0.009563599531967478,
+        "f2b_001_ee_field_148": -0.0433951664187511,
+        "f2b_002_ee_field_207": 0.017959750686859847,
+        "f2b_003_ee_field_35": 0.2518453107489514,
+        "f2b_004_ee_field_43": -0.0023723654949467797,
+        "f2b_005_ee_field_46": -0.09507879766098395,
+        "f2b_006_ee_field_9": -0.04080348833682147,
+        "f2b_007_nl_field_111": 0.03347891612364577,
+        "f2b_008_nl_field_17": -0.0020141997643733566,
+        "f2b_009_nl_field_187374": -0.02490917564197017,
+        "f2b_010_nl_field_188": 0.006785833316578648,
+        "f2b_011_nl_field_19": 0.012132241981208134,
+        "f2b_012_nl_field_716551": -0.0007921888026306353,
+        "f2b_013_nl_field_90": 0.007255787027666507
+      },
+      "median": -0.001403194283501996
+    },
+    "skip_one_order": {
+      "per_request": {
+        "f2b_000_ee_field_130": 0.04810784578728554,
+        "f2b_001_ee_field_148": -0.5599234598157145,
+        "f2b_002_ee_field_207": 1.1661964552423916,
+        "f2b_003_ee_field_35": 0.1729277121671466,
+        "f2b_004_ee_field_43": -0.42204696905868017,
+        "f2b_005_ee_field_46": -0.6044738993301358,
+        "f2b_006_ee_field_9": -0.2501822996579362,
+        "f2b_007_nl_field_111": 1.2314959377311085,
+        "f2b_008_nl_field_17": 1.2536032919285243,
+        "f2b_009_nl_field_187374": 0.9987791386598843,
+        "f2b_010_nl_field_188": -0.5710120415229525,
+        "f2b_011_nl_field_19": 1.2156234623565885,
+        "f2b_012_nl_field_716551": 0.9418359234613497,
+        "f2b_013_nl_field_90": 1.2928079714077747
+      },
+      "median": 0.5573818178142481
+    }
+  },
+  "route_identity_replay": [
+    {
+      "request_id": "f2b_000_ee_field_130",
+      "match_worst_m": 0.6367032146081328,
+      "replayed_turn_total_m": 2696.633224978459,
+      "golden_turn_total_m": 2699.373526721554,
+      "rel_diff_vs_golden": -0.001015162116679305
+    },
+    {
+      "request_id": "f2b_001_ee_field_148",
+      "match_worst_m": 1.8141897206352455,
+      "replayed_turn_total_m": 5208.606615432524,
+      "golden_turn_total_m": 5217.278274551918,
+      "rel_diff_vs_golden": -0.0016621040057784365
+    },
+    {
+      "request_id": "f2b_002_ee_field_207",
+      "match_worst_m": 0.004310569725930716,
+      "replayed_turn_total_m": 599.4319678453004,
+      "golden_turn_total_m": 599.6245475158005,
+      "rel_diff_vs_golden": -0.0003211670891359234
+    },
+    {
+      "request_id": "f2b_003_ee_field_35",
+      "match_worst_m": 1.4965077500803483,
+      "replayed_turn_total_m": 2350.9409441518433,
+      "golden_turn_total_m": 2356.529908033128,
+      "rel_diff_vs_golden": -0.002371692318536884
+    },
+    {
+      "request_id": "f2b_004_ee_field_43",
+      "match_worst_m": 0.8170615130141936,
+      "replayed_turn_total_m": 2259.812104258474,
+      "golden_turn_total_m": 2265.185953254005,
+      "rel_diff_vs_golden": -0.002372365495120421
+    },
+    {
+      "request_id": "f2b_005_ee_field_46",
+      "match_worst_m": 67.15480299415108,
+      "replayed_turn_total_m": 6731.600751427382,
+      "golden_turn_total_m": 6791.6612624696445,
+      "rel_diff_vs_golden": -0.008843272466215775
+    },
+    {
+      "request_id": "f2b_006_ee_field_9",
+      "match_worst_m": 0.4219709178432822,
+      "replayed_turn_total_m": 13680.765363097073,
+      "golden_turn_total_m": 13682.92643859696,
+      "rel_diff_vs_golden": -0.00015793956867234097
+    },
+    {
+      "request_id": "f2b_007_nl_field_111",
+      "match_worst_m": 7.458761557769658e-09,
+      "replayed_turn_total_m": 373.0369555731164,
+      "golden_turn_total_m": 373.2127025012997,
+      "rel_diff_vs_golden": -0.0004709028578218739
+    },
+    {
+      "request_id": "f2b_008_nl_field_17",
+      "match_worst_m": 1.6333989301024765,
+      "replayed_turn_total_m": 280.91005169750485,
+      "golden_turn_total_m": 281.47700260979644,
+      "rel_diff_vs_golden": -0.0020141997642256276
+    },
+    {
+      "request_id": "f2b_009_nl_field_187374",
+      "match_worst_m": 8.665611121298497,
+      "replayed_turn_total_m": 677.2241021234087,
+      "golden_turn_total_m": 694.524125554908,
+      "rel_diff_vs_golden": -0.02490917564264166
+    },
+    {
+      "request_id": "f2b_010_nl_field_188",
+      "match_worst_m": 0.4846916124224663,
+      "replayed_turn_total_m": 1547.0390868867605,
+      "golden_turn_total_m": 1549.309069279691,
+      "rel_diff_vs_golden": -0.001465157880980942
+    },
+    {
+      "request_id": "f2b_011_nl_field_19",
+      "match_worst_m": 0.00988155045669467,
+      "replayed_turn_total_m": 985.6116376706011,
+      "golden_turn_total_m": 986.083026398093,
+      "rel_diff_vs_golden": -0.00047804162009943557
+    },
+    {
+      "request_id": "f2b_012_nl_field_716551",
+      "match_worst_m": 0.6237764116376638,
+      "replayed_turn_total_m": 505.9401349762672,
+      "golden_turn_total_m": 506.34125284744715,
+      "rel_diff_vs_golden": -0.000792188803350008
+    },
+    {
+      "request_id": "f2b_013_nl_field_90",
+      "match_worst_m": 2.865092682528293,
+      "replayed_turn_total_m": 501.8207113267148,
+      "golden_turn_total_m": 498.2058358853921,
+      "rel_diff_vs_golden": 0.0072557870280633395
+    }
+  ]
+}

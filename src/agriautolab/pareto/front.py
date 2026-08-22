@@ -1,0 +1,59 @@
+"""Pareto 前沿与目标向量：Block B 的主指标向量是三维，全部最小化。
+
+path_length / headland_turns / row_crossings。transit_length 因与 path_length
+秩相关 rho=1.000（240 实例实测）降为 DIAGNOSTIC，不进向量（见注册表 notes）。
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Iterable, Mapping
+
+from agriautolab.evidence.hashing import content_hash
+
+ConfigId = str
+
+
+@dataclass(frozen=True)
+class ObjectiveVector:
+    path_length: float          # 越小越好
+    headland_turns: float       # 越小越好
+    row_crossings: float        # 越小越好
+
+    def as_tuple(self) -> tuple[float, float, float]:
+        return (self.path_length, self.headland_turns, self.row_crossings)
+
+
+def dominates(left: ObjectiveVector, right: ObjectiveVector, *, rtol: float = 1e-12) -> bool:
+    """left 是否支配 right（最小化）。严格不等式 + 相对容差，不用绝对 eps。
+
+    容差取 rtol * max(|a_i|, |b_i|)：两位有效数字相当的值视为并列，
+    避免浮点尾差制造假支配；并列时 any(...) 的严格劣必须有超出容差的维度。
+    """
+    better_somewhere = False
+    for a, b in zip(left.as_tuple(), right.as_tuple()):
+        tolerance = rtol * max(abs(a), abs(b), 1e-300)
+        if a > b + tolerance:
+            return False
+        if a < b - tolerance:
+            better_somewhere = True
+    return better_somewhere
+
+
+def pareto_front(points: Mapping[ConfigId, ObjectiveVector], *, rtol: float = 1e-12) -> frozenset[ConfigId]:
+    """返回非支配集合。
+
+    **前沿大小不可跨算法池比较。** 往池子里加配置只会让前沿单调变大或不变。
+    报告"前沿有 6 个配置"而不说池子是哪 12 个，等于没说。
+    任何前沿相关的量都必须与产生它的 `pool_hash` 一起记录。
+    """
+    return frozenset(
+        config_id
+        for config_id, vector in points.items()
+        if not any(dominates(other, vector, rtol=rtol) for other_id, other in points.items() if other_id != config_id)
+    )
+
+
+def pool_hash(config_ids: Iterable[ConfigId]) -> str:
+    """池身份：池中全部 config_id 排序后的内容哈希。前沿量必须与它一起记录。"""
+    return content_hash({"config_ids": sorted(config_ids)})

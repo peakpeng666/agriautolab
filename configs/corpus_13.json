@@ -1,0 +1,145 @@
+[
+  {
+    "decomposition": "no_decomposition",
+    "headland": "uniform_headland",
+    "swath": "min_width",
+    "route": "boustrophedon_order",
+    "path": "dubins_transit",
+    "params": {
+      "headland_width_m": 8.0
+    },
+    "reason": "基准：min_width 方向使作业段条数最少，是作业里程下界方向的牛耕基线"
+  },
+  {
+    "decomposition": "no_decomposition",
+    "headland": "uniform_headland",
+    "swath": "principal_axis",
+    "route": "boustrophedon_order",
+    "path": "dubins_transit",
+    "params": {
+      "headland_width_m": 8.0
+    },
+    "reason": "方向族对照：PCA 主轴 vs min_width（非凸地块上分家）"
+  },
+  {
+    "decomposition": "no_decomposition",
+    "headland": "uniform_headland",
+    "swath": "longest_edge",
+    "route": "boustrophedon_order",
+    "path": "dubins_transit",
+    "params": {
+      "headland_width_m": 8.0
+    },
+    "reason": "方向族对照：多边形最长边 vs PCA 主轴"
+  },
+  {
+    "decomposition": "no_decomposition",
+    "headland": "uniform_headland",
+    "swath": "fixed_angle",
+    "route": "boustrophedon_order",
+    "path": "dubins_transit",
+    "params": {
+      "headland_width_m": 8.0,
+      "angle_rad": 0.0
+    },
+    "reason": "固定正交基线一（0 rad）"
+  },
+  {
+    "decomposition": "no_decomposition",
+    "headland": "uniform_headland",
+    "swath": "fixed_angle",
+    "route": "boustrophedon_order",
+    "path": "dubins_transit",
+    "params": {
+      "headland_width_m": 8.0,
+      "angle_rad": 1.5707963267948966
+    },
+    "reason": "固定正交基线二（pi/2）"
+  },
+  {
+    "decomposition": "no_decomposition",
+    "headland": "uniform_headland",
+    "swath": "min_width",
+    "route": "skip_one_order",
+    "path": "dubins_transit",
+    "params": {
+      "headland_width_m": 8.0
+    },
+    "reason": "路线轴：隔行访问 vs 牛耕"
+  },
+  {
+    "decomposition": "no_decomposition",
+    "headland": "uniform_headland",
+    "swath": "min_width",
+    "route": "rural_postman_greedy",
+    "path": "dubins_transit",
+    "params": {
+      "headland_width_m": 8.0
+    },
+    "reason": "路线轴：贪心 Rural-Postman vs 牛耕"
+  },
+  {
+    "decomposition": "boustrophedon_cells",
+    "headland": "uniform_headland",
+    "swath": "min_width",
+    "route": "boustrophedon_order",
+    "path": "dubins_transit",
+    "params": {
+      "headland_width_m": 8.0
+    },
+    "reason": "分解轴：BCD vs 不分解"
+  },
+  {
+    "decomposition": "no_decomposition",
+    "headland": "uniform_headland",
+    "swath": "min_width",
+    "route": "boustrophedon_order",
+    "path": "dubins_transit",
+    "params": {
+      "headland_width_m": 12.0
+    },
+    "reason": "地头强度轴：8 -> 12 米"
+  },
+  {
+    "decomposition": "no_decomposition",
+    "headland": "uniform_headland",
+    "swath": "row_aligned",
+    "route": "boustrophedon_order",
+    "path": "dubins_transit",
+    "params": {
+      "headland_width_m": 8.0
+    },
+    "reason": "行冲突轴：row_aligned 是 crossings 与 path_length 冲突最尖锐的组合"
+  },
+  {
+    "decomposition": "no_decomposition",
+    "headland": "uniform_headland",
+    "swath": "row_aligned",
+    "route": "skip_one_order",
+    "path": "dubins_transit",
+    "params": {
+      "headland_width_m": 8.0
+    },
+    "reason": "行冲突 x 路线交互（隔行）"
+  },
+  {
+    "decomposition": "no_decomposition",
+    "headland": "uniform_headland",
+    "swath": "row_aligned",
+    "route": "boustrophedon_order",
+    "path": "reeds_shepp_transit",
+    "params": {
+      "headland_width_m": 8.0
+    },
+    "reason": "行冲突的第二个路径变体（复核 §六 原始组成建议）：RS 允许倒车，与 dubins 同槽位对比掉头策略在顺行场景的代价"
+  },
+  {
+    "decomposition": "no_decomposition",
+    "headland": "no_headland",
+    "swath": "min_width",
+    "route": "boustrophedon_order",
+    "path": "reeds_shepp_transit",
+    "params": {},
+    "reason": "零地头解锁（复核 §六）：Dubins 前向掉头鼓包约 2R 必越界；RS 的等长孪生词（先倒车的时间反演版）把掉头收进作业走廊，实测 zero-headland 通过 outside_area。注意 RS 配置要求 can_reverse 机具，不匹配时运行器记 NOT_APPLICABLE"
+  }
+]

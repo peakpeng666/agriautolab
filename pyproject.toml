@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agriautolab"
+version = "0.1.0"
+description = "Research-grade geometry and coverage-planning foundations for agricultural robots."
+requires-python = ">=3.11"
+dependencies = [
+  "shapely>=2.0",
+  "pydantic>=2.0",
+  "numpy",
+  "pyproj>=3.6",
+  "pyarrow>=16",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
