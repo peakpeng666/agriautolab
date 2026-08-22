@@ -61,6 +61,9 @@ class CorpusProtocol(BaseModel):
     row_spacings_m: tuple[float, ...] = DEFAULT_ROW_SPACINGS_M
     row_crossable: bool = True
     cv_folds: int = Field(default=10, ge=2)
+    # 机具清单的内容哈希（无默认值）：机具清单变了实验身份就变。runner 加载后
+    # 与实际 vehicles 逐字节核对——声明可证伪，防「协议里记的是 A 实际跑的是 B」。
+    vehicles_hash: str = Field(min_length=64, max_length=64)
 
     def spec_hash(self) -> str:
         return content_hash(self)

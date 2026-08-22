@@ -80,6 +80,7 @@ def test_crossable_is_handled_by_stratification_not_features():
         benchmark_protocol_hash="0" * 64,
         row_offsets_rad=(0.0,),
         row_spacings_m=(2.5,),
+        vehicles_hash="0" * 64,
     )
     crossable_run = CorpusProtocol(row_crossable=True, **protocol_kwargs)
     uncrossable_run = CorpusProtocol(row_crossable=False, **protocol_kwargs)

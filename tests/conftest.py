@@ -17,6 +17,7 @@ from agriautolab.contracts.protocol import (
     ReverseCostSpec,
 )
 from agriautolab.contracts.vehicle import VehicleSpec
+from agriautolab.evidence.hashing import content_hash
 from agriautolab.corpus.protocol import CorpusProtocol
 from agriautolab.datasets.fields2benchmark import DatasetLicense, FieldRecord
 from agriautolab.geometry.validate import polygon_to_spec
@@ -119,13 +120,14 @@ def c_benchmark():
 
 
 @pytest.fixture
-def c_corpus_protocol(c_benchmark):
+def c_corpus_protocol(c_benchmark, c_vehicle):
     return CorpusProtocol(
         protocol_id="C-CORPUS-TEST",
         benchmark_protocol_hash=c_benchmark.spec_hash(),
         row_offsets_rad=(0.0,),
         row_spacings_m=(3.0,),
         cv_folds=3,
+        vehicles_hash=content_hash(tuple(v.model_dump(mode="json") for v in (c_vehicle,))),
     )
 
 

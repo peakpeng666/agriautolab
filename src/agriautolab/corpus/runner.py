@@ -259,6 +259,14 @@ class CorpusRunner:
             raise DatasetLicenseError("运行器拒绝 UNKNOWN 许可证记录：" + ", ".join(unknown))
         if corpus_protocol.benchmark_protocol_hash != benchmark_protocol.spec_hash():
             raise ValueError("CorpusProtocol 内的 benchmark_protocol_hash 与实际 BenchmarkProtocol 不一致")
+        from agriautolab.evidence.hashing import content_hash as _ch
+        actual_vehicles_hash = _ch(tuple(v.model_dump(mode="json") for v in vehicles))
+        if corpus_protocol.vehicles_hash != actual_vehicles_hash:
+            raise ValueError(
+                "CorpusProtocol 内的 vehicles_hash 与实际机具清单不一致："
+                f"协议记 {corpus_protocol.vehicles_hash[:12]}，实跑 {_ch(tuple(v.model_dump(mode='json') for v in vehicles))[:12]}。"
+                "机具清单是实验身份的一部分，改清单必须改协议"
+            )
         root = Path(output_dir)
         root.mkdir(parents=True, exist_ok=True)
         checkpoint = root / "checkpoint.jsonl"

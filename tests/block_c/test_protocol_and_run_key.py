@@ -6,6 +6,7 @@ def test_row_grid_is_part_of_protocol_hash(c_benchmark):
     left = CorpusProtocol(
         protocol_id="x", benchmark_protocol_hash=c_benchmark.spec_hash(),
         row_offsets_rad=(0.0, 0.1), row_spacings_m=(0.75, 3.0), cv_folds=3,
+        vehicles_hash="0" * 64,
     )
     right = left.model_copy(update={"row_offsets_rad": (0.0, 0.2)})
     assert left.spec_hash() != right.spec_hash()

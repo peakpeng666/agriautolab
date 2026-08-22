@@ -16,6 +16,7 @@ from agriautolab.contracts.protocol import (
     ReverseCostSpec,
 )
 from agriautolab.contracts.vehicle import VehicleSpec
+from agriautolab.evidence.hashing import content_hash
 from agriautolab.corpus.protocol import CorpusProtocol
 from agriautolab.corpus.runner import CodeVersion, CorpusRunner, discover_code_version
 from agriautolab.datasets.fields2benchmark import DatasetLicense, FieldRecord, load_exported_corpus
@@ -50,6 +51,7 @@ def _self_check() -> None:
         row_offsets_rad=(0.0,),
         row_spacings_m=(3.0,),
         cv_folds=2,
+        vehicles_hash=content_hash(tuple(v.model_dump(mode="json") for v in (vehicle,))),
     )
     config = PipelineConfig(
         decomposition="no_decomposition",

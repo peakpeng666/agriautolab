@@ -1425,3 +1425,14 @@ manifest 新增 `n_instances_in_corpus` / `n_instances_with_zero_ok_configs` /
 测试 `test_manifest_counts_zero_ok_instances_from_aggregator`。
 过程中的教训写进测试 docstring：干净矩形上零地头 Dubins 的 Pi-turn 是合法 ok
 （第一版测试想用 no_headland 制造全灭，被物理打脸——塌缩才是确定性路径）。
+
+## §4.4 双机具与 vehicles_hash（声明可证伪规则命中案例）
+
+- `CorpusProtocol` 新增**必填** `vehicles_hash`（机具清单内容哈希）；runner 加载后与实跑
+  vehicles 逐字节核对，不符即拒——「协议里记 A 实跑 B」从此结构不可能。
+- 第二台机具：`w=5.0, body=2.0, R=2.5, can_reverse=true`。R 与第一台（2.0）不同：
+  turning_ratio 从常量 0.4 变为 {0.4, 0.5}，对推荐器有信息量（规格明文要求）。
+  RS 两槽位在机具 1 上从恒 not_applicable 变为真跑。
+- 测试 `test_second_vehicle_unlocks_reeds_shepp_and_changes_identity`：
+  RS 配置在机具 0 为 not_applicable、机具 1 真跑；协议哈希不符抛 ValueError。
+- 实例规模 2 350 → 4 700（235×5×2×2×13 = 61 100 行）。

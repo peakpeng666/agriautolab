@@ -4,6 +4,7 @@ import pytest
 
 pyarrow = pytest.importorskip("pyarrow")
 
+from agriautolab.evidence.hashing import content_hash
 from agriautolab.corpus.runner import CodeVersion, CorpusRunner
 
 
@@ -69,6 +70,7 @@ def test_headland_collapse_is_not_applicable_not_crash(tmp_path, c_benchmark):
     from agriautolab.contracts.geometry import Point, PolygonSpec  # noqa: F401  (与下方 Polygon 对照)
     from agriautolab.contracts.protocol import HypervolumeReference
     from agriautolab.contracts.vehicle import VehicleSpec
+    from agriautolab.evidence.hashing import content_hash
     from agriautolab.corpus.protocol import CorpusProtocol
     from agriautolab.corpus.runner import CodeVersion, CorpusRunner
     from agriautolab.datasets.fields2benchmark import DatasetLicense, FieldRecord
@@ -84,6 +86,7 @@ def test_headland_collapse_is_not_applicable_not_crash(tmp_path, c_benchmark):
     corpus = CorpusProtocol(
         protocol_id="collapse-corpus", benchmark_protocol_hash=c_benchmark.spec_hash(),
         row_offsets_rad=(0.0,), row_spacings_m=(3.0,), cv_folds=2,
+        vehicles_hash=content_hash(tuple(v.model_dump(mode="json") for v in (vehicle,))),
     )
     configs = (
         PipelineConfig("no_decomposition", "uniform_headland", "min_width", "boustrophedon_order",
@@ -195,7 +198,8 @@ def test_manifest_counts_zero_ok_instances_from_aggregator(tmp_path, c_benchmark
                        source_crs="EPSG:28992", working_crs="EPSG:28992")
     vehicle = VehicleSpec(working_width_m=10.0, body_width_m=2.0, min_turning_radius_m=3.0)
     corpus = CorpusProtocol(protocol_id="z", benchmark_protocol_hash=c_benchmark.spec_hash(),
-                            row_offsets_rad=(0.0,), row_spacings_m=(3.0,), cv_folds=2)
+                            row_offsets_rad=(0.0,), row_spacings_m=(3.0,), cv_folds=2,
+                            vehicles_hash=content_hash(tuple(v.model_dump(mode="json") for v in (vehicle,))))
     configs = (
         PipelineConfig("no_decomposition", "uniform_headland", "min_width", "boustrophedon_order",
                        "dubins_transit", {"headland_width_m": 8.0}),
@@ -212,3 +216,52 @@ def test_manifest_counts_zero_ok_instances_from_aggregator(tmp_path, c_benchmark
     assert manifest["n_instances_with_degenerate_pool"] >= 1
     assert len(manifest["effective_pool_size_by_instance"]) == 1      # 只有有 ok 的大田
     assert manifest["effective_pool_size_by_instance"]["NL_big:principal_axis:0.0:3.0:vehicle:0"] >= 1
+
+
+def test_second_vehicle_unlocks_reeds_shepp_and_changes_identity(c_record, c_vehicle, c_configs, c_benchmark):
+    """§4.4：可倒车机具让 RS 槽位从恒 NA 变为真跑；vehicles_hash 不符即拒。
+
+    第二台参数刻意不同（R 3.0->2.5）：单机具语料里 turning_ratio 是常量，
+    对推荐器零信息量——两台参数相同则仍是常量（规格明文要求）。
+    """
+    import pyarrow.parquet as pq
+
+    from agriautolab.contracts.vehicle import VehicleSpec
+    from agriautolab.corpus.protocol import CorpusProtocol
+    from agriautolab.corpus.runner import CodeVersion, CorpusRunner
+    from agriautolab.evidence.hashing import content_hash
+    from agriautolab.pipeline.config import PipelineConfig
+
+    reverse_vehicle = VehicleSpec(working_width_m=10.0, body_width_m=2.0,
+                                  min_turning_radius_m=2.5, can_reverse=True)
+    rs_config = PipelineConfig("no_decomposition", "no_headland", "min_width",
+                               "boustrophedon_order", "reeds_shepp_transit", {})
+    vehicles = (c_vehicle, reverse_vehicle)
+    corpus = CorpusProtocol(protocol_id="rv", benchmark_protocol_hash=c_benchmark.spec_hash(),
+                            row_offsets_rad=(0.0,), row_spacings_m=(3.0,), cv_folds=2,
+                            vehicles_hash=content_hash(tuple(v.model_dump(mode="json") for v in vehicles)))
+    import tempfile
+    from pathlib import Path as _P
+    with tempfile.TemporaryDirectory() as tmp:
+        manifest = CorpusRunner(clock=ConstantClock()).run(
+            (c_record,), vehicles, (rs_config,) + tuple(c_configs), c_benchmark, corpus,
+            output_dir=_P(tmp) / "runs", code_version=CodeVersion("T", False, "3" * 64),
+        )
+        rows = pq.read_table(_P(tmp) / "runs" / "runs.parquet").to_pylist()
+        # RS 配置：机具0（不可倒车）not_applicable；机具1（可倒车）真跑出结果
+        # 直接按 config 精确断言
+        rs_id = rs_config.config_id()
+        v0 = next(r for r in rows if r["config_id"] == rs_id and r["vehicle_index"] == 0)
+        v1 = next(r for r in rows if r["config_id"] == rs_id and r["vehicle_index"] == 1)
+        assert v0["runstatus"] == "not_applicable"
+        assert v1["runstatus"] in {"ok", "outside_area", "not_applicable"}
+        assert manifest["runstatus_counts"].get("other", 0) == 0
+
+    # 协议声明与实跑不符 -> 拒绝
+    wrong = corpus.model_copy(update={"vehicles_hash": "0" * 64})
+    with pytest.raises(ValueError, match="vehicles_hash"):
+        with tempfile.TemporaryDirectory() as tmp:
+            CorpusRunner(clock=ConstantClock()).run(
+                (c_record,), vehicles, c_configs[:1], c_benchmark, wrong,
+                output_dir=_P(tmp) / "x", code_version=CodeVersion("T", False, "3" * 64),
+            )

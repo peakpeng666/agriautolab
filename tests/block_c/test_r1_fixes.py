@@ -12,6 +12,7 @@ pyarrow = pytest.importorskip("pyarrow")  # noqa: F841
 
 import pyarrow.parquet as pq
 
+from agriautolab.evidence.hashing import content_hash
 from agriautolab.aslib import export_aslib_scenarios
 from agriautolab.aslib.exporter import _fold
 from agriautolab.contracts.protocol import HypervolumeReference
@@ -42,6 +43,7 @@ def test_all_instances_of_one_field_share_one_fold(tmp_path, c_record, c_vehicle
         row_offsets_rad=(0.0, 0.5),
         row_spacings_m=(0.75, 3.0),
         cv_folds=3,
+        vehicles_hash=content_hash(tuple(v.model_dump(mode="json") for v in (c_vehicle,))),
     )
     root = tmp_path / "corpus"
     CorpusRunner(clock=ConstantClock()).run(
