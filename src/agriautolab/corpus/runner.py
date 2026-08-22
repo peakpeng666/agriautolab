@@ -154,10 +154,22 @@ def _append_checkpoint(path: Path, row: dict[str, object]) -> None:
 
 
 def _load_checkpoint(path: Path) -> dict[str, dict[str, object]]:
+    """读断点：优先明文，其次跑完压缩的 .gz（v4 实测明文 2.0 GB = parquet 的 6 倍）。"""
+    import gzip as _gzip
+    source = path
     if not path.exists():
+        gz = path.with_suffix(path.suffix + ".gz")
+        if gz.exists():
+            with _gzip.open(gz, "rt", encoding="utf-8") as handle:
+                return _parse_checkpoint_lines(handle)
         return {}
+    with path.open("r", encoding="utf-8") as handle:
+        return _parse_checkpoint_lines(handle)
+
+
+def _parse_checkpoint_lines(handle) -> dict[str, dict[str, object]]:
     rows: dict[str, dict[str, object]] = {}
-    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+    for line_number, line in enumerate(handle, start=1):
         if not line.strip():
             continue
         row = json.loads(line)
@@ -420,4 +432,11 @@ class CorpusRunner:
         manifest = {**manifest_base, "manifest_hash": manifest_hash}
         (root / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
         _write_artifact_ledger(root / "ledger.jsonl", manifest_hash, selected)
+        # 跑完压缩断点（§4.6，偏离 keys-only 预案的留痕见 AUDIT_NOTE）：
+        # keys-only 会让续跑后 parquet 重建丢 path_json（违反 Block C #8 的路径保留精神）；
+        # gzip 同样收磁盘与 I/O（实测 2.0 GB -> ~1/8），零数据损失。mtime=0 保证字节确定。
+        import gzip as _gzip
+        with checkpoint.open("rb") as src, _gzip.GzipFile(filename=str(checkpoint) + ".gz", mode="wb", compresslevel=6, mtime=0, fileobj=None) as dst:
+            dst.writelines(src)
+        checkpoint.unlink()
         return manifest

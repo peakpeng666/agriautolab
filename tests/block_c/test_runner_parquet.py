@@ -29,7 +29,7 @@ def test_resume_is_byte_identical_to_one_shot(tmp_path, c_record, c_vehicle, c_c
     partial = _run(resumed, c_record, c_vehicle, c_configs, c_benchmark, c_corpus_protocol, stop_after=1)
     assert partial == {"interrupted": True, "n_new": 1}
     _run(resumed, c_record, c_vehicle, c_configs, c_benchmark, c_corpus_protocol)
-    for name in ("checkpoint.jsonl", "runs.parquet", "manifest.json", "ledger.jsonl"):
+    for name in ("checkpoint.jsonl.gz", "runs.parquet", "manifest.json", "ledger.jsonl"):
         assert (full / name).read_bytes() == (resumed / name).read_bytes(), name
 
 

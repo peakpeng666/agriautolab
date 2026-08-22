@@ -1436,3 +1436,12 @@ manifest 新增 `n_instances_in_corpus` / `n_instances_with_zero_ok_configs` /
 - 测试 `test_second_vehicle_unlocks_reeds_shepp_and_changes_identity`：
   RS 配置在机具 0 为 not_applicable、机具 1 真跑；协议哈希不符抛 ValueError。
 - 实例规模 2 350 → 4 700（235×5×2×2×13 = 61 100 行）。
+
+## §4.6 checkpoint 跑完 gzip（偏离 keys-only 预案，留痕）
+
+**偏离理由**：keys-only 断点会让续跑后的 parquet 重建丢失 path_json——违反 Block C
+#8「路径几何必须保留」的精神（旧基线剥 path 的教训不能换个别的地方重犯）。
+gzip 方案：跑完把 checkpoint.jsonl 压成 .gz 并删明文（mtime=0 保证字节确定），
+加载端优先明文、次 .gz。实测压缩前 2.0 GB（parquet 的 6 倍）→ 压缩后约 1/8，
+磁盘与续跑 I/O 双收，零数据损失。#7「中断续跑逐位一致」测试改比 .gz 文件
+（改文件名，不改字节同一性断言），528 passed 验证通过。
