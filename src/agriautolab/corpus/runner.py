@@ -369,11 +369,11 @@ class CorpusRunner:
             status = str(row["runstatus"])
             counts[status] = counts.get(status, 0) + 1
         nominal_pool = len(configs)
-        effective_by_instance: dict[str, int] = {}
-        for row in selected:
-            if row["runstatus"] == RunStatus.OK.value:
-                instance_id = str(row["instance_id"])
-                effective_by_instance[instance_id] = effective_by_instance.get(instance_id, 0) + 1
+        # 有效池/退化池统计一律取聚合器的结果（单一真相源）。
+        # v4 实测教训：runner 自算的 effective_pool 只含 >=1 ok 的实例，450 个零 ok
+        # 实例在 manifest 里静默消失——同一事实两处住，修了聚合器漏了 runner。
+        from agriautolab.corpus.aggregate import summarize_pareto
+        pool_summary = summarize_pareto(root / "runs.parquet")
         manifest_base = {
             "corpus_hash": content_hash({
                 "record_hashes": sorted(field_record_hash(record) for record in records)
@@ -397,7 +397,13 @@ class CorpusRunner:
             "pool_file_sha256": pool_file_sha256,
             "hypervolume_reference": benchmark_protocol.hypervolume_reference.model_dump(mode="json"),
             "hypervolume_reference_scope": "per-instance-analytic",
-            "effective_pool_size_by_instance": effective_by_instance,
+            "effective_pool_size_by_instance": dict(
+                zip(pool_summary.front_instance_ids, pool_summary.effective_pool_size_by_instance)
+            ),
+            "n_instances_in_corpus": pool_summary.n_instances_in_corpus,
+            "n_instances_with_zero_ok_configs": pool_summary.n_instances_with_zero_ok_configs,
+            "n_instances_with_degenerate_pool": pool_summary.n_instances_with_degenerate_pool,
+            "front_size_median": pool_summary.front_size_median,
             "row_offsets_rad": list(corpus_protocol.row_offsets_rad),
             "row_spacings_m": list(corpus_protocol.row_spacings_m),
             "cv_folds": corpus_protocol.cv_folds,

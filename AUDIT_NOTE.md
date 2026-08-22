@@ -1412,3 +1412,16 @@ ASlib 导出层做六值格式聚合（那层的 other 是 ARFF 词表约束，�
 测试：`test_corpus_run_status_vocabulary_has_no_other_bucket`（词典↔源码核对+全 RunStatus
 全覆盖+未知响亮抛）与 `test_manifest_runstatus_counts_have_no_other`（混合语料 other==0）。
 重跑后的全语料 other 计数见本轮终章。
+
+## §4.3 manifest 取聚合器结果（单一真相源规则命中案例）
+
+**v4 实测**：`effective_pool_size_by_instance` 只有 1 900 键，实例总数 2 350，
+450 个零 ok 实例静默消失（19.1%）。根因：同一事实两处住——C-R2 修了
+`CorpusParetoSummary`（有 `n_instances_with_zero_ok_configs`），runner 写 manifest
+的路径没修。修法：runner 写 manifest 前调 `summarize_pareto`（聚合器为唯一真相源），
+manifest 新增 `n_instances_in_corpus` / `n_instances_with_zero_ok_configs` /
+`n_instances_with_degenerate_pool` / `front_size_median`；聚合器补
+`front_instance_ids`（与前沿同序的实例名，manifest 映射用）。
+测试 `test_manifest_counts_zero_ok_instances_from_aggregator`。
+过程中的教训写进测试 docstring：干净矩形上零地头 Dubins 的 Pi-turn 是合法 ok
+（第一版测试想用 no_headland 制造全灭，被物理打脸——塌缩才是确定性路径）。

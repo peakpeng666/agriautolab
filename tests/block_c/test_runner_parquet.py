@@ -168,3 +168,47 @@ def test_manifest_runstatus_counts_have_no_other(tmp_path, c_record, c_vehicle, 
     assert manifest["runstatus_counts"].get("other", 0) == 0
     rows = pq.read_table(root / "runs.parquet").to_pylist()
     assert all(row["runstatus"] != "other" for row in rows)
+
+
+def test_manifest_counts_zero_ok_instances_from_aggregator(tmp_path, c_benchmark):
+    """§4.3 单一真相源：零 ok 实例不再静默消失，计数来自聚合器。
+
+    构造：大田（有 ok）+ 12 米宽小田（两个 uniform 配置 8/12 米地头全部塌缩）→
+    小田实例有效池 0，必须被 n_instances_with_zero_ok_configs 数到。
+    注：不能用 no_headland 制造失败——干净矩形上零地头 Dubins 的 Pi-turn 合法
+    （解析真值场景），实测 ok；塌缩才是确定性的全灭路径。
+    """
+    import pyarrow.parquet as pq
+    from shapely import Polygon
+
+    from agriautolab.contracts.vehicle import VehicleSpec
+    from agriautolab.corpus.protocol import CorpusProtocol
+    from agriautolab.corpus.runner import CodeVersion, CorpusRunner
+    from agriautolab.datasets.fields2benchmark import DatasetLicense, FieldRecord
+    from agriautolab.pipeline.config import PipelineConfig
+
+    big = FieldRecord(field_id="NL_big", geometry=Polygon([(0, 0), (100, 0), (100, 50), (0, 50), (0, 0)]),
+                      source="PDOK", license=DatasetLicense.CC0_1_0,
+                      source_crs="EPSG:28992", working_crs="EPSG:28992")
+    tiny = FieldRecord(field_id="NL_tiny", geometry=Polygon([(0, 0), (30, 0), (30, 12), (0, 12), (0, 0)]),
+                       source="PDOK", license=DatasetLicense.CC0_1_0,
+                       source_crs="EPSG:28992", working_crs="EPSG:28992")
+    vehicle = VehicleSpec(working_width_m=10.0, body_width_m=2.0, min_turning_radius_m=3.0)
+    corpus = CorpusProtocol(protocol_id="z", benchmark_protocol_hash=c_benchmark.spec_hash(),
+                            row_offsets_rad=(0.0,), row_spacings_m=(3.0,), cv_folds=2)
+    configs = (
+        PipelineConfig("no_decomposition", "uniform_headland", "min_width", "boustrophedon_order",
+                       "dubins_transit", {"headland_width_m": 8.0}),
+        PipelineConfig("no_decomposition", "uniform_headland", "min_width", "boustrophedon_order",
+                       "dubins_transit", {"headland_width_m": 12.0}),
+    )
+    root = tmp_path / "runs"
+    manifest = CorpusRunner(clock=ConstantClock()).run(
+        (big, tiny), (vehicle,), configs, c_benchmark, corpus,
+        output_dir=root, code_version=CodeVersion("T", False, "2" * 64),
+    )
+    assert manifest["n_instances_in_corpus"] == 2
+    assert manifest["n_instances_with_zero_ok_configs"] == 1          # 小田，不再消失
+    assert manifest["n_instances_with_degenerate_pool"] >= 1
+    assert len(manifest["effective_pool_size_by_instance"]) == 1      # 只有有 ok 的大田
+    assert manifest["effective_pool_size_by_instance"]["NL_big:principal_axis:0.0:3.0:vehicle:0"] >= 1

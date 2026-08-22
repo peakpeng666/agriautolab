@@ -36,6 +36,7 @@ class CorpusParetoSummary:
     n_instances_with_zero_ok_configs: int              # 有效池 = 0：无前沿可言，单列不许静默消失
     pool_hash: str
     front_size_distribution: tuple[int, ...]
+    front_instance_ids: tuple[str, ...]                # 与上行同序（实例名对齐，供 manifest 等消费方映射）
     effective_pool_size_by_instance: tuple[int, ...]   # 与 front_size_distribution 同序
     front_size_ratio_distribution: tuple[float, ...]   # front_size / effective_pool，同序
     front_size_median: float
@@ -148,6 +149,7 @@ def summarize_pareto(runs_parquet: str | Path, *, reference: HypervolumeReferenc
         n_instances_with_zero_ok_configs=zero_ok,
         pool_hash=pool_hash(config_ids),
         front_size_distribution=tuple(front_sizes),
+        front_instance_ids=tuple(sorted(by_instance)),
         effective_pool_size_by_instance=tuple(effective_sizes),
         front_size_ratio_distribution=tuple(ratios),
         front_size_median=statistics.median(front_sizes) if front_sizes else 0.0,
