@@ -5,6 +5,9 @@
 
 ## [未发布]
 
+- D2 三层池普查：selection/pools.py（N/A/O 契约 + 逐实例包含校验）、
+  scripts/pool_census.py、evidence/block_d/pool_census.json（4,700 实例，
+  A 层 v0=11/v1=13）+ Block D ledger index=1；5 条测试
 - 第三次转折发起（docs/TURNING_POINT.md）：生成式研究线章程 + 两份外部
   AI 输入的批判性核验（H2 退化实证、空白前提联网抽查成立）
 - 修正案 04：H2 田内重复测量设计、H3 偏好条件 Tchebycheff 悔值首要端点
