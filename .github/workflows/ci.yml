@@ -34,7 +34,47 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-      # shapely 大版本绑定 GEOS 行为（test_shapely_is_pinned 契约）：
-      # 运行时钉 2.1.2，与 requirements.lock 一致；其余依赖按解释器解析。
       - run: python -m pip install -e .[dev] "shapely==2.1.2"
       - run: python -m pytest -q
+
+  integration-audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+      - run: python -m pip install -e .[dev] "shapely==2.1.2"
+      - name: Corpus runner self-check
+        run: python scripts/run_corpus.py --self-check
+      - name: Recorded F2C adapter self-check
+        run: python scripts/validate_f2c_recorded.py --self-check
+      - name: Recorded F2C golden reconciliation
+        run: python scripts/validate_f2c_recorded.py --ours-csv evidence/o2/ours.csv --reference-csv evidence/o2/golden_f2c.csv
+      - name: O2 reconciliation replay
+        working-directory: evidence/o2
+        run: python reconcile.py --requests requests_metric.json --ours ours.csv --golden golden_f2c.csv --route-identity golden_route.json --scan-output /tmp/route_scan.json
+      - name: Canonical API smoke
+        run: |
+          python - <<'PY'
+          from agriautolab.features.schema import canonical_feature_name
+          from agriautolab.metrics.registry import metric_by_canonical
+          from agriautolab.pareto.front import ObjectiveVector
+          assert canonical_feature_name('row_angle_vs_principal') == 'crop_row_angle_to_principal_axis_rad'
+          assert metric_by_canonical('runtime_s').metric_id == 'runtime_ms'
+          v = ObjectiveVector(path_length=10.0, headland_turn_count=2.0, row_crossing_equivalent=3.5)
+          assert v.headland_turns == 2.0 and v.row_crossings == 3.5
+          print('canonical-api: ok')
+          PY
+      - name: Frozen pool identity
+        run: |
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          p = Path('configs/corpus_13.json')
+          data = json.loads(p.read_text())
+          assert len(data) == 13
+          assert all(str(item.get('reason', '')).strip() for item in data)
+          print('corpus_13_sha256', hashlib.sha256(p.read_bytes()).hexdigest())
+          PY
