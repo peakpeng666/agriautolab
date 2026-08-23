@@ -45,7 +45,7 @@ def test_unknown_license_is_rejected(tmp_path):
 
 
 def test_analysis_only_export_of_non_commercial_carries_an_explicit_warning(tmp_path):
-    """任务 8：仅供分析（不再分发）时，仅许非商业使用的记录可以进语料，但必须带警告。"""
+    """仅供分析（不再分发）时，仅许非商业使用的记录可以进语料，但必须带警告。"""
     manifest = export_corpus((_record("nc", DatasetLicense.NON_COMMERCIAL),), path=tmp_path,
                              allow_analysis=True, allow_redistribution=False)
     assert manifest.warning is not None and "不得公开再分发" in manifest.warning
@@ -73,7 +73,7 @@ def test_declaring_no_purpose_at_all_is_rejected(tmp_path):
 
 def test_metric_projection_identity_for_known_metric_rectangle():
     # 坐标必须落在 EPSG:28992 的定义域内：RD New 的合法 easting 从 646 起步，
-    # 原点附近的 (0,0) 是假声明，会被 _verify_declared_crs 拒（任务 5）。
+    # 原点附近的 (0,0) 是假声明，会被 _verify_declared_crs 拒。
     ox, oy = 155000.0, 463000.0
     geometry = Polygon([(ox, oy), (ox + 100, oy), (ox + 100, oy + 50), (ox, oy + 50), (ox, oy)])
     projected, crs = to_metric_crs(geometry, source_crs="EPSG:28992")
@@ -101,7 +101,7 @@ def test_fields2benchmark_country_metadata_is_explicit(tmp_path):
     from agriautolab.datasets.fields2benchmark import load_fields2benchmark_wkt_zip
 
     archive_path = tmp_path / "wkt.zip"
-    # 每国的 fixture 必须落在该国声明 CRS 的定义域内（任务 5 的可证伪检查）。
+    # 每国的 fixture 必须落在该国声明 CRS 的定义域内（可证伪检查）。
     origins = {"nl": (155000.0, 463000.0), "ee": (600000.0, 6500000.0), "lt": (500000.0, 6100000.0)}
 
     def rect(origin):
@@ -137,14 +137,14 @@ def test_corpus_record_hash_changes_when_geometry_changes():
 
 
 def test_self_intersecting_fields_are_quarantined_not_repaired(tmp_path):
-    """真实数据策略（2026-08-21 实测 350 块中 2 块自交）：剔除并记录，绝不 make_valid。"""
+    """真实数据策略（实测 350 块中 2 块自交）：剔除并记录，绝不 make_valid。"""
     import zipfile as zf
 
     from agriautolab.datasets.fields2benchmark import (
         export_corpus, load_fields2benchmark_wkt_zip_with_quarantine,
     )
 
-    # nl_* 声明 EPSG:28992，坐标要落在 RD New 定义域内（任务 5）。
+    # nl_* 声明 EPSG:28992，坐标要落在 RD New 定义域内。
     bowtie = "POLYGON ((155000 463000, 155010 463010, 155010 463000, 155000 463010, 155000 463000))"
     square = "POLYGON ((155000 463000, 155010 463000, 155010 463010, 155000 463010, 155000 463000))"
     archive_path = tmp_path / "mixed.zip"

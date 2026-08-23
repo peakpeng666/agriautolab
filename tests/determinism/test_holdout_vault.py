@@ -30,13 +30,13 @@ def test_verify_rejects_changed_holdout_and_unsealed_vault() -> None:
         vault.verify(("a", "b"), seed=2)
 
 
-# ---- 任务 10：封存必须按 field_id 分组 ----------------------------------------
+# ---- 封存必须按 field_id 分组 ----------------------------------------
 
 def test_all_instances_of_one_field_share_the_same_in_holdout_flag() -> None:
     """同一 field_id 的全部实例，in_holdout 必须相同。
 
     按实例封存 = 同一块地同时进训练与留出 = 泄漏，
-    正是 C-R1 刚修掉的那个洞的另一个出口。
+    正是折分组泄漏的另一个出口。
     """
     from agriautolab.evidence.holdout import field_level_holdout, instance_in_holdout
 

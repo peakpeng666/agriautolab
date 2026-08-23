@@ -1,4 +1,4 @@
-"""run_pipeline 的确定性、记忆化与 min_width 条数真值（§9 真值 13）。"""
+"""run_pipeline 的确定性、记忆化与 min_width 条数真值（解析真值清单 13）。"""
 
 import math
 
@@ -112,7 +112,7 @@ def test_no_headland_combination_is_recorded_as_infeasible_not_raised() -> None:
 
 
 def test_row_aligned_objective_tradeoff_is_visible() -> None:
-    """§0.2 的底物在管线上可见：顺行把 crossings 压低、长度升高（turns 与 crossings 冲突）。"""
+    """目标冲突在管线上可见：顺行把 crossings 压低、长度升高（turns 与 crossings 冲突）。"""
     rows = RowStructure(direction_rad=math.pi / 2.0, spacing_m=2.5, crossable=True, crossing_penalty=10.0)
     problem = CoverageProblem(problem_id="p", field=rect_field(), row_structure=rows)
     vehicle = VehicleSpec(working_width_m=10.0, body_width_m=2.0, min_turning_radius_m=3.0)

@@ -61,7 +61,7 @@ def export_aslib_scenarios(
     scenario”，并在 description.txt 明说三者来自同一运行语料。绝不把三目标加权成
     一个伪单目标，否则下游会误以为权重是 benchmark 的标准定义。
 
-    row_crossable 无默认值（任务 6）：crossable 不做特征、做分层。它一变，
+    row_crossable 无默认值：crossable 不做特征、做分层。它一变，
     crossing_penalty 从有限变 inf，可行性整体改变——可穿越与不可穿越是两个问题族，
     混在一个推荐器里训练是错的。分层的载体是 CorpusProtocol.row_crossable（进协议哈希），
     但导出目录必须自己也带上，否则两层导出的目录长得一模一样、下游无从分辨。

@@ -5,7 +5,7 @@
 不引入任何一侧的隐式配置——同一清单、同一数字，才有对账意义。
 
 抽样按 ReconciliationSamplingSpec 分层，不按 id 顺序，也不按等距抽：
-上一轮的等距抽样在这份语料上抽出的 12 块里只有 1 块含障碍，
+等距抽样在这份语料上抽出的 12 块里只有 1 块含障碍，
 而 235 块语料里有 33 块含障碍——于是 main_field_area 的 0.004% 主要来自无障碍情形，
 而 RMA 裁决（F2C 扣障碍 + 扣障碍周围一圈 headland）恰恰是关于障碍的。
 """
@@ -27,7 +27,7 @@ DEFAULT_PARAMS = {
     "min_turning_radius_m": 2.0,
     "headland_width_m": 5.0,
     "swath_angle_rad": 1.5707963267948966,
-    # 路线阶段必须显式配对（Block C 规格 §3.5）。写死 snake 那次的代价是
+    # 路线阶段必须显式配对（路线配对规格）。写死 snake 那次的代价是
     # 两侧跑了不同路线、transit 差 −38.11%，被读成了「我方路径更短」。
     "route_algorithm": "boustrophedon",
 }

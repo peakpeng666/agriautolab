@@ -1,4 +1,4 @@
-"""Block C 复核 R1 的整改验收：分组折、有效池、逐实例参考点、冻结池、Windows 修复。"""
+"""语料完整性守卫：分组折、有效池、逐实例参考点、冻结池、跨平台字节冻结。"""
 
 import hashlib
 import importlib.util
@@ -32,7 +32,7 @@ class ConstantClock:
         return 0.0
 
 
-# ---- C-R1：折按地块分组 ----
+# ---- 折按地块分组 ----
 
 def test_all_instances_of_one_field_share_one_fold(tmp_path, c_record, c_vehicle, c_configs, c_benchmark):
     """同地块 2 行向 x 2 行距 = 4 个实例，cv.arff 里必须同折（此前实测散布 8/10 折）。"""
@@ -69,7 +69,7 @@ def test_fold_hash_spreads_distinct_fields_deterministically() -> None:
     assert len(set(first)) >= 5
 
 
-# ---- C-R3：逐实例参考点 ----
+# ---- 逐实例参考点 ----
 
 def test_runner_writes_per_instance_analytic_reference_columns(tmp_path, c_record, c_vehicle, c_configs, c_benchmark, c_corpus_protocol):
     root = tmp_path / "corpus"
@@ -88,7 +88,7 @@ def test_runner_writes_per_instance_analytic_reference_columns(tmp_path, c_recor
     assert manifest["hypervolume_reference_scope"] == "per-instance-analytic"
 
 
-# ---- C-R2：有效池与退化池 ----
+# ---- 有效池与退化池 ----
 
 def _write_rows(path, rows):
     import pyarrow as pa
@@ -157,11 +157,11 @@ def test_aggregate_global_fallback_and_missing_reference(tmp_path):
         summarize_pareto(parquet)
 
 
-# ---- C-R4：冻结的 13 配置池 ----
+# ---- 冻结的 13 配置池 ----
 
-# 冻结哈希基线随修正案更新（2026-08-21 O1 落地：RS 两槽位替换原零地头 Dubins 对照）。
+# 冻结哈希基线随修正案更新（RS 两槽位替换原零地头 Dubins 对照）。
 # 每次变更必须在 AUDIT_NOTE 留修正案记录——这个常量存在的意义就是让"顺手改一下"过不了测试。
-# 2026-08-22 重钉：.gitattributes 强制 LF 后按 LF 字节重算（内容零变化，跨平台一致性）。
+# 重钉：.gitattributes 强制 LF 后按 LF 字节重算（内容零变化，跨平台一致性；过程见 AUDIT_NOTE）。
 # Windows 文本模式曾把文件写成 CRLF，冻结哈希钉了 CRLF 字节 → Linux 检出必炸。
 CORPUS_13_SHA256 = "502b1e9053b598d62daafa0b3a819f3cebc8385cb356aa908433582b93083a57"
 

@@ -30,7 +30,7 @@ _RESOLVED = object()
 class DenominatorProvenance:
     """分母的证据链：记下三个几何的 hash，事后才能对账两条覆盖率是不是同一把尺子量的。
 
-    上一版基线（gate.jsonl）在序列化时把 path 剥掉了，结果没有任何一个指标能被独立重算。
+    外部旧基线（gate.jsonl）在序列化时把 path 剥掉了，结果没有任何一个指标能被独立重算。
     分母是同一类东西：如果产物里不记分母，事后没人能判断两条覆盖率是不是同一把尺子量的。
     记了 hash，绕过令牌造出来的分母也会在对账时露出来。
 
@@ -175,7 +175,7 @@ def resolve_coverage_targets(
         main_field = original_field
     else:
         # 申报的地头宽度必须可证伪。口径：**不绕损耗环**。
-        # 旧口径 buffer(main∪ring, -W) 与 main 对账，在 UTM 大坐标真实地块上的
+        # 备选口径 buffer(main∪ring, -W) 与 main 对账，在 UTM 大坐标真实地块上的
         # buffer->difference->union->buffer 弦弧往返损耗实测达 rel 4.5e-04（真实地块、
         # w=12、残差 4.9 m²），与 mitre 信号（rel ~3e-03）只差一个量级，噪声地板太高。
         # 新口径是两条**无往返**的断言，诚实路径残差为精确 0 或网格噪声：

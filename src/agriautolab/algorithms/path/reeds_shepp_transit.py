@@ -118,7 +118,7 @@ def _contained_word(start: Pose2D, goal: Pose2D, radius: float, body_width_m: fl
 
     两级检查：腐蚀走廊 covers（廉价，可能因离散化漏掉贴边可接受词——只是
     少一个候选，无损正确性）→ 命中后**精确回验**一次扫掠差面积（保证返回的词
-    与旧口径逐字同判）。任何返回词都经过精确判据，绝不因加速放水。
+    与未加速口径逐字同判）。任何返回词都经过精确判据，绝不因加速放水。
     """
     from shapely import LineString
     from agriautolab.geometry.footprint import QUAD_SEGS

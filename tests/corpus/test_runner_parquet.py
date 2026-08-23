@@ -58,7 +58,7 @@ def test_dirty_code_version_is_written_to_manifest(tmp_path, c_record, c_vehicle
 
 
 def test_headland_collapse_is_not_applicable_not_crash(tmp_path, c_benchmark):
-    """真实小地块实测（2026-08-21 探针 30/390）：塌缩是算法不适用于该实例，归 NOT_APPLICABLE。
+    """真实小地块实测：塌缩是算法不适用于该实例，归 NOT_APPLICABLE。
 
     崩溃要归零：infeasible / constraint_violation / not_applicable 是数据，crash 不是。
     只认『塌缩』消息标记，其余 ValueError 仍为 CRASH。
@@ -107,7 +107,7 @@ def test_headland_collapse_is_not_applicable_not_crash(tmp_path, c_benchmark):
 
 
 def test_corpus_run_status_vocabulary_has_no_other_bucket():
-    """§4.1 分类完备性：具名状态映射必须覆盖 validator 全部拒绝原因，永不产出 other。
+    """分类完备性：具名状态映射必须覆盖 validator 全部拒绝原因，永不产出 other。
 
     未知原因/缺原因当场抛 ValueError（响亮失败），这是对「新增拒绝原因忘了登记」
     的结构性防御——兜底桶会把它静默吞掉。
@@ -155,7 +155,7 @@ def test_corpus_run_status_vocabulary_has_no_other_bucket():
 
 
 def test_manifest_runstatus_counts_have_no_other(tmp_path, c_record, c_vehicle, c_configs, c_benchmark, c_corpus_protocol):
-    """§4.1 验收：跑一轮混合语料，manifest 的 runstatus_counts 里 other 必须为 0。"""
+    """验收：跑一轮混合语料，manifest 的 runstatus_counts 里 other 必须为 0。"""
     import pyarrow.parquet as pq
 
     root = tmp_path / "runs"
@@ -166,7 +166,7 @@ def test_manifest_runstatus_counts_have_no_other(tmp_path, c_record, c_vehicle, 
 
 
 def test_manifest_counts_zero_ok_instances_from_aggregator(tmp_path, c_benchmark):
-    """§4.3 单一真相源：零 ok 实例不再静默消失，计数来自聚合器。
+    """单一真相源：零 ok 实例不再静默消失，计数来自聚合器。
 
     构造：大田（有 ok）+ 12 米宽小田（两个 uniform 配置 8/12 米地头全部塌缩）→
     小田实例有效池 0，必须被 n_instances_with_zero_ok_configs 数到。
@@ -210,7 +210,7 @@ def test_manifest_counts_zero_ok_instances_from_aggregator(tmp_path, c_benchmark
 
 
 def test_second_vehicle_unlocks_reeds_shepp_and_changes_identity(c_record, c_vehicle, c_configs, c_benchmark):
-    """§4.4：可倒车机具让 RS 槽位从恒 NA 变为真跑；vehicles_hash 不符即拒。
+    """双机具配对：可倒车机具让 RS 槽位从恒 NA 变为真跑；vehicles_hash 不符即拒。
 
     第二台参数刻意不同（R 3.0->2.5）：单机具语料里 turning_ratio 是常量，
     对推荐器零信息量——两台参数相同则仍是常量（规格明文要求）。

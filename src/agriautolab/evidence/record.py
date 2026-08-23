@@ -35,7 +35,7 @@ class EvidenceRecord(BaseModel):
 
     @model_validator(mode="after")
     def coverage_metrics_must_carry_denominator(self) -> "EvidenceRecord":
-        """上一版基线把 path 剥掉之后没有任何指标能被独立重算；分母不能重蹈覆辙。"""
+        """剥掉 path 的证据记录没有任何指标能被独立重算（gate.jsonl 教训）；分母不能重蹈覆辙。"""
         if self.denominator is None and any(item.metric_id in _COVERAGE_METRIC_IDS for item in self.metrics):
             raise ValueError(
                 "携带覆盖率指标的记录必须同时携带 denominator（分母 provenance）："

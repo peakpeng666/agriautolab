@@ -1,4 +1,4 @@
-"""pareto 核心的解析真值（§9 真值 9–12）与超体积精确性。"""
+"""pareto 核心的解析真值（解析真值清单 9–12）与超体积精确性。"""
 
 import pytest
 
@@ -118,7 +118,7 @@ def test_beyond_reference_is_flagged_not_silently_clipped() -> None:
 
 
 def test_chebyshev_selects_concave_point_no_weighted_sum_can() -> None:
-    """真值 12b（规格 §4.4 验收）：非凸前沿，切比雪夫可选中间点，任何加权和都选不中。"""
+    """真值 12b：非凸前沿，切比雪夫可选中间点，任何加权和都选不中。"""
     from agriautolab.pareto.scalarize import scalarize
 
     reference = _ref(1.5, 1.5, 1.5)
