@@ -12,6 +12,7 @@ from pathlib import Path
 from agriautolab.contracts.vehicle import VehicleSpec
 from agriautolab.pareto.front import pool_hash
 from agriautolab.pipeline.config import PipelineConfig
+from agriautolab.evidence.atomic import commit_guarded
 from agriautolab.selection.evidence import seal_selection_cv_result
 from agriautolab.selection.evaluation import load_selection_instances
 from agriautolab.selection.experiment import run_frozen_grouped_cv
@@ -92,15 +93,24 @@ def main() -> None:
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     result_path = args.output_dir / "selection_cv.json"
-    result_path.write_text(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    tmp_dir = args.output_dir / ".tmp-seal"
+    tmp_dir.mkdir(exist_ok=True)
+    tmp_result = tmp_dir / "selection_cv.json"
+    tmp_result.write_text(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     final_model = PreferenceConditionedRecommender(
         cv_spec_hash=cv["spec_hash"],
         pool_hash=actual_pool_hash,
     ).fit(instances)
+    tmp_model = tmp_dir / "recommender.joblib"
+    tmp_metadata = tmp_dir / "recommender_metadata.json"
+    final_model.save(tmp_model, tmp_metadata)
+    # 三个产物先过封存守卫再落位：与已封存字节不一致时在覆盖前拒绝
     model_path = args.output_dir / "recommender.joblib"
     metadata_path = args.output_dir / "recommender_metadata.json"
-    final_model.save(model_path, metadata_path)
+    commit_guarded(tmp_result, result_path, args.ledger, "selection_cv_result", "cv_file_sha256")
+    commit_guarded(tmp_model, model_path, args.ledger, "selection_cv_result", "model_file_sha256")
+    commit_guarded(tmp_metadata, metadata_path, args.ledger, "selection_cv_result", "metadata_file_sha256")
     entry = seal_selection_cv_result(
         result_path=result_path,
         model_path=model_path,
