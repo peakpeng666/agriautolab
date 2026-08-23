@@ -50,7 +50,8 @@ def _install_defaults() -> None:
                    description="相邻非零路径段之间的绝对航向变化总和"),
         MetricSpec("aol", "1", OptimizationDirection.MINIMIZE, ComparabilityScope.IMPL_INVARIANT,
                    ScaleBehavior.INVERSE_LINEAR, True, MetricRole.DIAGNOSTIC, common, CoverageStage.PATH,
-                   description="总航向变化除以路径长度"),
+                   description="总航向变化除以路径长度",
+                   canonical_name="heading_change_per_meter"),
         MetricSpec("tortuosity", "1", OptimizationDirection.MINIMIZE, ComparabilityScope.IMPL_INVARIANT,
                    ScaleBehavior.INVARIANT, True, MetricRole.DIAGNOSTIC, common, CoverageStage.PATH,
                    description="路径长度与端点欧氏距离之比"),
@@ -90,10 +91,12 @@ def _install_defaults() -> None:
                    description="覆盖路径总弧长"),
         MetricSpec("L_area", "1", OptimizationDirection.MINIMIZE, ComparabilityScope.IMPL_INVARIANT,
                    ScaleBehavior.INVARIANT, True, MetricRole.DIAGNOSTIC, coverage, CoverageStage.PATH,
-                   description="L_R 乘工作幅宽后除以作业域面积"),
+                   description="L_R 乘工作幅宽后除以作业域面积",
+                   canonical_name="normalized_path_length"),
         MetricSpec("eta_L", "1", OptimizationDirection.MINIMIZE, ComparabilityScope.IMPL_INVARIANT,
                    ScaleBehavior.INVARIANT, True, MetricRole.DIAGNOSTIC, coverage, CoverageStage.PATH,
-                   description="非作业路径长度占总路径长度的比例"),
+                   description="非作业路径长度占总路径长度的比例",
+                   canonical_name="nonwork_length_ratio"),
         MetricSpec("turning_overhead_ratio", "1", OptimizationDirection.MINIMIZE, ComparabilityScope.IMPL_INVARIANT,
                    ScaleBehavior.INVARIANT, True, MetricRole.DIAGNOSTIC, coverage, CoverageStage.PATH,
                    description="TURN 段长度占总路径长度的比例"),
@@ -114,6 +117,7 @@ def _install_defaults() -> None:
         MetricSpec("row_crossings", "count", OptimizationDirection.MINIMIZE, ComparabilityScope.IMPL_INVARIANT,
                    ScaleBehavior.INVARIANT, True, MetricRole.DIAGNOSTIC, coverage, CoverageStage.PATH,
                    description="路径对作物行的穿行次数，按段端点解析计算",
+                   canonical_name="row_crossing_equivalent",
                    notes="无行结构（row_structure=None）时恒为 0；作业段按直线端点计为精确值，"
                          "弧形转移段按弦投影计，是该口径的下界。行结构是目标空间里唯一与长度族"
                          "正交的维度来源（实测 crossings 与 length 秩相关 -0.098）。"
@@ -144,10 +148,30 @@ def _install_defaults() -> None:
                    ScaleBehavior.UNDEFINED, False, MetricRole.DIAGNOSTIC, common, None,
                    protocol_parameters={"clock": "monotonic"},
                    description="运行时长；ID 保留 runtime_ms，但规范值在证据层换算为 SI 秒",
-                   notes="依赖硬件、系统负载和计时协议，禁止进入跨协议主排名"),
+                   notes="依赖硬件、系统负载和计时协议，禁止进入跨协议主排名",
+                   canonical_name="runtime_s"),
     )
     for spec in specs:
         register_metric(spec)
+
+
+def metric_by_canonical(canonical: str) -> MetricSpec:
+    """按规范名反查（API/论文层入口）；证据层永远按 metric_id。"""
+    for spec in METRIC_REGISTRY.values():
+        if spec.canonical == canonical:
+            return spec
+    raise KeyError(f"未知规范名 {canonical!r}：规范名见 docs/NAMING.md 对照表")
+
+
+def _check_canonical_uniqueness() -> None:
+    seen: set[str] = set()
+    for spec in METRIC_REGISTRY.values():
+        if spec.canonical in seen:
+            raise MetricRegistrationError(f"规范名重复：{spec.canonical}")
+        seen.add(spec.canonical)
+
+
+_check_canonical_uniqueness()
 
 
 _install_defaults()

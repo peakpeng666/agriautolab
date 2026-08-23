@@ -8,7 +8,7 @@ from agriautolab.contracts.artifacts import SwathsArtifact
 from agriautolab.contracts.problem import CoverageProblem
 
 
-class FixedAngleSwath:
+class FixedAngleSwathGenerator:
     algorithm_id = "fixed_angle"
 
     def __init__(self, angle_rad: float) -> None:
@@ -18,3 +18,7 @@ class FixedAngleSwath:
         return swaths_along_direction(
             mains, math.cos(self.angle_rad), math.sin(self.angle_rad), working_width_m=working_width_m
         )
+
+
+# legacy 别名：canonical 类名见 docs/NAMING.md。
+FixedAngleSwath = FixedAngleSwathGenerator

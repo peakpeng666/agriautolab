@@ -1653,3 +1653,30 @@ H3 推荐器训练前必须：折按 field_id 分组（C-R1 同键）、种子�
 
 许可邮件（Mier，BY vs BY-SA + LT 非商业）与仓库 LICENSE 挂牌——
 裁定前按更严一方行事，不扩样本、不动语料。
+
+## 重构留痕：canonical 命名层落地（refactor/canonical-naming-comments，2026-08-23）
+
+外部协作方提出、本轮由 ZCode 完整实现并验证。总纲（docs/NAMING.md）：
+**证据身份（wire ID）永不改；规范名只存在于 API 层。** 动机含两处语义
+修正——row_crossings 实为连续等价量（规范名 row_crossing_equivalent）、
+runtime_ms 的注册单位本是秒（规范名 runtime_s）。
+
+落地内容：①MetricSpec.canonical_name + registry 反查；②ObjectiveVector
+规范字段 + legacy 关键字/属性（哨兵防静默零向量）；③features/schema.py
+特征规范名表；④12 个算法类 canonical + legacy 别名（发现并修复一处
+coverage 委托同名遮蔽导致的无限递归）；⑤reconciliation/（对账语义，
+cross_validation 的规范名；f2c.py 字节冻结原路径未动）与 benchmark/
+（corpus 规范入口）两个薄转发包；⑥注释清扫第一批（日期/田 ID/轮次标签
+移出生产源码，约束与数值依据保留）。
+
+**验收门全过（对 v7 重放）**：pool_hash `aa0e4aaa…` 重放一致；13 个
+config_id 集合与 parquet 逐一对上；CorpusProtocol/BenchmarkProtocol
+双协议哈希重放一致；冻结件三件字节不变（f2c.py / corpus_13.json /
+预注册 yaml）；parquet 证据契约列不变；聚合统计重算逐项相等；
+544 passed（537+7 新测试，含冻结件哈希门与规范/legacy 恒等测试）。
+
+**异议留痕**：外部方案的 domain/planning/selection 包重组与实现搬家
+（coverage/stages 三词典收口）本轮**未做**——三重命名过渡成本正值
+Block D 前夜，selection/ 应随 Block D 开工自然创建而非预建空壳。
+Block A/B/C 架构标签注释（约 40 处）清扫留作第二批，规则已在
+NAMING.md 钉死。

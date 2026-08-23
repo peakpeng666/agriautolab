@@ -42,7 +42,7 @@ class DatasetLicenseError(ValueError):
 class CrsDeclarationError(ValueError):
     """声明的 CRS 与坐标量程不自洽。
 
-    存在的理由（2026-08-21 实测）：F2B wkt.zip 实为 WGS84 经纬度，门户声明
+    存在的理由：F2B wkt.zip 实为 WGS84 经纬度，门户声明
     EPSG:3301/28992/3346，to_metric_crs 走了「已是米制」快速通道、度坐标原样流出，
     5.0 米地头被当 5.0 度用，地块被内缩吃光。当时是靠地块归零才被发现的——
     也就是说，只要错得不够狠，就不会有任何东西响。
@@ -139,7 +139,7 @@ def _projected_extent(source: CRS) -> tuple[float, float, float, float] | None:
 def _verify_declared_crs(geometry: BaseGeometry, declared_crs: str) -> None:
     """声明的 CRS 必须与坐标量程自洽，否则抛 CrsDeclarationError。
 
-    实测事故（2026-08-21）：F2B wkt.zip 实为 WGS84 经纬度，门户声明
+    实测事故：F2B wkt.zip 实为 WGS84 经纬度，门户声明
     EPSG:3301/28992/3346；快速通道把 5.0 米地头当 5.0 度用，地块被内缩吃光。
     那次响了是因为地块归零；把 28992 误报成 3301 则是静默的，
     只让所有长度差几个百分点——正好是当时 path_length 残差的量级。
@@ -363,8 +363,8 @@ def export_corpus(
 class QuarantinedField:
     """被隔离的地块：几何不合法（如自交），剔除而非修复。
 
-    真实 EuroCrops 数据实测 350 块中 2 块自交（nl_field_22 / nl_field_32，
-    2026-08-21 实测）。Block A 纪律禁止 make_valid——被偷偷修好的拓扑会让后续
+    真实 EuroCrops 数据实测 350 块中 2 块自交（具体 id 与隔离记录见 AUDIT_NOTE，
+    实测如此）。仓库纪律禁止 make_valid——被偷偷修好的拓扑会让后续
     所有面积指标建立在一块没人见过的多边形上；正确的处置是显式剔除并记录，
     剔除本身进入 manifest 与证据链。
     """

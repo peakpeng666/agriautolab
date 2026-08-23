@@ -6,10 +6,10 @@
 """
 
 from agriautolab.contracts.artifacts import CellsArtifact, HeadlandArtifact
-from agriautolab.coverage.stages.headland import ConstantWidthHeadland
+from agriautolab.coverage.stages import headland as _headland_stage
 
 
-class UniformHeadland:
+class ConstantWidthHeadland:
     algorithm_id = "uniform_headland"
 
     def __init__(self, width_m: float) -> None:
@@ -18,4 +18,8 @@ class UniformHeadland:
         self.width_m = width_m
 
     def run(self, cells: CellsArtifact) -> HeadlandArtifact:
-        return ConstantWidthHeadland(self.width_m).run(cells)
+        return _headland_stage.ConstantWidthHeadland(self.width_m).run(cells)
+
+
+# legacy 别名：canonical 类名见 docs/NAMING.md。
+UniformHeadland = ConstantWidthHeadland

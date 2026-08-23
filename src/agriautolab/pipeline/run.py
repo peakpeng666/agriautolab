@@ -11,19 +11,19 @@ from dataclasses import dataclass, field
 import time
 from typing import Any, Callable, Mapping
 
-from agriautolab.algorithms.decomposition.boustrophedon_cells import BoustrophedonCells
+from agriautolab.algorithms.decomposition.boustrophedon_cells import BoustrophedonDecomposition
 from agriautolab.algorithms.headland.no_headland import NoHeadland
-from agriautolab.algorithms.headland.uniform_headland import UniformHeadland
-from agriautolab.algorithms.path.dubins_transit import DubinsTransit
-from agriautolab.algorithms.path.reeds_shepp_transit import ReedsSheppTransit
-from agriautolab.algorithms.route.boustrophedon_order import BoustrophedonOrder
-from agriautolab.algorithms.route.rural_postman_greedy import RuralPostmanGreedy
-from agriautolab.algorithms.route.skip_one_order import SkipOneOrder
-from agriautolab.algorithms.swath.fixed_angle import FixedAngleSwath
-from agriautolab.algorithms.swath.longest_edge import LongestEdgeSwathDirection
-from agriautolab.algorithms.swath.min_width import MinWidthSwath
-from agriautolab.algorithms.swath.principal_axis import PrincipalAxisSwath
-from agriautolab.algorithms.swath.row_aligned import RowAlignedSwath
+from agriautolab.algorithms.headland.uniform_headland import ConstantWidthHeadland
+from agriautolab.algorithms.path.dubins_transit import DubinsPathPlanner
+from agriautolab.algorithms.path.reeds_shepp_transit import ReedsSheppPathPlanner
+from agriautolab.algorithms.route.boustrophedon_order import BoustrophedonRoutePlanner
+from agriautolab.algorithms.route.rural_postman_greedy import GreedyRuralPostmanRoutePlanner
+from agriautolab.algorithms.route.skip_one_order import SkipOneRoutePlanner
+from agriautolab.algorithms.swath.fixed_angle import FixedAngleSwathGenerator
+from agriautolab.algorithms.swath.longest_edge import LongestEdgeSwathGenerator
+from agriautolab.algorithms.swath.min_width import MinimumWidthSwathGenerator
+from agriautolab.algorithms.swath.principal_axis import PrincipalAxisSwathGenerator
+from agriautolab.algorithms.swath.row_aligned import RowAlignedSwathGenerator
 from agriautolab.contracts.enums import RunStatus
 from agriautolab.contracts.artifacts import (
     CellsArtifact, HeadlandArtifact, PathArtifact, RouteArtifact, SwathsArtifact,
@@ -33,28 +33,28 @@ from agriautolab.contracts.protocol import BenchmarkProtocol
 from agriautolab.contracts.vehicle import VehicleSpec
 from agriautolab.coverage.stages.decomposition import NoDecomposition
 from agriautolab.evidence.hashing import content_hash
-from agriautolab.metrics.path import TransitBreakdown, transit_breakdown
+from agriautolab.metrics.path import TransferBreakdown, transit_breakdown
 from agriautolab.metrics.path import headland_turn_count as headland_turn_count_metric
 from agriautolab.metrics.path import row_crossings as row_crossings_metric
 from agriautolab.pareto.front import ObjectiveVector
 from agriautolab.pipeline.config import PipelineConfig
 from agriautolab.validation.validator import PathValidator, ValidationResult
 
-_DECOMPOSITIONS = {"no_decomposition": NoDecomposition, "boustrophedon_cells": BoustrophedonCells}
-_HEADLANDS = {"no_headland": NoHeadland, "uniform_headland": UniformHeadland}
+_DECOMPOSITIONS = {"no_decomposition": NoDecomposition, "boustrophedon_cells": BoustrophedonDecomposition}
+_HEADLANDS = {"no_headland": NoHeadland, "uniform_headland": ConstantWidthHeadland}
 _SWATHS = {
-    "fixed_angle": FixedAngleSwath,
-    "principal_axis": PrincipalAxisSwath,
-    "min_width": MinWidthSwath,
-    "longest_edge": LongestEdgeSwathDirection,
-    "row_aligned": RowAlignedSwath,
+    "fixed_angle": FixedAngleSwathGenerator,
+    "principal_axis": PrincipalAxisSwathGenerator,
+    "min_width": MinimumWidthSwathGenerator,
+    "longest_edge": LongestEdgeSwathGenerator,
+    "row_aligned": RowAlignedSwathGenerator,
 }
 _ROUTES = {
-    "boustrophedon_order": BoustrophedonOrder,
-    "skip_one_order": SkipOneOrder,
-    "rural_postman_greedy": RuralPostmanGreedy,
+    "boustrophedon_order": BoustrophedonRoutePlanner,
+    "skip_one_order": SkipOneRoutePlanner,
+    "rural_postman_greedy": GreedyRuralPostmanRoutePlanner,
 }
-_PATHS = {"dubins_transit": DubinsTransit, "reeds_shepp_transit": ReedsSheppTransit}
+_PATHS = {"dubins_transit": DubinsPathPlanner, "reeds_shepp_transit": ReedsSheppPathPlanner}
 
 
 @dataclass
@@ -102,7 +102,7 @@ class PipelineResult:
     objectives: ObjectiveVector | None
     headland_width_m: float | None
     # 转移五项分解。总数查不出超额出在哪一项——这是 G-A 诊断闸要的强制分类。
-    transit: TransitBreakdown
+    transit: TransferBreakdown
     timing: PipelineTiming = PipelineTiming(0.0, 0.0, 0.0)
 
 
@@ -152,7 +152,7 @@ def _require_param(config: PipelineConfig, name: str, stage: str) -> float:
 def _center_free_polygons(cell: Any, body_width_m: float) -> tuple:
     """cell 内缩 body/2 的车体中心可行域（PolygonSpec 元组），语义同 Block A FieldGeometry.center_free。
 
-    真实地块（235 全量 v3 实测，nl_field_7）：内缩可把颈缩地块劈成 MultiPolygon——
+    真实地块实测：内缩可把颈缩地块劈成 MultiPolygon——
     两个部件都是合法扫掠域，按片返回而不是拒绝；语义同 BCD 的多部件 cell 处理。
     """
     from agriautolab.geometry.footprint import QUAD_SEGS
@@ -207,7 +207,7 @@ def run_pipeline(
         # 扫掠域取车体中心可行域（cell 内缩 body/2），不是地头：分母仍是原田
         # （resolve(problem, None) 的既定语义），这里只是让中心线不把车体带出边界——
         # 否则 no_headland 组合被 outside_area 全部拒绝，运动学内缩与地头是两回事。
-        # 颈缩地块内缩成多片：逐片展开成独立扫掠域（v3 实测 nl_field_7 两片）。
+        # 颈缩地块内缩成多片：逐片展开成独立扫掠域（实测颈缩地块两片）。
         mains = tuple(
             part
             for cell in cells.cells
@@ -241,7 +241,8 @@ def run_pipeline(
             lambda: _ROUTES[config.route]().run(swaths),
         )
 
-    sample_step = float(config.params.get("dubins_sample_step_m", 0.25))
+    # 规范参数键 path_sample_step_m；dubins_sample_step_m 为 legacy 键，两者等价。
+    sample_step = float(config.params.get("path_sample_step_m", config.params.get("dubins_sample_step_m", 0.25)))
     if config.path == "reeds_shepp_transit":
         # 允许域 = 可作业区：等长孪生词里优先选把掉头收进场内的那个（见该阶段 docstring）。
         from agriautolab.geometry.kernel import FieldGeometry

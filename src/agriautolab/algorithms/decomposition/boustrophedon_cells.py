@@ -68,7 +68,7 @@ def _connectivity_continues(current: tuple[tuple[float, float], ...], following:
     )
 
 
-class BoustrophedonCells:
+class BoustrophedonDecomposition:
     algorithm_id = "boustrophedon_cells"
 
     def run(self, problem: CoverageProblem) -> CellsArtifact:
@@ -189,3 +189,7 @@ class BoustrophedonCells:
                             specs.append(polygon_to_spec(piece, f"cell-{len(specs):04d}"))
                     assigned_parts.append(part)
         return CellsArtifact(cells=tuple(specs))
+
+
+# legacy 别名：canonical 类名见 docs/NAMING.md。
+BoustrophedonCells = BoustrophedonDecomposition

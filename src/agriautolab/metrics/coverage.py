@@ -174,9 +174,9 @@ def resolve_coverage_targets(
     if headland is None:
         main_field = original_field
     else:
-        # 申报的地头宽度必须可证伪。口径（2026-08-21 235 全量修正）：**不绕损耗环**。
+        # 申报的地头宽度必须可证伪。口径：**不绕损耗环**。
         # 旧口径 buffer(main∪ring, -W) 与 main 对账，在 UTM 大坐标真实地块上的
-        # buffer->difference->union->buffer 弦弧往返损耗实测达 rel 4.5e-04（nl_field_15、
+        # buffer->difference->union->buffer 弦弧往返损耗实测达 rel 4.5e-04（真实地块、
         # w=12、残差 4.9 m²），与 mitre 信号（rel ~3e-03）只差一个量级，噪声地板太高。
         # 新口径是两条**无往返**的断言，诚实路径残差为精确 0 或网格噪声：
         # (a) main == cell.buffer(-W)——与生成侧同一调用直接对账：错宽度（~10-50%）、

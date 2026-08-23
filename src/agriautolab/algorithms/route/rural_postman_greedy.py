@@ -38,7 +38,7 @@ def _entry_poses(swath):
     )
 
 
-class RuralPostmanGreedy:
+class GreedyRuralPostmanRoutePlanner:
     algorithm_id = "rural_postman_greedy"
 
     def run(self, artifact: SwathsArtifact, *, min_turning_radius_m: float) -> RouteArtifact:
@@ -66,3 +66,7 @@ class RuralPostmanGreedy:
             remaining.remove(swath_id)
             current_pose = exit_pose
         return RouteArtifact(traversals=tuple(traversals), swaths=swaths)
+
+
+# legacy 别名：canonical 类名见 docs/NAMING.md。
+RuralPostmanGreedy = GreedyRuralPostmanRoutePlanner

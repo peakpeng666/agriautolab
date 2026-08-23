@@ -14,9 +14,9 @@ class CellsArtifact(BaseModel):
 class HeadlandCell(BaseModel):
     """一个 cell 的地头切分结果。两个域都是**多部件**的。
 
-    为什么是元组而不是单个 PolygonSpec（2026-08-21 实测）：对账集改分层抽样后，
+    为什么是元组而不是单个 PolygonSpec：真实含障碍地块上，
     14 块里 6 块的地头环带是 MultiPolygon（外圈 + 每个障碍周围一圈），
-    1 块（ee_field_35）主田被障碍夹断成两片。单 Polygon 契约让这些地块直接抛错，
+    部分地块主田被障碍夹断成两片。单 Polygon 契约让这些地块直接抛错，
     而关于障碍的 RMA 裁决恰恰只能在这些地块上验。
     """
 

@@ -361,7 +361,7 @@ class CorpusRunner:
                                     RunStatus.NOT_APPLICABLE, error, reference_columns, features,
                                 )
                             except ValueError as error:
-                                # 真实地块实测（2026-08-21 探针）：3 块小 EE 地在 8/12 米地头下
+                                # 真实地块实测：小地块在 8/12 米地头下
                                 # main_field 塌缩（coverage/stages/headland.py 的固定消息），
                                 # 30/390 全 crash。算法在该实例上给不出解，与机具不匹配
                                 # 同属 NOT_APPLICABLE——crash 要归零，不是可接受状态。

@@ -13,7 +13,7 @@ from agriautolab.contracts.geometry import PolygonSpec
 from agriautolab.contracts.problem import CoverageProblem
 
 
-class RowAlignedSwath:
+class RowAlignedSwathGenerator:
     algorithm_id = "row_aligned"
 
     def run(self, mains: tuple[PolygonSpec, ...], *, working_width_m: float, problem: CoverageProblem) -> SwathsArtifact:
@@ -26,3 +26,7 @@ class RowAlignedSwath:
             math.sin(row_structure.direction_rad),
             working_width_m=working_width_m,
         )
+
+
+# legacy 别名：canonical 类名见 docs/NAMING.md。
+RowAlignedSwath = RowAlignedSwathGenerator

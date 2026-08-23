@@ -29,3 +29,9 @@ class MetricSpec:
     aggregation_method: str = "arithmetic_mean"
     description: str = ""
     notes: str = ""
+    # 规范名（API/论文层）；None 时规范名即 metric_id。证据身份永远是 metric_id。
+    canonical_name: str | None = None
+
+    @property
+    def canonical(self) -> str:
+        return self.canonical_name or self.metric_id

@@ -171,10 +171,10 @@ def headland_turn_count(path: PathArtifact) -> int:
 
 
 @dataclass(frozen=True)
-class TransitBreakdown:
+class TransferBreakdown:
     """转移长度的五项完备分解，专为定位「转移超额到底出在哪一项」而设。
 
-    存在的理由（2026-08-21 实测）：12 块 F2B 地上 swath_length_sum 只差 +0.169%，
+    存在的理由：对账集 12 块地上 swath_length_sum 只差 +0.169%，
     path_length 差 -5.30%，而 transit 差 -38.1% —— 残差全在转移里。
     只有总数查不出 38% 从哪来：得知道它是首尾腿、掉头，还是跨 cell 转场。
 
@@ -209,7 +209,7 @@ def transit_breakdown(
     path: PathArtifact,
     *,
     cell_of_work_index: tuple[int, ...] | None = None,
-) -> TransitBreakdown:
+) -> TransferBreakdown:
     """把全部非作业段按位置归入五项之一，残余必须为 0。
 
     cell_of_work_index[k] 给出第 k 个作业段所属的 cell 序号；传 None 表示单 cell
@@ -269,7 +269,7 @@ def transit_breakdown(
             f"转移分解残余 other_m={other:.9f} m（总转移 {total_transit:.6f} m）："
             "有段落既不属于首尾腿也不属于段间转移，分类不完备"
         )
-    return TransitBreakdown(
+    return TransferBreakdown(
         entry_leg_m=entry,
         turn_total_m=turn_total,
         turn_count=turn_count,
@@ -294,3 +294,7 @@ def row_crossings(path: PathArtifact, row_structure: RowStructure | None) -> flo
         points = segment.line.points
         total += row_structure.crossings_between(points[0].as_tuple(), points[-1].as_tuple())
     return total
+
+
+# legacy 别名：transit 一词与路径阶段语义混叠，规范名 TransferBreakdown。
+TransitBreakdown = TransferBreakdown

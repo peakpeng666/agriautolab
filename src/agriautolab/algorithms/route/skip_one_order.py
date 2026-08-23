@@ -8,7 +8,7 @@ from agriautolab.contracts.artifacts import RouteArtifact, SwathsArtifact, Swath
 from agriautolab.contracts.enums import SwathDirection
 
 
-class SkipOneOrder:
+class SkipOneRoutePlanner:
     algorithm_id = "skip_one_order"
 
     def run(self, artifact: SwathsArtifact) -> RouteArtifact:
@@ -28,3 +28,7 @@ class SkipOneOrder:
                     )
                 )
         return RouteArtifact(traversals=tuple(traversals), swaths=swaths)
+
+
+# legacy 别名：canonical 类名见 docs/NAMING.md。
+SkipOneOrder = SkipOneRoutePlanner

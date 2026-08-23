@@ -42,9 +42,13 @@ def swath_count_at_direction(polygon, ux: float, uy: float, working_width_m: flo
     return max(1, math.ceil(span / working_width_m))
 
 
-class MinWidthSwath:
+class MinimumWidthSwathGenerator:
     algorithm_id = "min_width"
 
     def run(self, mains: tuple[PolygonSpec, ...], *, working_width_m: float, problem: CoverageProblem) -> SwathsArtifact:
         ux, uy = min_width_direction(polygon_from_spec(mains[0]))
         return swaths_along_direction(mains, ux, uy, working_width_m=working_width_m)
+
+
+# legacy 别名：canonical 类名见 docs/NAMING.md。
+MinWidthSwath = MinimumWidthSwathGenerator

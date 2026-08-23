@@ -22,9 +22,13 @@ def longest_edge_direction(polygon) -> tuple[float, float]:
     return canonical_direction(best[1], best[2])
 
 
-class LongestEdgeSwathDirection:
+class LongestEdgeSwathGenerator:
     algorithm_id = "longest_edge"
 
     def run(self, mains: tuple[PolygonSpec, ...], *, working_width_m: float, problem: CoverageProblem) -> SwathsArtifact:
         ux, uy = longest_edge_direction(polygon_from_spec(mains[0]))
         return swaths_along_direction(mains, ux, uy, working_width_m=working_width_m)
+
+
+# legacy 别名：canonical 类名见 docs/NAMING.md。
+LongestEdgeSwathDirection = LongestEdgeSwathGenerator

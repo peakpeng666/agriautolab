@@ -14,14 +14,46 @@ from agriautolab.evidence.hashing import content_hash
 ConfigId = str
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, init=False)
 class ObjectiveVector:
-    path_length: float          # 越小越好
-    headland_turns: float       # 越小越好
-    row_crossings: float        # 越小越好
+    """三维主目标向量，全部最小化。字段用规范名（docs/NAMING.md）。
+
+    证据层（parquet 列名、wire ID）仍是 headland_turns / row_crossings；
+    这里永久接受 legacy 关键字并提供 legacy 属性，旧构造点零改动。
+    位置顺序三时代一致：path_length, 转弯维, 穿行维。
+    """
+
+    path_length: float              # m，越小越好
+    headland_turn_count: float      # count，越小越好
+    row_crossing_equivalent: float  # 1（横向位移/行距），越小越好
+
+    def __init__(self, path_length=None, headland_turn_count=None, row_crossing_equivalent=None, *,
+                 headland_turns=None, row_crossings=None):
+        if headland_turns is not None:
+            headland_turn_count = headland_turns
+        if row_crossings is not None:
+            row_crossing_equivalent = row_crossings
+        missing = [name for name, value in (
+            ("path_length", path_length),
+            ("headland_turn_count", headland_turn_count),
+            ("row_crossing_equivalent", row_crossing_equivalent),
+        ) if value is None]
+        if missing:
+            raise TypeError(f"ObjectiveVector 缺少目标维: {missing}（canonical 或 legacy 关键字至少给一个）")
+        object.__setattr__(self, "path_length", float(path_length))
+        object.__setattr__(self, "headland_turn_count", float(headland_turn_count))
+        object.__setattr__(self, "row_crossing_equivalent", float(row_crossing_equivalent))
+
+    @property
+    def headland_turns(self) -> float:
+        return self.headland_turn_count
+
+    @property
+    def row_crossings(self) -> float:
+        return self.row_crossing_equivalent
 
     def as_tuple(self) -> tuple[float, float, float]:
-        return (self.path_length, self.headland_turns, self.row_crossings)
+        return (self.path_length, self.headland_turn_count, self.row_crossing_equivalent)
 
 
 def dominates(left: ObjectiveVector, right: ObjectiveVector, *, rtol: float = 1e-12) -> bool:

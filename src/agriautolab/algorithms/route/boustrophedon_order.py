@@ -14,7 +14,7 @@ def _normal_axis(swaths) -> tuple[float, float]:
     return -dy / norm, dx / norm
 
 
-class BoustrophedonOrder:
+class BoustrophedonRoutePlanner:
     algorithm_id = "boustrophedon_order"
 
     def run(self, artifact: SwathsArtifact) -> RouteArtifact:
@@ -36,3 +36,7 @@ class BoustrophedonOrder:
             for index, swath in enumerate(swaths)
         )
         return RouteArtifact(traversals=traversals, swaths=swaths)
+
+
+# legacy 别名：canonical 类名见 docs/NAMING.md。
+BoustrophedonOrder = BoustrophedonRoutePlanner
