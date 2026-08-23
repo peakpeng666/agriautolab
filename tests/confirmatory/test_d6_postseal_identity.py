@@ -62,7 +62,8 @@ def test_d6_result_is_bound_to_every_predecessor_input_protocol_code_and_pratt_r
     # D6 is the exact sixth append-only entry; deletion, insertion, reordering, or
     # payload mutation must fail the generic chain recomputation before identities.
     verify_artifact_chain(entries)
-    assert len(entries) == 6
+    # D7 等后续合法封存可追加；前六条语义作为 D6 固定前缀钉住
+    assert len(entries) >= 6
     assert tuple(entry["index"] for entry in entries) == tuple(range(6))
     d1, d2, d3, d4, d5, d6 = entries
     actual_artifacts = (

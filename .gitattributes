@@ -7,3 +7,6 @@
 *.png binary
 *.zip binary
 *.parquet binary
+
+# 示例协议文件是数据机原件的字节拷贝，身份哈希链要求逐字节一致，禁止换行归一化
+examples/corpus/*.json -text
