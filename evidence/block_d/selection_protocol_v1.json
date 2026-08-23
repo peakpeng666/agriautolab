@@ -54,11 +54,12 @@
       "n_jobs": 1,
       "random_state": 20260822
     },
+    "sample_weight": "equal_per_analyzable_instance",
     "scikit_learn_version": "1.7.2",
     "target": "22-vector of deterministic regrets"
   },
   "schema_version": 1,
   "seed": 20260822,
-  "spec_hash": "38620ab561b4e501a8d6e71a6da6b0df10246076a922ac7fdec69133eeec3ee1",
+  "spec_hash": "be5d2e6106529fc751fecfe047b6da079c5534073d99249366f36a657e838e8c",
   "study_id": "AGRIPLAN-PARETO-001"
 }
