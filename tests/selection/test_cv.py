@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -119,6 +120,20 @@ def test_committed_v7_cv_assignment_exactly_regenerates() -> None:
         root / "evidence" / "v7" / "holdout_seal.json",
     )
     assert regenerated == expected
+
+
+def test_committed_block_d_ledger_genesis_binds_cv_file() -> None:
+    root = Path(__file__).resolve().parents[2]
+    assignment_path = root / "evidence" / "v7" / "cv_assignment.json"
+    ledger_path = root / "evidence" / "block_d" / "ledger.jsonl"
+    evidence = CvAssignmentEvidence.model_validate_json(assignment_path.read_text(encoding="utf-8"))
+    entries = tuple(json.loads(line) for line in ledger_path.read_text(encoding="utf-8").splitlines())
+
+    verify_artifact_chain(entries)
+    assert entries[0]["payload"]["event"] == "cv_assignment_sealed"
+    assert entries[0]["payload"]["assignment_hash"] == evidence.assignment_hash
+    assert entries[0]["payload"]["spec_hash"] == evidence.spec_hash
+    assert entries[0]["payload"]["cv_assignment_file_sha256"] == hashlib.sha256(assignment_path.read_bytes()).hexdigest()
 
 
 def test_d1_frozen_constants_match_preregistration() -> None:
