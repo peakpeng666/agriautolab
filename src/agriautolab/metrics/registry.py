@@ -112,7 +112,7 @@ def _install_defaults() -> None:
                    notes="与禁用表里的 turn_count 是不同的量：turn_count 数折线顶点、对分段粒度敏感；"
                          "本指标只数被作业段夹住的非作业游程，与转移段被采样成几条折线无关。"
                          "禁用表未因此放宽，两者语义并存。"
-                         "它是 Block B 主目标向量的第二维，但角色保持 DIAGNOSTIC——"
+                         "它是主目标向量的第二维，但角色保持 DIAGNOSTIC——"
                          "主向量的成员资格由 pareto.ObjectiveVector 声明，不占用注册表 PRIMARY 语义"),
         MetricSpec("row_crossings", "count", OptimizationDirection.MINIMIZE, ComparabilityScope.IMPL_INVARIANT,
                    ScaleBehavior.INVARIANT, True, MetricRole.DIAGNOSTIC, coverage, CoverageStage.PATH,
@@ -121,7 +121,7 @@ def _install_defaults() -> None:
                    notes="无行结构（row_structure=None）时恒为 0；作业段按直线端点计为精确值，"
                          "弧形转移段按弦投影计，是该口径的下界。行结构是目标空间里唯一与长度族"
                          "正交的维度来源（实测 crossings 与 length 秩相关 -0.098）。"
-                         "它是 Block B 主目标向量的第三维，角色同 headland_turn_count 保持 DIAGNOSTIC"),
+                         "它是主目标向量的第三维，角色同 headland_turn_count 保持 DIAGNOSTIC"),
         MetricSpec("swath_count", "count", OptimizationDirection.MINIMIZE, ComparabilityScope.IMPL_INVARIANT,
                    ScaleBehavior.INVARIANT, True, MetricRole.DIAGNOSTIC, coverage, CoverageStage.SWATH,
                    description="输出中作业 swath 的数量"),
@@ -139,7 +139,7 @@ def _install_defaults() -> None:
         MetricSpec("collision_checks", "count", OptimizationDirection.MINIMIZE, ComparabilityScope.IMPL_BOUND,
                    ScaleBehavior.UNDEFINED, False, MetricRole.DIAGNOSTIC, common, CoverageStage.PATH,
                    description="实现执行的碰撞检测次数",
-                   notes="由未来 benchmark harness 计数；Block A 禁止 benchmark runner，因此这里只声明契约"),
+                   notes="由未来 benchmark harness 计数；契约层禁止 benchmark runner，因此这里只声明契约"),
         MetricSpec("objective_evaluations", "count", OptimizationDirection.MINIMIZE, ComparabilityScope.IMPL_BOUND,
                    ScaleBehavior.UNDEFINED, False, MetricRole.DIAGNOSTIC, common, None,
                    description="搜索过程中目标函数求值次数",

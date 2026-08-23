@@ -144,5 +144,5 @@ class GeometryFrame(BaseModel):
     @classmethod
     def require_meters(cls, unit: str) -> str:
         if unit != "m":
-            raise ValueError("Block A 只接受米制局部或投影坐标")
+            raise ValueError("本契约只接受米制局部或投影坐标")
         return unit

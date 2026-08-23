@@ -29,7 +29,7 @@ class CoveragePipeline:
             config.path.algorithm_id,
         }
         if actual != expected:
-            raise ValueError("Block A 只允许第一条竖切的五个基线算法")
+            raise ValueError("阶段基线只允许第一条竖切的五个算法")
 
     def run(self, problem: CoverageProblem, robot: VehicleSpec) -> PathArtifact:
         cells = NoDecomposition().run(problem)

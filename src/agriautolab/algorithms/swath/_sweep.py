@@ -3,7 +3,7 @@
 五个 swath 算法只在「方向怎么选」上不同，扫掠本身必须同一份实现——
 两份扫掠代码会像两份地头代码一样，在某个非凸地块上分家。
 中心线取与主田的交线；条数 = ceil(法向跨度 / 幅宽)，首条贴边、末条回收，
-这些都是 Block A MBRDirectionSwath 已被 309 条测试约束住的语义。
+这些都是 MBRDirectionSwath 基线被既有测试约束住的语义。
 
 入口收主田多边形序列（PolygonSpec）而不是 HeadlandArtifact：
 no_headland 管线没有地头产物，恒等地头的规范表示就是「主田 = 原 cell」

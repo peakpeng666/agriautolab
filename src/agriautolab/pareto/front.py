@@ -1,4 +1,4 @@
-"""Pareto 前沿与目标向量：Block B 的主指标向量是三维，全部最小化。
+"""Pareto 前沿与目标向量：主指标向量是三维，全部最小化。
 
 path_length / headland_turns / row_crossings。transit_length 因与 path_length
 秩相关 rho=1.000（240 实例实测）降为 DIAGNOSTIC，不进向量（见注册表 notes）。

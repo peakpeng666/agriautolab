@@ -1,6 +1,6 @@
-"""均匀地头：委托 Block A 的 ConstantWidthHeadland 做内缩。
+"""均匀地头：委托 coverage 阶段基线的 ConstantWidthHeadland 做内缩。
 
-全仓库的减地头实现必须只有一份（Block A G-1.4 删掉第二套 parallel path 的教训：
+全仓库的减地头实现必须只有一份（曾删掉第二套 parallel path 实现的教训：
 两份内偏置实现会在非凸地块的反曲顶点上分家，round/mitre 相差 0.4%~0.5%）。
 分母一律走 resolve_coverage_targets，算法层不再自行减地头。
 """

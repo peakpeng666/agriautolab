@@ -9,7 +9,7 @@ class NoHeadland:
     def run(self, problem: CoverageProblem):
         """返回 None 是语义，不是缺省值。
 
-        Block A 的 resolve_coverage_targets 把 headland=None 定义为「本次运行
+        契约层的 resolve_coverage_targets 把 headland=None 定义为「本次运行
         没跑地头，主田即原田」；而空环带在 PolygonSpec 里不可表示
         （validate_geometry 拒绝空几何），所以「恒等地头」的唯一规范表示就是 None。
         申报宽度与恒等产物也不可能在逐 cell 重算对账下同时成立——

@@ -1,4 +1,4 @@
-"""把 RowScenario 解析成 Block B 唯一的 RowStructure 契约。"""
+"""把 RowScenario 解析成唯一的 RowStructure 契约。"""
 
 from __future__ import annotations
 

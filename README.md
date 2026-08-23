@@ -40,9 +40,12 @@ pytest -q          # 544 passed / 30 skipped
     │   ├── contracts/             // 契约层：问题、几何、机具、协议（依赖最底层）
     │   ├── geometry/              // 几何内核：robust_union、校验、离散化
     │   ├── kinematics/            // Dubins / Reeds-Shepp 48 词运动学
+    │   ├── agent/                 // LLM 演化循环（提案-闸门-账本，mock 后端）
     │   ├── algorithms/            // 五阶段算法实现（canonical 类名 + legacy 别名）
-    │   ├── coverage/              // Block A 冻结的阶段基线（兼容层）
+    │   ├── coverage/              // 冻结的阶段基线（兼容层，实现唯一来源）
+    │   ├── datasets/              // Fields2Benchmark 接入：许可过滤、CRS 守卫、隔离
     │   ├── pipeline/              // 五阶段组合与执行入口
+    │   ├── validation/            // 独立路径校验器（几何/运动学/行穿越）
     │   ├── metrics/               // 指标注册表：不可比指标进门即拒
     │   ├── features/              // 10 个实例特征 + 规范名词汇表
     │   ├── pareto/                // 前沿、超体积、偏好标量化
