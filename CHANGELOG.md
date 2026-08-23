@@ -13,6 +13,11 @@
 - D0.4 执行规范封口（修正案 05，最终修正案）：零权重契约、
   PREFERENCE_GRID_V1 坐标冻结（22 点+哈希）、H3 非 oracle 精确期望基线
   与田级聚合、不可行罚则、H2 常数响应记 0；examples/corpus/ 补齐
+- D1 field-grouped CV 身份冻结：235-field universe − 70-field holdout = 165
+  training fields，seed 20260822、10 折（17×5 + 16×5）；完整折表、assignment/spec
+  hash 与 Block D 分析链 genesis 落盘。首轮干净 runner 暴露
+  `effective_pool_size_by_instance` 不能代表全集（12 个 holdout field 缺席），
+  已改用结果无关的 manifest `licenses` 表并加重放回归测试
 - 工程成熟化：GitHub Actions CI（ruff + 双 Python 矩阵 pytest）、ruff 接入
   （冻结件排除）、README 重写（项目级 + 目录树 + 徽章）、CONTRIBUTING、
   PR/Issue 模板、CHANGELOG、版本 0.4.0
