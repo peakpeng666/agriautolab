@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import asdict
 import importlib.metadata
 import json
 from pathlib import Path
@@ -56,14 +57,24 @@ def main() -> None:
         cv_spec_hash=cv["spec_hash"],
         pool_hash=actual_pool_hash,
     )
-    fold_summaries = [fold.summary() for fold in folds]
+    fold_documents = [
+        {
+            "summary": fold.summary(),
+            "fields": [asdict(field) for field in fold.fields],
+        }
+        for fold in folds
+    ]
     result = {
         "study_id": "AGRIPLAN-PARETO-001",
         "stage": "D3-D4-training-cv",
         "protocol_hash": expected_protocol_hash,
         "cv_spec_hash": cv["spec_hash"],
         "pool_hash": actual_pool_hash,
-        "sklearn_version": importlib.metadata.version("scikit-learn"),
+        "environment": {
+            "scikit_learn": importlib.metadata.version("scikit-learn"),
+            "numpy": importlib.metadata.version("numpy"),
+            "pyarrow": importlib.metadata.version("pyarrow"),
+        },
         "n_training_fields": len(training_fields),
         "n_instances": len(instances),
         "n_zero_ok_instances": sum(not instance.analyzable for instance in instances),
@@ -76,7 +87,7 @@ def main() -> None:
             "regret oracle is undefined when O_x is empty; these instances remain counted and are not silently excluded. "
             "This training-side CV is not the confirmatory H3 test."
         ),
-        "folds": fold_summaries,
+        "folds": fold_documents,
     }
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -87,9 +98,13 @@ def main() -> None:
         cv_spec_hash=cv["spec_hash"],
         pool_hash=actual_pool_hash,
     ).fit(instances)
-    final_model.save(args.output_dir / "recommender.joblib", args.output_dir / "recommender_metadata.json")
+    model_path = args.output_dir / "recommender.joblib"
+    metadata_path = args.output_dir / "recommender_metadata.json"
+    final_model.save(model_path, metadata_path)
     entry = seal_selection_cv_result(
         result_path=result_path,
+        model_path=model_path,
+        metadata_path=metadata_path,
         ledger_path=args.ledger,
         protocol_hash=expected_protocol_hash,
     )
