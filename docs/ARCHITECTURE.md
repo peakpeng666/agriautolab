@@ -35,7 +35,7 @@ Benchmark 不得 import Terminal；Algorithm 不得知道 selector、LLM、排�
 - `pareto/`：三维目标向量（path_length/headland_turn_count/row_crossings）、Pareto 前沿
   （pool_hash 必须随前沿量记录）、精确 3D 超体积（参考点由协议必填声明、解析上界导出、
   越界显式标记不静默截断）、加权切比雪夫标量化（可选中非凸前沿点，加权和不能）
-- `features/`：10 个农业几何特征 + 逐特征提取耗时 + 不变性契约（200 组随机刚体变换测试）
+- `features/`：12 个农业几何特征 + 逐特征提取耗时 + 不变性契约（200 组随机刚体变换测试）
 - `agent/`：沙箱（AST 静态扫描 + 受限 exec，纪律不是安全边界）、四道闸
   （契约/校验/确定性/不变性）、对抗式复核（默认 refuted，多数否决）、
   演化循环（适应度 = 超体积增量，EoH-S CPI 的多目标对应物）、哈希链演化账本（淘汰也记账）

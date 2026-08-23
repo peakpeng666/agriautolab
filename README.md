@@ -47,7 +47,7 @@ pytest -q          # 544 passed / 30 skipped
     │   ├── pipeline/              // 五阶段组合与执行入口
     │   ├── validation/            // 独立路径校验器（几何/运动学/行穿越）
     │   ├── metrics/               // 指标注册表：不可比指标进门即拒
-    │   ├── features/              // 10 个实例特征 + 规范名词汇表
+    │   ├── features/              // 12 个实例特征 + 规范名词汇表
     │   ├── pareto/                // 前沿、超体积、偏好标量化
     │   ├── corpus/                // 语料运行器（断点续跑、清单、账本）
     │   ├── benchmark/             // corpus 的规范入口（薄转发）
