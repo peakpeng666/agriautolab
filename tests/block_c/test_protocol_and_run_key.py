@@ -1,5 +1,5 @@
 from agriautolab.corpus.protocol import CorpusProtocol
-from agriautolab.corpus.runner import CodeVersion, discover_code_version, run_key
+from agriautolab.corpus.runner import discover_code_version, run_key
 
 
 def test_row_grid_is_part_of_protocol_hash(c_benchmark):

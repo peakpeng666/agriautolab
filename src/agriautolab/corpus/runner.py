@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable, Sequence
 
-import shapely
 from shapely.geometry import Polygon
 
 from agriautolab.contracts.enums import RunStatus
@@ -156,7 +155,6 @@ def _append_checkpoint(path: Path, row: dict[str, object]) -> None:
 def _load_checkpoint(path: Path) -> dict[str, dict[str, object]]:
     """读断点：优先明文，其次跑完压缩的 .gz（v4 实测明文 2.0 GB = parquet 的 6 倍）。"""
     import gzip as _gzip
-    source = path
     if not path.exists():
         gz = path.with_suffix(path.suffix + ".gz")
         if gz.exists():

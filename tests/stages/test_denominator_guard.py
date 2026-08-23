@@ -24,7 +24,6 @@ from agriautolab.geometry.validate import (
     line_from_spec,
     polygon_from_spec,
     polygon_parts_to_specs,
-    polygon_to_spec,
 )
 from agriautolab.metrics.coverage import (
     _RESOLVED, CoverageTargets, coverage_stats, resolve_coverage_targets,

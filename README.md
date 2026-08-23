@@ -1,80 +1,89 @@
-# AgriAutoLab Block A
+# AgriAutoLab
 
-AgriAutoLab Block A 是面向农业覆盖路径规划（Coverage Path Planning, CPP）的可复现实验基准内核。
-它先把问题契约、几何域、指标、五阶段基线、独立校验与证据链做实，再允许上层做 benchmark、推荐或自动算法设计。
-本包只做 Python/Shapely 的二维几何与算法仿真，不模拟动力学或硬件。
+[![CI](https://github.com/peakpeng666/agriautolab/actions/workflows/ci.yml/badge.svg)](https://github.com/peakpeng666/agriautolab/actions/workflows/ci.yml)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
+[![tests](https://img.shields.io/badge/tests-544%20passed-brightgreen)](tests/)
 
-## 分层与依赖方向
+农业覆盖路径规划（Coverage Path Planning）的**研究级基准与分析层**：
+把 13 个可组合规划配置在 235 块真实农田上全部跑通（61,100 次运行、
+零崩溃、零未分类失败），量化「路程 / 掉头 / 横穿作物行」三目标之间的
+真实权衡，并训练看一眼田块形状就能推荐配置的选择器。
 
-依赖只能向下：`contracts → geometry → kinematics/algorithms → metrics/coverage/pareto/features/pipeline → validation/evidence/agent`。
-`algorithms` 只保存能力卡与 `(stage, ProblemKind)` 分区，不保存“谁应该赢”的知识。
-Benchmark 不得 import Terminal；Algorithm 不得知道 selector、LLM、排名或最终推荐结果。
+三层冻结（L1 域核心 / L2 算法层 / L3 基准层）已交付，分层与依赖方向见
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)；L4 选择层（Block D）待开工。
+三目标向量的第三维 `row_crossings`（横穿作物行）是本项目首倡的农业专属
+目标——拿掉它，目标空间会塌成一根轴。
 
-## 本轮已实现（Block A）
+## 快速开始
 
-- TaskType × ScenarioDynamics × ProblemKind 防火墙与米制 CRS 守卫
-- 严格几何校验、规范 WKB 哈希、`robust_union`、统一 `QUAD_SEGS=16`
-- flat-cap 机具扫掠；覆盖率分母由 `resolve_coverage_targets` 一处锁定：构造令牌、语义不变量、分母 provenance 三层防自造，地头宽度申报逐 cell 重算可证伪
-- `PolygonSpec.from_wkt` / `to_wkt`：对接 Fields2Benchmark 与 Fields2Cover 的 WKT 交换格式
-- 路径长度、总航向变化、AOL、tortuosity、cusp、按弧长密化 clearance
-- PRIMARY：`overlap_ratio`、`nonwork_normalized`
-- HARD_CONSTRAINT：`coverage_ratio_field`、collision、curvature、outside area
-- DIAGNOSTIC 且 PROTOCOL_BOUND：`coverage_ratio_main`（分母随 headland 配置变化，禁止用作门槛）
-- NoDecomposition → ConstantWidthHeadland → MBRDirectionSwath → BoustrophedonRoute → DubinsPath
-- Dubins 六型 LSL/RSR/LSR/RSL/RLR/LRL 的前进最短路
-- 独立路径校验器、算法卡注册表、内容/源码/环境哈希与哈希链账本
-
-## Block B 增量（偏好条件下的 Pareto 推荐基建）
-
-- `RowStructure` 契约：穿行数与各向异性代价全部解析可算（`crossings_between` 端点投影 / 行距）
-- 五阶段可组合算法池（12 个）：BCD 分解（连通性合并）、恒等/均匀地头、五种 swath
-  （fixed_angle/principal_axis/min_width/longest_edge/row_aligned）、三种 route
-  （牛耕/隔行/贪心 Rural-Postman——按弧路径而非 TSP 建模）、Dubins 转移
-- `kinematics/dubins.py`：六字闭式解 + 5000 组正演闭合（LRL 陷阱按几何推导写并在 docstring 留案）
-- `pipeline/`：组合体执行 + 阶段产物按内容哈希记忆化；不可行组合按 RunStatus 记录，不伪造目标向量
-- `pareto/`：三维目标向量（path_length/headland_turn_count/row_crossings）、Pareto 前沿
-  （pool_hash 必须随前沿量记录）、精确 3D 超体积（参考点由协议必填声明、解析上界导出、
-  越界显式标记不静默截断）、加权切比雪夫标量化（可选中非凸前沿点，加权和不能）
-- `features/`：10 个农业几何特征 + 逐特征提取耗时 + 不变性契约（200 组随机刚体变换测试）
-- `agent/`：沙箱（AST 静态扫描 + 受限 exec，纪律不是安全边界）、四道闸
-  （契约/校验/确定性/不变性）、对抗式复核（默认 refuted，多数否决）、
-  演化循环（适应度 = 超体积增量，EoH-S CPI 的多目标对应物）、哈希链演化账本（淘汰也记账）
-- `prereg/AGRIPLAN-PARETO-001.yaml` + 字节级封存脚本 + `HoldoutVault`（纪律不是安全）
-- 指标新增：`transit_length`（与 path_length ρ=1.000，DIAGNOSTIC 不进主向量）、
-  `headland_turn_count`（与禁用的 turn_count 语义不同，notes 写明）、`row_crossings`
-
-## 明确未实现
-
-- benchmark runner、selector、agent、LLM/API、MCP、Web 或终端交互层
-- Reeds-Shepp、动态重规划、真实车辆动力学、滑移、能耗、电池、质量和摩擦
-- Boustrophedon 等分解算法、多个 headland/swath/route/path 候选算法
-- Fields2Benchmark/Fields2Cover 外部基线适配器与论文级批量实验
-- 非单 Polygon 的 headland 基线输出；复杂拓扑应在后续阶段显式扩展契约
-
-## 安装与测试
+一键环境（WSL2 Ubuntu 22.04，含 Fields2Cover 编译，幂等可重跑）：
 
 ```bash
-python -m pip install -e ".[dev]"
-pytest -q
+git clone https://github.com/peakpeng666/agriautolab.git
+bash agriautolab/scripts/install/setup_wsl.sh
 ```
 
-## 工程纪律
+只跑测试（任意 Linux/Windows，Python ≥3.10，无需 F2C）：
 
-1. 指标必须声明可比性；通不过由 `MetricSpec` 驱动的不变性测试，不得进入主排名。
-2. 规划器自述一律不采信；可行性和指标由独立校验器从几何重新计算。
-3. 失败是数据；失败、超时、拒绝必须保留为 `RunStatus` 与结构化失败原因，不能伪装成零长度。
-4. 几何并集必须走 `robust_union`，不得在业务代码绕过自检。
-5. 覆盖率分母由 `BenchmarkProtocol.coverage_target` 指定并进入 `spec_hash()`；硬门槛恒用对原田的覆盖率。
+```bash
+pip install -e .[dev] "shapely==2.1.2"
+pytest -q          # 544 passed / 30 skipped
+```
 
-## 异议
+净室安装记录与九项自校验见 [docs/INSTALL_TRANSCRIPT.md](docs/INSTALL_TRANSCRIPT.md)。
 
-- `robust_union` 的面积区间自检能抓“整块丢失导致面积越下界”的故障，但对高度重叠几何并非完备证明；后续若把它作为论文核心证据，应增加基于分块覆盖或高精度参考的独立交叉校验。代码仍严格按本轮指定的两层策略实现。
-- 规范 WKB 哈希忠实区分浮点 epsilon，但由几何运算新生成的顶点仍可能受 GEOS 版本影响；因此证据链同时记录环境指纹，跨 GEOS 版本不应把结果哈希相同当作默认前提。
+## 文件目录结构说明
 
+```
+└── agriautolab
+    ├── src/agriautolab            // 主包
+    │   ├── contracts/             // 契约层：问题、几何、机具、协议（依赖最底层）
+    │   ├── geometry/              // 几何内核：robust_union、校验、离散化
+    │   ├── kinematics/            // Dubins / Reeds-Shepp 48 词运动学
+    │   ├── algorithms/            // 五阶段算法实现（canonical 类名 + legacy 别名）
+    │   ├── coverage/              // Block A 冻结的阶段基线（兼容层）
+    │   ├── pipeline/              // 五阶段组合与执行入口
+    │   ├── metrics/               // 指标注册表：不可比指标进门即拒
+    │   ├── features/              // 10 个实例特征 + 规范名词汇表
+    │   ├── pareto/                // 前沿、超体积、偏好标量化
+    │   ├── corpus/                // 语料运行器（断点续跑、清单、账本）
+    │   ├── benchmark/             // corpus 的规范入口（薄转发）
+    │   ├── cross_validation/      // F2C 数值对账（f2c.py 字节冻结）
+    │   ├── reconciliation/        // cross_validation 的规范名
+    │   ├── aslib/                 // ASlib 格式导出（每目标一个 scenario）
+    │   └── evidence/              // 内容哈希、哈希链账本、留出集封存
+    ├── configs/corpus_13.json     // 13 配置池（哈希钉死 502b1e90…）
+    ├── prereg/                    // 预注册（sha256 8d1326de… 永不回改）+ 修正案 01–03
+    ├── evidence/                  // 对账金标、环境指纹、v7 溯源件（manifest/账本校验）
+    ├── docs/                      // 设计文档、NAMING.md、迭代报告、安装记录
+    ├── scripts/                   // 一键安装五件套、语料运行、交叉表分析
+    ├── tests/                     // 544 项：解析真值、不变量、确定性、回归
+    └── AUDIT_NOTE.md              // 全部迭代与整改的完整留痕（导师可查）
+```
 
-## Benchmark design notes
+## 核心数字（v7 终语料，提交 ed1bccb）
 
-- Vehicle 表示作业车辆约束，不表示动力学机器人。
-- Validator 独立重算几何指标，不采信规划器自报结果。
-- Artifact 应逐步携带 provenance，用于未来算法库检索和大模型推荐的数据基础。
-- 当前 Block A 聚焦二维农业 CPP，不扩展到 ROS、动力学或传感器仿真。
+| 量 | 值 |
+|---|---|
+| 真实地块 | 235（EE+NL 自由许可；350 输入过滤而来） |
+| 运行 | 61,100 = 235 田 × 5 行角 × 2 行距 × 2 机具 × 13 配置 |
+| ok / 不适用 / 出界 / 碰撞 | 31,168 / 10,040 / 12,718 / 7,174 |
+| 兜底桶 other / 崩溃 crash | **0 / 0**（分类完备性验收） |
+| 有效池 | 中位 10/13，最大 12（双机具解锁 RS） |
+| Pareto 前沿 | 中位 3.0（典型田上有三种合理答案） |
+
+溯源件（含 ledger 哈希链 61,101 条逐条复算验证）在 [evidence/v7/](evidence/v7/)。
+
+## 研究纪律
+
+预注册先封存后看数（H1 权衡存在 / H2 权衡由田形决定 / H3 推荐器胜随机
+一倍），改动只追加修正案；留出集 70/235 地块跑前密封、看过结果后禁止
+重封；每个数字可经哈希链追回出处。全部过程批判与整改见
+[AUDIT_NOTE.md](AUDIT_NOTE.md)，命名与注释规则见 [docs/NAMING.md](docs/NAMING.md)，
+贡献流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
+## 许可
+
+代码与派生数据的许可声明待数据集上游（Zenodo 记录内 LICENSE 文件与
+元数据不一致）裁定后挂牌，裁定前按更严一方（CC BY-SA）行事：
+[docs/refs/licenses/fields2benchmark.md](docs/refs/licenses/fields2benchmark.md)。

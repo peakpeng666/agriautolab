@@ -12,17 +12,16 @@ from __future__ import annotations
 
 import math
 
-import shapely
 from shapely import LineString
 from shapely.affinity import rotate as shp_rotate
 from shapely.geometry import box as shp_box
 
 from agriautolab.contracts.artifacts import CellsArtifact
+from agriautolab.contracts.geometry import PolygonSpec
 from agriautolab.contracts.problem import CoverageProblem
 from agriautolab.contracts.errors import GeometryValidationError
 from agriautolab.geometry.footprint import QUAD_SEGS
 from agriautolab.geometry.robust import robust_union
-from shapely.geometry import GeometryCollection
 from agriautolab.geometry.validate import polygon_from_spec, polygon_to_spec, validate_obstacles_within_field
 
 
@@ -148,7 +147,7 @@ class BoustrophedonDecomposition:
                     if not pieces:
                         continue
                     cells.append(robust_union(tuple(pieces), scale_hint=scale_hint))
-        # 真实地块实测（235 全量）在回转阶段暴露三类数值伪影，处置原则：归一化只作用于
+        # 真实地块实测在回转阶段暴露三类数值伪影，处置原则：归一化只作用于
         # **我们自己的箱并集**（无洞、面积良定义），绝不作用于带洞自由空间的交——
         # nl_field_191476 实测：对含洞 cell 做 buffer(0) 会把洞并进外环，面积虚增 1357 m^2
         # 恰等于洞面积。因此顺序是：箱并集转回原 frame -> （必要时）归一化并面积对账

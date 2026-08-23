@@ -20,7 +20,6 @@ from agriautolab.corpus.aggregate import summarize_pareto
 from agriautolab.corpus.protocol import CorpusProtocol
 from agriautolab.corpus.runner import CodeVersion, CorpusRunner
 from agriautolab.cross_validation.f2c import SubprocessAdapter
-from agriautolab.datasets.fields2benchmark import DatasetLicense, FieldRecord
 from agriautolab.contracts.rows import RowStructure
 from agriautolab.contracts.geometry import Point, PolygonSpec
 from agriautolab.contracts.problem import CoverageProblem

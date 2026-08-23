@@ -21,7 +21,7 @@ from agriautolab.metrics.coverage import (
     path_work_lines, resolve_coverage_targets, swath_count, turning_overhead_ratio,
 )
 from agriautolab.metrics.path import (
-    aol, cusp_count, headland_turn_count, min_clearance, path_length, row_crossings,
+    aol, cusp_count, headland_turn_count, path_length, row_crossings,
     total_heading_change, tortuosity, transit_length,
 )
 

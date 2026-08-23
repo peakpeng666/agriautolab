@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from agriautolab.benchmark import CorpusRunner, derive_status, summarize_pareto
+from agriautolab.benchmark import CorpusRunner, derive_status
 from agriautolab.reconciliation import native
 
 

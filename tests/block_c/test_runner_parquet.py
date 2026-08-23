@@ -66,9 +66,7 @@ def test_headland_collapse_is_not_applicable_not_crash(tmp_path, c_benchmark):
     import pyarrow.parquet as pq
     from shapely import Polygon
 
-    from agriautolab.contracts.enums import CoverageTarget
     from agriautolab.contracts.geometry import Point, PolygonSpec  # noqa: F401  (与下方 Polygon 对照)
-    from agriautolab.contracts.protocol import HypervolumeReference
     from agriautolab.contracts.vehicle import VehicleSpec
     from agriautolab.evidence.hashing import content_hash
     from agriautolab.corpus.protocol import CorpusProtocol
@@ -116,8 +114,7 @@ def test_corpus_run_status_vocabulary_has_no_other_bucket():
     """
     from agriautolab.contracts.enums import RunStatus
     from agriautolab.corpus.runner import _VALIDATOR_REJECTION_CLASSES, _corpus_run_status
-    from agriautolab.contracts.geometry import Point, PolygonSpec
-    from agriautolab.contracts.problem import CoverageProblem
+    from agriautolab.contracts.geometry import Point, PolygonSpec  # noqa: F401 词汇测试不再构造地块
     from agriautolab.pipeline.config import PipelineConfig
     from agriautolab.contracts.vehicle import VehicleSpec
     from agriautolab.validation.validator import PathValidator
@@ -125,11 +122,6 @@ def test_corpus_run_status_vocabulary_has_no_other_bucket():
     vehicle = VehicleSpec(working_width_m=10.0, body_width_m=2.0, min_turning_radius_m=3.0)
     config = PipelineConfig("no_decomposition", "uniform_headland", "min_width",
                             "boustrophedon_order", "dubins_transit", {"headland_width_m": 8.0})
-    field = PolygonSpec(geometry_id="f", exterior=(
-        Point(x=0.0, y=0.0), Point(x=100.0, y=0.0), Point(x=100.0, y=50.0),
-        Point(x=0.0, y=50.0), Point(x=0.0, y=0.0)))
-    problem = CoverageProblem(problem_id="vocab", field=field)
-
     # 拒绝原因封闭词典与 validator 源码里的实际产出一一对应（结构性核对，
     # 不靠人工同步：新增原因而未登记词典时，此测试必红）
     import inspect
@@ -181,7 +173,6 @@ def test_manifest_counts_zero_ok_instances_from_aggregator(tmp_path, c_benchmark
     注：不能用 no_headland 制造失败——干净矩形上零地头 Dubins 的 Pi-turn 合法
     （解析真值场景），实测 ok；塌缩才是确定性的全灭路径。
     """
-    import pyarrow.parquet as pq
     from shapely import Polygon
 
     from agriautolab.contracts.vehicle import VehicleSpec
