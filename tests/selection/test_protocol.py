@@ -7,7 +7,11 @@ from pathlib import Path
 import pytest
 
 from agriautolab.evidence.ledger import artifact_chain_entry, verify_artifact_chain
-from agriautolab.selection.evidence import seal_selection_protocol, write_selection_protocol
+from agriautolab.selection.evidence import (
+    seal_selection_cv_result,
+    seal_selection_protocol,
+    write_selection_protocol,
+)
 from agriautolab.selection.protocol import (
     RECOMMENDER_PARAMS,
     SELECTION_FEATURE_IDS,
@@ -65,8 +69,53 @@ def test_selection_protocol_refuses_code_document_drift(tmp_path: Path):
     document = write_selection_protocol(cv_spec_hash="e" * 64, pool_hash="f" * 64, path=protocol)
     document["feature_ids"][0] = "tampered"
     protocol.write_text(json.dumps(document, sort_keys=True), encoding="utf-8")
-    with pytest.raises(ValueError, match="spec_hash"):
+    with pytest.raises(ValueError, match="完整冻结规范"):
         seal_selection_protocol(protocol_path=protocol, ledger_path=ledger)
+
+
+def test_selection_cv_seal_binds_report_model_and_metadata(tmp_path: Path):
+    protocol = tmp_path / "protocol.json"
+    ledger = tmp_path / "ledger.jsonl"
+    _ledger_with_d1_d2(ledger)
+    document = write_selection_protocol(cv_spec_hash="1" * 64, pool_hash="2" * 64, path=protocol)
+    seal_selection_protocol(protocol_path=protocol, ledger_path=ledger)
+
+    result = tmp_path / "selection_cv.json"
+    model = tmp_path / "recommender.joblib"
+    metadata = tmp_path / "recommender_metadata.json"
+    result.write_text('{"folds": []}\n', encoding="utf-8")
+    model.write_bytes(b"model-bytes")
+    metadata.write_text(json.dumps({"protocol_hash": document["spec_hash"]}) + "\n", encoding="utf-8")
+
+    first = seal_selection_cv_result(
+        result_path=result,
+        model_path=model,
+        metadata_path=metadata,
+        ledger_path=ledger,
+        protocol_hash=document["spec_hash"],
+    )
+    before = ledger.read_bytes()
+    second = seal_selection_cv_result(
+        result_path=result,
+        model_path=model,
+        metadata_path=metadata,
+        ledger_path=ledger,
+        protocol_hash=document["spec_hash"],
+    )
+    assert first == second
+    assert first["index"] == 3
+    assert ledger.read_bytes() == before
+    assert first["payload"]["model_file_sha256"] == hashlib.sha256(b"model-bytes").hexdigest()
+
+    model.write_bytes(b"different-model")
+    with pytest.raises(ValueError, match="冲突"):
+        seal_selection_cv_result(
+            result_path=result,
+            model_path=model,
+            metadata_path=metadata,
+            ledger_path=ledger,
+            protocol_hash=document["spec_hash"],
+        )
 
 
 def test_committed_selection_protocol_replays_exactly_and_is_ledger_index_two():
