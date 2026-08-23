@@ -16,12 +16,14 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from agriautolab.evidence.hashing import content_hash
+from agriautolab.evidence.ledger import artifact_chain_entry, verify_artifact_chain
 
 CV_ASSIGNMENT_SCHEMA_VERSION = 1
 CV_ASSIGNMENT_ALGORITHM = "sha256-seeded-round-robin-v1"
 CV_SEED = 20260822
 CV_FOLDS = 10
 CV_STUDY_ID = "AGRIPLAN-PARETO-001"
+BLOCK_D_LEDGER_GENESIS_EVENT = "cv_assignment_sealed"
 
 
 class CvFoldRecord(BaseModel):
@@ -72,8 +74,7 @@ class CvAssignmentEvidence(BaseModel):
         if max(expected_sizes.values()) - min(expected_sizes.values()) > 1:
             raise ValueError("round-robin 折大小不应相差超过 1")
 
-        expected_assignment_hash = assignment_hash(self.assignments)
-        if self.assignment_hash != expected_assignment_hash:
+        if self.assignment_hash != assignment_hash(self.assignments):
             raise ValueError("assignment_hash 与 assignments 不一致")
         if self.spec_hash != content_hash(_spec_payload(self)):
             raise ValueError("spec_hash 与 D1 完整规范不一致")
@@ -108,22 +109,13 @@ def assign_grouped_folds(
         raise ValueError("n_folds 不能超过训练田数量")
 
     seeded_order = sorted(raw, key=lambda field_id: (_seeded_key(field_id, seed), field_id))
-    fold_of = {
-        field_id: index % n_folds + 1
-        for index, field_id in enumerate(seeded_order)
-    }
-    return tuple(
-        CvFoldRecord(field_id=field_id, fold=fold_of[field_id])
-        for field_id in sorted(raw)
-    )
+    fold_of = {field_id: index % n_folds + 1 for index, field_id in enumerate(seeded_order)}
+    return tuple(CvFoldRecord(field_id=field_id, fold=fold_of[field_id]) for field_id in sorted(raw))
 
 
 def assignment_hash(assignments: tuple[CvFoldRecord, ...]) -> str:
     """只绑定 field -> fold 明细；方便下游在不关心文件元数据时对账。"""
-    return content_hash([
-        {"field_id": item.field_id, "fold": item.fold}
-        for item in assignments
-    ])
+    return content_hash([{"field_id": item.field_id, "fold": item.fold} for item in assignments])
 
 
 def _spec_payload(evidence: CvAssignmentEvidence | dict) -> dict:
@@ -219,3 +211,55 @@ def write_cv_assignment(evidence: CvAssignmentEvidence, path: str | Path) -> Non
         json.dumps(evidence.model_dump(mode="json"), ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+
+
+def cv_assignment_ledger_payload(evidence: CvAssignmentEvidence, assignment_path: str | Path) -> dict:
+    """把 D1 折表绑定到 Block D 分析链；不修改冻结 v7 语料账本。"""
+    path = Path(assignment_path)
+    return {
+        "event": BLOCK_D_LEDGER_GENESIS_EVENT,
+        "study_id": evidence.study_id,
+        "cv_assignment_file_sha256": _sha256_file(path),
+        "assignment_hash": evidence.assignment_hash,
+        "spec_hash": evidence.spec_hash,
+        "manifest_file_sha256": evidence.manifest_file_sha256,
+        "corpus_hash": evidence.corpus_hash,
+        "holdout_file_sha256": evidence.holdout_file_sha256,
+        "holdout_seal_hash": evidence.holdout_seal_hash,
+        "seed": evidence.seed,
+        "n_folds": evidence.n_folds,
+        "n_training_fields": evidence.n_training_fields,
+    }
+
+
+def seal_cv_assignment_in_block_d_ledger(
+    evidence: CvAssignmentEvidence,
+    assignment_path: str | Path,
+    ledger_path: str | Path,
+) -> dict:
+    """把 CV 折表封为 Block D 分析账本的 genesis；重复执行只允许精确重放。
+
+    后续 D2/D3 可在同一 JSONL 链上追加。若链已存在且第一条与当前折表不一致，
+    直接失败，禁止用“重新生成”覆盖既有分析历史。
+    """
+    ledger_file = Path(ledger_path)
+    payload = cv_assignment_ledger_payload(evidence, assignment_path)
+    expected = artifact_chain_entry(0, "0" * 64, payload)
+
+    if ledger_file.exists():
+        entries = tuple(
+            json.loads(line)
+            for line in ledger_file.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        )
+        verify_artifact_chain(entries)
+        if not entries:
+            raise ValueError("Block D ledger 文件存在但为空；拒绝静默覆盖")
+        if entries[0] != expected:
+            raise ValueError("Block D ledger genesis 与当前 D1 折表不一致；拒绝改写分析历史")
+        return entries[0]
+
+    ledger_file.parent.mkdir(parents=True, exist_ok=True)
+    ledger_file.write_text(json.dumps(expected, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+    verify_artifact_chain((expected,))
+    return expected
