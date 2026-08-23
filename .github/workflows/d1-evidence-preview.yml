@@ -25,20 +25,23 @@ jobs:
         with:
           python-version: "3.10"
       - run: python -m pip install -e .
-      - name: Generate D1 assignment
+      - name: Generate D1 assignment and analysis-ledger genesis
         run: |
           python scripts/prepare_cv_folds.py \
             --manifest evidence/v7/manifest.json \
             --holdout evidence/v7/holdout_seal.json \
-            --output evidence/v7/cv_assignment.json
+            --output evidence/v7/cv_assignment.json \
+            --ledger evidence/block_d/ledger.jsonl
       - name: Commit machine-generated evidence to PR branch
         run: |
-          if git diff --quiet -- evidence/v7/cv_assignment.json && git ls-files --error-unmatch evidence/v7/cv_assignment.json >/dev/null 2>&1; then
-            echo "cv_assignment.json already matches generator"
+          if git diff --quiet -- evidence/v7/cv_assignment.json evidence/block_d/ledger.jsonl \
+             && git ls-files --error-unmatch evidence/v7/cv_assignment.json >/dev/null 2>&1 \
+             && git ls-files --error-unmatch evidence/block_d/ledger.jsonl >/dev/null 2>&1; then
+            echo "D1 evidence already matches generator"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add evidence/v7/cv_assignment.json
-          git commit -m "D1: freeze generated CV assignment evidence"
+          git add evidence/v7/cv_assignment.json evidence/block_d/ledger.jsonl
+          git commit -m "D1: freeze CV assignment and Block D ledger genesis"
           git push origin HEAD:${{ github.head_ref }}
