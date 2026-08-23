@@ -140,17 +140,31 @@ def _sha256_file(path: Path) -> str:
 
 
 def field_ids_from_manifest(manifest: dict) -> tuple[str, ...]:
-    """从 v7 manifest 的实例键恢复全部 field_id，不依赖 runs.parquet。"""
+    """从 v7 manifest 的许可证表恢复完整 field universe。
+
+    不能从 effective_pool_size_by_instance 反推全集：该映射是结果摘要，零有效池
+    或前处理阶段无有效实例的困难田可能不出现。`licenses` 则由导出语料逐田写入，
+    与结果无关，正好是 D1 需要的全语料身份源。
+    """
+    licenses = manifest.get("licenses")
+    if not isinstance(licenses, dict) or not licenses:
+        raise ValueError("manifest 缺少逐田 licenses，无法建立结果无关的 field universe")
+    fields = tuple(sorted(str(field_id) for field_id in licenses))
+    if any(not field_id for field_id in fields):
+        raise ValueError("manifest licenses 含空 field_id")
+
     effective = manifest.get("effective_pool_size_by_instance")
-    if not isinstance(effective, dict) or not effective:
-        raise ValueError("manifest 缺少 effective_pool_size_by_instance")
-    fields: set[str] = set()
-    for instance_id in effective:
-        field_id, separator, _ = str(instance_id).partition(":")
-        if not separator or not field_id:
-            raise ValueError(f"无法从 instance_id 恢复 field_id：{instance_id!r}")
-        fields.add(field_id)
-    return tuple(sorted(fields))
+    if isinstance(effective, dict):
+        observed_fields: set[str] = set()
+        for instance_id in effective:
+            field_id, separator, _ = str(instance_id).partition(":")
+            if not separator or not field_id:
+                raise ValueError(f"无法从 instance_id 恢复 field_id：{instance_id!r}")
+            observed_fields.add(field_id)
+        unknown = sorted(observed_fields - set(fields))
+        if unknown:
+            raise ValueError(f"effective-pool 摘要引用了 licenses 不存在的田：{unknown}")
+    return fields
 
 
 def build_cv_assignment_evidence(
