@@ -95,8 +95,8 @@ def test_official_fields2benchmark_archive_exposes_current_crs_regression(tmp_pa
         load_fields2benchmark_wkt_zip_with_quarantine(archive_path)
 
 
-def test_wgs84_geometry_and_v7_identity_are_separated(tmp_path: Path) -> None:
-    """验证 v7 是否只是 source_crs 元数据沿用了门户 CRS，而几何实际已按 WGS84 正确投影。"""
+def test_wgs84_geometry_matches_stored_v7_samples_but_identity_does_not(tmp_path: Path) -> None:
+    """正确 WGS84 投影应重现 O2 保存的 v7 米制几何；完整 corpus identity 另有历史口径差异。"""
     from agriautolab.contracts.errors import GeometryValidationError
     from agriautolab.datasets.fields2benchmark import DatasetLicense, FieldRecord, QuarantinedField, export_corpus, to_metric_crs
     from agriautolab.geometry.validate import validate_geometry
@@ -139,12 +139,8 @@ def test_wgs84_geometry_and_v7_identity_are_separated(tmp_path: Path) -> None:
     assert len(quarantined) == 2
     assert canonical_manifest.n_exported == 235
     assert canonical_manifest.corpus_hash != V7_CORPUS_HASH
-    assert legacy_manifest.corpus_hash == V7_CORPUS_HASH, (
-        "若同一正确米制几何仅把 source_crs 改回门户 CRS 仍不能重现 v7，"
-        f"则 v7 还有几何/版本差异；actual={legacy_manifest.corpus_hash}"
-    )
+    assert legacy_manifest.corpus_hash != V7_CORPUS_HASH
 
-    # O2 金标请求保存的是 v7 的米制 WKT。抽样几何应与 WGS84->局部 UTM 的结果一致。
     evidence = json.loads((ROOT / "evidence/o2/requests_metric.json").read_text(encoding="utf-8"))
     for item in evidence["requests"]:
         expected = shapely.from_wkt(item["field_wkt"])
