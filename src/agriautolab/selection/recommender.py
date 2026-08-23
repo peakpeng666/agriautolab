@@ -34,7 +34,7 @@ class PreferenceConditionedRecommender:
         return self._training_fields
 
     def fit(self, instances: Sequence[SelectionInstance]) -> "PreferenceConditionedRecommender":
-        """按配置拟合 22 维 regret；只用该配置静态可适用且 oracle 可定义的实例。"""
+        """按配置拟合 22 维 regret；只用该配置静态适用且 oracle 可定义的实例。"""
         if not instances:
             raise ValueError("训练实例不能为空")
         from sklearn.ensemble import ExtraTreesRegressor
@@ -52,6 +52,8 @@ class PreferenceConditionedRecommender:
             ]
             if len(eligible) < 2:
                 raise ValueError(f"{config_id}: 可用于拟合的静态适用实例不足 2 个")
+            if any(instance.features is None for instance in eligible):
+                raise ValueError(f"{config_id}: 可分析训练实例缺少特征，证据 schema 自相矛盾")
             x = [instance.features for instance in eligible]
             y = [instance.regret_vector(config_id) for instance in eligible]
             model = ExtraTreesRegressor(**RECOMMENDER_PARAMS)
@@ -62,7 +64,11 @@ class PreferenceConditionedRecommender:
         self._training_fields = tuple(sorted({instance.field_id for instance in instances}))
         return self
 
-    def predict_regrets(self, features: Sequence[float], applicable_config_ids: Iterable[str]) -> dict[str, tuple[float, ...]]:
+    def predict_regrets(
+        self,
+        features: Sequence[float],
+        applicable_config_ids: Iterable[str],
+    ) -> dict[str, tuple[float, ...]]:
         if not self._models:
             raise ValueError("推荐器尚未 fit")
         feature_vector = tuple(float(value) for value in features)
