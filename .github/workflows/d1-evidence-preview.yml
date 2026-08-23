@@ -6,14 +6,21 @@ on:
       - "src/agriautolab/selection/**"
       - "scripts/prepare_cv_folds.py"
       - "tests/selection/**"
+      - ".github/workflows/d1-evidence-preview.yml"
       - "evidence/v7/manifest.json"
       - "evidence/v7/holdout_seal.json"
+
+permissions:
+  contents: write
+  pull-requests: read
 
 jobs:
   generate-cv-evidence:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
@@ -23,5 +30,15 @@ jobs:
           python scripts/prepare_cv_folds.py \
             --manifest evidence/v7/manifest.json \
             --holdout evidence/v7/holdout_seal.json \
-            --output /tmp/cv_assignment.json \
-            --print-json
+            --output evidence/v7/cv_assignment.json
+      - name: Commit machine-generated evidence to PR branch
+        run: |
+          if git diff --quiet -- evidence/v7/cv_assignment.json && git ls-files --error-unmatch evidence/v7/cv_assignment.json >/dev/null 2>&1; then
+            echo "cv_assignment.json already matches generator"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add evidence/v7/cv_assignment.json
+          git commit -m "D1: freeze generated CV assignment evidence"
+          git push origin HEAD:${{ github.head_ref }}
