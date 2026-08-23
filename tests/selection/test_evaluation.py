@@ -87,6 +87,20 @@ def test_zero_ok_instance_is_retained_but_regret_is_undefined():
         instance.regret_vector(A.config_id())
 
 
+def test_zero_ok_historical_failure_rows_may_lack_features_without_disappearing():
+    rows = [
+        _row("field-zero", "instance-zero", A, (1.0, 1.0, 1.0), ok=False),
+        _row("field-zero", "instance-zero", B, (1.0, 1.0, 1.0), ok=False),
+    ]
+    for row in rows:
+        for feature_id in SELECTION_FEATURE_IDS:
+            row[f"feature__{feature_id}"] = None
+    instance = build_selection_instance(rows, CONFIGS, (VEHICLE,))
+    assert not instance.analyzable
+    assert instance.features is None
+    assert instance.field_id == "field-zero"
+
+
 def test_loader_scans_only_authorized_training_fields(tmp_path: Path):
     import pyarrow as pa
     import pyarrow.parquet as pq
@@ -102,10 +116,11 @@ def test_loader_scans_only_authorized_training_fields(tmp_path: Path):
     instances = load_selection_instances(path, ("train:with:colon",), CONFIGS, (VEHICLE,))
     assert len(instances) == 1
     assert instances[0].field_id == "train:with:colon"
+    assert instances[0].features is not None
     assert instances[0].features[0] == 1.0
 
 
-def test_missing_feature_is_loud_failure():
+def test_missing_feature_is_loud_failure_for_analyzable_instance():
     rows = [
         _row("field-a", "instance-a", A, (10.0, 5.0, 2.0)),
         _row("field-a", "instance-a", B, (20.0, 2.0, 1.0)),
