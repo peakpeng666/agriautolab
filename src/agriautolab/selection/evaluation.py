@@ -20,13 +20,14 @@ class SelectionInstance:
     """一个场景实例的特征、池身份和 22 偏好悔值。
 
     `regrets=None` 明确表示 O_x 为空：confirmatory H3 的 oracle 未定义。
-    这类实例必须保留计数，不能被 loader 静默删除。
+    历史 v7 的异常失败行不保存 feature__*；若整个 O_x 为空且没有任何普通
+    运行行可恢复特征，`features=None` 也必须保留该实例，而不是把困难样本删掉。
     """
 
     field_id: str
     instance_id: str
     vehicle_index: int
-    features: tuple[float, ...]
+    features: tuple[float, ...] | None
     nominal: frozenset[str]
     applicable: frozenset[str]
     observed_ok: frozenset[str]
@@ -75,6 +76,28 @@ def _one_float(rows: Sequence[dict], key: str) -> float:
     return value
 
 
+def _feature_vector(rows: Sequence[dict], *, required: bool) -> tuple[float, ...] | None:
+    values: list[float] = []
+    missing: list[str] = []
+    for feature_id in SELECTION_FEATURE_IDS:
+        key = f"feature__{feature_id}"
+        observed = {float(row[key]) for row in rows if row.get(key) is not None}
+        if len(observed) > 1:
+            raise ValueError(f"同一 instance 的 {key} 出现多个值")
+        if not observed:
+            missing.append(key)
+            continue
+        value = next(iter(observed))
+        if not math.isfinite(value):
+            raise ValueError(f"{key} 必须有限")
+        values.append(value)
+    if missing:
+        if required:
+            raise ValueError(f"可分析 instance 缺少 selection 特征：{missing}")
+        return None
+    return tuple(values)
+
+
 def _mean_vectors(vectors: Sequence[tuple[float, ...]]) -> tuple[float, ...]:
     if not vectors:
         raise ValueError("不能对空向量集合取均值")
@@ -111,15 +134,6 @@ def build_selection_instance(
             f"missing={sorted(nominal - set(row_config_ids))}, extra={sorted(set(row_config_ids) - nominal)}"
         )
 
-    features = tuple(_one_float(rows, f"feature__{feature_id}") for feature_id in SELECTION_FEATURE_IDS)
-    reference = (
-        _one_float(rows, "ref_path_length"),
-        _one_float(rows, "ref_headland_turns"),
-        _one_float(rows, "ref_row_crossings"),
-    )
-    if any(value <= 0.0 for value in reference):
-        raise ValueError(f"{instance_id}: analytic reference 三维必须 >0")
-
     config_by_id = {config.config_id(): config for config in configs}
     applicable = frozenset(
         config_id
@@ -151,7 +165,7 @@ def build_selection_instance(
             field_id=field_id,
             instance_id=instance_id,
             vehicle_index=vehicle_index,
-            features=features,
+            features=_feature_vector(rows, required=False),
             nominal=nominal,
             applicable=applicable,
             observed_ok=observed_ok,
@@ -159,6 +173,16 @@ def build_selection_instance(
             random_applicable=None,
             random_nominal=None,
         )
+
+    features = _feature_vector(rows, required=True)
+    assert features is not None
+    reference = (
+        _one_float(rows, "ref_path_length"),
+        _one_float(rows, "ref_headland_turns"),
+        _one_float(rows, "ref_row_crossings"),
+    )
+    if any(value <= 0.0 for value in reference):
+        raise ValueError(f"{instance_id}: analytic reference 三维必须 >0")
 
     scalarized: dict[str, tuple[float, ...]] = {}
     for config_id, objective in objectives.items():
@@ -181,10 +205,7 @@ def build_selection_instance(
         max((values[index] for values in feasible_regrets.values()), default=0.0) + 1.0
         for index in range(len(PREFERENCE_GRID_V1))
     )
-    regret_by_config = {
-        config_id: feasible_regrets.get(config_id, penalty)
-        for config_id in nominal
-    }
+    regret_by_config = {config_id: feasible_regrets.get(config_id, penalty) for config_id in nominal}
     random_applicable = _mean_vectors([regret_by_config[config_id] for config_id in sorted(applicable)])
     random_nominal = _mean_vectors([regret_by_config[config_id] for config_id in sorted(nominal)])
 
