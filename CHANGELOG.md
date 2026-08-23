@@ -5,6 +5,10 @@
 
 ## [未发布]
 
+- **D7/H3 封存（Study-001 结案）**：留出集一次性消费，H3 未获支持
+  （mean_D=+0.0587，p=0.821，失效判据 1 触发；判据 2 通过；双轨一致）；
+  Holm 终表 H1 支持 / H2 支持 / H3 不支持；confirmatory/h3.py + 双模式
+  分析脚本 + 5 条合成测试；封存前两次身份守门中止事故留痕（零泄漏）
 - D2 三层池普查：selection/pools.py（N/A/O 契约 + 逐实例包含校验）、
   scripts/pool_census.py、evidence/block_d/pool_census.json（4,700 实例，
   A 层 v0=11/v1=13）+ Block D ledger index=1；5 条测试
