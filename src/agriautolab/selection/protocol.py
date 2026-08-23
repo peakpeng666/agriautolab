@@ -26,6 +26,7 @@ SELECTION_FEATURE_IDS: tuple[str, ...] = (
 )
 
 RECOMMENDER_CLASS = "sklearn.ensemble.ExtraTreesRegressor"
+RECOMMENDER_SKLEARN_VERSION = "1.7.2"
 RECOMMENDER_PARAMS = {
     "n_estimators": 192,
     "max_features": 1.0,
@@ -75,6 +76,7 @@ def selection_protocol_payload(*, cv_spec_hash: str, pool_hash: str) -> dict:
         },
         "recommender": {
             "class": RECOMMENDER_CLASS,
+            "scikit_learn_version": RECOMMENDER_SKLEARN_VERSION,
             "params": dict(RECOMMENDER_PARAMS),
             "fit": "one multi-output model per config; rows restricted to instances where config in A_x",
             "target": "22-vector of deterministic regrets",
