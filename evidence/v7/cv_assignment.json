@@ -1,0 +1,690 @@
+{
+  "algorithm": "sha256-seeded-round-robin-v1",
+  "assignment_hash": "bcf237a782e9ba2023eddcda9e4c3131036a795beea1d209c201696abf974113",
+  "assignments": [
+    {
+      "field_id": "ee_field_10",
+      "fold": 1
+    },
+    {
+      "field_id": "ee_field_103",
+      "fold": 10
+    },
+    {
+      "field_id": "ee_field_105",
+      "fold": 6
+    },
+    {
+      "field_id": "ee_field_106",
+      "fold": 1
+    },
+    {
+      "field_id": "ee_field_107",
+      "fold": 4
+    },
+    {
+      "field_id": "ee_field_128",
+      "fold": 4
+    },
+    {
+      "field_id": "ee_field_130",
+      "fold": 3
+    },
+    {
+      "field_id": "ee_field_132",
+      "fold": 2
+    },
+    {
+      "field_id": "ee_field_133",
+      "fold": 8
+    },
+    {
+      "field_id": "ee_field_135",
+      "fold": 2
+    },
+    {
+      "field_id": "ee_field_136",
+      "fold": 9
+    },
+    {
+      "field_id": "ee_field_138",
+      "fold": 3
+    },
+    {
+      "field_id": "ee_field_139",
+      "fold": 9
+    },
+    {
+      "field_id": "ee_field_14",
+      "fold": 2
+    },
+    {
+      "field_id": "ee_field_140",
+      "fold": 6
+    },
+    {
+      "field_id": "ee_field_141",
+      "fold": 5
+    },
+    {
+      "field_id": "ee_field_146",
+      "fold": 10
+    },
+    {
+      "field_id": "ee_field_147",
+      "fold": 2
+    },
+    {
+      "field_id": "ee_field_148",
+      "fold": 4
+    },
+    {
+      "field_id": "ee_field_149",
+      "fold": 9
+    },
+    {
+      "field_id": "ee_field_15",
+      "fold": 1
+    },
+    {
+      "field_id": "ee_field_152",
+      "fold": 3
+    },
+    {
+      "field_id": "ee_field_159",
+      "fold": 5
+    },
+    {
+      "field_id": "ee_field_165",
+      "fold": 4
+    },
+    {
+      "field_id": "ee_field_168",
+      "fold": 9
+    },
+    {
+      "field_id": "ee_field_170",
+      "fold": 2
+    },
+    {
+      "field_id": "ee_field_173",
+      "fold": 7
+    },
+    {
+      "field_id": "ee_field_175",
+      "fold": 5
+    },
+    {
+      "field_id": "ee_field_176",
+      "fold": 9
+    },
+    {
+      "field_id": "ee_field_178",
+      "fold": 4
+    },
+    {
+      "field_id": "ee_field_180",
+      "fold": 5
+    },
+    {
+      "field_id": "ee_field_183",
+      "fold": 5
+    },
+    {
+      "field_id": "ee_field_184",
+      "fold": 7
+    },
+    {
+      "field_id": "ee_field_19",
+      "fold": 7
+    },
+    {
+      "field_id": "ee_field_192",
+      "fold": 6
+    },
+    {
+      "field_id": "ee_field_198",
+      "fold": 4
+    },
+    {
+      "field_id": "ee_field_207",
+      "fold": 7
+    },
+    {
+      "field_id": "ee_field_210",
+      "fold": 9
+    },
+    {
+      "field_id": "ee_field_214",
+      "fold": 9
+    },
+    {
+      "field_id": "ee_field_217",
+      "fold": 6
+    },
+    {
+      "field_id": "ee_field_219",
+      "fold": 3
+    },
+    {
+      "field_id": "ee_field_22",
+      "fold": 3
+    },
+    {
+      "field_id": "ee_field_24",
+      "fold": 8
+    },
+    {
+      "field_id": "ee_field_25",
+      "fold": 3
+    },
+    {
+      "field_id": "ee_field_27",
+      "fold": 5
+    },
+    {
+      "field_id": "ee_field_28",
+      "fold": 1
+    },
+    {
+      "field_id": "ee_field_35",
+      "fold": 9
+    },
+    {
+      "field_id": "ee_field_38",
+      "fold": 10
+    },
+    {
+      "field_id": "ee_field_42",
+      "fold": 7
+    },
+    {
+      "field_id": "ee_field_43",
+      "fold": 5
+    },
+    {
+      "field_id": "ee_field_46",
+      "fold": 1
+    },
+    {
+      "field_id": "ee_field_5",
+      "fold": 3
+    },
+    {
+      "field_id": "ee_field_52",
+      "fold": 1
+    },
+    {
+      "field_id": "ee_field_61",
+      "fold": 10
+    },
+    {
+      "field_id": "ee_field_62",
+      "fold": 4
+    },
+    {
+      "field_id": "ee_field_63",
+      "fold": 9
+    },
+    {
+      "field_id": "ee_field_64",
+      "fold": 10
+    },
+    {
+      "field_id": "ee_field_69",
+      "fold": 8
+    },
+    {
+      "field_id": "ee_field_71",
+      "fold": 3
+    },
+    {
+      "field_id": "ee_field_73",
+      "fold": 2
+    },
+    {
+      "field_id": "ee_field_74",
+      "fold": 9
+    },
+    {
+      "field_id": "ee_field_79",
+      "fold": 7
+    },
+    {
+      "field_id": "ee_field_82",
+      "fold": 4
+    },
+    {
+      "field_id": "ee_field_89",
+      "fold": 8
+    },
+    {
+      "field_id": "ee_field_9",
+      "fold": 10
+    },
+    {
+      "field_id": "ee_field_90",
+      "fold": 4
+    },
+    {
+      "field_id": "ee_field_92",
+      "fold": 5
+    },
+    {
+      "field_id": "ee_field_93",
+      "fold": 8
+    },
+    {
+      "field_id": "ee_field_97",
+      "fold": 4
+    },
+    {
+      "field_id": "nl_field_10",
+      "fold": 1
+    },
+    {
+      "field_id": "nl_field_104",
+      "fold": 4
+    },
+    {
+      "field_id": "nl_field_105",
+      "fold": 5
+    },
+    {
+      "field_id": "nl_field_109",
+      "fold": 3
+    },
+    {
+      "field_id": "nl_field_11",
+      "fold": 2
+    },
+    {
+      "field_id": "nl_field_113",
+      "fold": 6
+    },
+    {
+      "field_id": "nl_field_117",
+      "fold": 4
+    },
+    {
+      "field_id": "nl_field_119",
+      "fold": 10
+    },
+    {
+      "field_id": "nl_field_122",
+      "fold": 4
+    },
+    {
+      "field_id": "nl_field_13",
+      "fold": 5
+    },
+    {
+      "field_id": "nl_field_134",
+      "fold": 2
+    },
+    {
+      "field_id": "nl_field_136",
+      "fold": 3
+    },
+    {
+      "field_id": "nl_field_137",
+      "fold": 6
+    },
+    {
+      "field_id": "nl_field_139",
+      "fold": 1
+    },
+    {
+      "field_id": "nl_field_14",
+      "fold": 2
+    },
+    {
+      "field_id": "nl_field_143",
+      "fold": 8
+    },
+    {
+      "field_id": "nl_field_147",
+      "fold": 10
+    },
+    {
+      "field_id": "nl_field_149",
+      "fold": 4
+    },
+    {
+      "field_id": "nl_field_15",
+      "fold": 8
+    },
+    {
+      "field_id": "nl_field_158",
+      "fold": 10
+    },
+    {
+      "field_id": "nl_field_160",
+      "fold": 8
+    },
+    {
+      "field_id": "nl_field_162",
+      "fold": 9
+    },
+    {
+      "field_id": "nl_field_165",
+      "fold": 7
+    },
+    {
+      "field_id": "nl_field_17",
+      "fold": 1
+    },
+    {
+      "field_id": "nl_field_174",
+      "fold": 5
+    },
+    {
+      "field_id": "nl_field_175965",
+      "fold": 1
+    },
+    {
+      "field_id": "nl_field_178",
+      "fold": 3
+    },
+    {
+      "field_id": "nl_field_18",
+      "fold": 9
+    },
+    {
+      "field_id": "nl_field_187",
+      "fold": 4
+    },
+    {
+      "field_id": "nl_field_187374",
+      "fold": 1
+    },
+    {
+      "field_id": "nl_field_188",
+      "fold": 2
+    },
+    {
+      "field_id": "nl_field_19",
+      "fold": 3
+    },
+    {
+      "field_id": "nl_field_191476",
+      "fold": 7
+    },
+    {
+      "field_id": "nl_field_20",
+      "fold": 1
+    },
+    {
+      "field_id": "nl_field_200637",
+      "fold": 2
+    },
+    {
+      "field_id": "nl_field_21",
+      "fold": 8
+    },
+    {
+      "field_id": "nl_field_23",
+      "fold": 6
+    },
+    {
+      "field_id": "nl_field_24",
+      "fold": 5
+    },
+    {
+      "field_id": "nl_field_25",
+      "fold": 5
+    },
+    {
+      "field_id": "nl_field_26",
+      "fold": 4
+    },
+    {
+      "field_id": "nl_field_28",
+      "fold": 3
+    },
+    {
+      "field_id": "nl_field_29",
+      "fold": 9
+    },
+    {
+      "field_id": "nl_field_30",
+      "fold": 8
+    },
+    {
+      "field_id": "nl_field_300075",
+      "fold": 6
+    },
+    {
+      "field_id": "nl_field_31",
+      "fold": 2
+    },
+    {
+      "field_id": "nl_field_33",
+      "fold": 6
+    },
+    {
+      "field_id": "nl_field_338399",
+      "fold": 6
+    },
+    {
+      "field_id": "nl_field_35",
+      "fold": 8
+    },
+    {
+      "field_id": "nl_field_36",
+      "fold": 1
+    },
+    {
+      "field_id": "nl_field_371656",
+      "fold": 5
+    },
+    {
+      "field_id": "nl_field_372467",
+      "fold": 2
+    },
+    {
+      "field_id": "nl_field_39",
+      "fold": 8
+    },
+    {
+      "field_id": "nl_field_40",
+      "fold": 7
+    },
+    {
+      "field_id": "nl_field_42",
+      "fold": 10
+    },
+    {
+      "field_id": "nl_field_43",
+      "fold": 7
+    },
+    {
+      "field_id": "nl_field_44533",
+      "fold": 5
+    },
+    {
+      "field_id": "nl_field_46",
+      "fold": 2
+    },
+    {
+      "field_id": "nl_field_47",
+      "fold": 1
+    },
+    {
+      "field_id": "nl_field_48",
+      "fold": 5
+    },
+    {
+      "field_id": "nl_field_49",
+      "fold": 8
+    },
+    {
+      "field_id": "nl_field_52",
+      "fold": 6
+    },
+    {
+      "field_id": "nl_field_53",
+      "fold": 9
+    },
+    {
+      "field_id": "nl_field_532603",
+      "fold": 10
+    },
+    {
+      "field_id": "nl_field_558824",
+      "fold": 6
+    },
+    {
+      "field_id": "nl_field_56",
+      "fold": 6
+    },
+    {
+      "field_id": "nl_field_57",
+      "fold": 10
+    },
+    {
+      "field_id": "nl_field_576946",
+      "fold": 7
+    },
+    {
+      "field_id": "nl_field_59131",
+      "fold": 3
+    },
+    {
+      "field_id": "nl_field_60",
+      "fold": 10
+    },
+    {
+      "field_id": "nl_field_61",
+      "fold": 7
+    },
+    {
+      "field_id": "nl_field_64",
+      "fold": 2
+    },
+    {
+      "field_id": "nl_field_65",
+      "fold": 6
+    },
+    {
+      "field_id": "nl_field_657406",
+      "fold": 1
+    },
+    {
+      "field_id": "nl_field_66",
+      "fold": 1
+    },
+    {
+      "field_id": "nl_field_66921",
+      "fold": 8
+    },
+    {
+      "field_id": "nl_field_7",
+      "fold": 7
+    },
+    {
+      "field_id": "nl_field_702198",
+      "fold": 3
+    },
+    {
+      "field_id": "nl_field_716551",
+      "fold": 2
+    },
+    {
+      "field_id": "nl_field_72",
+      "fold": 5
+    },
+    {
+      "field_id": "nl_field_729253",
+      "fold": 2
+    },
+    {
+      "field_id": "nl_field_78",
+      "fold": 6
+    },
+    {
+      "field_id": "nl_field_8",
+      "fold": 10
+    },
+    {
+      "field_id": "nl_field_81",
+      "fold": 3
+    },
+    {
+      "field_id": "nl_field_82",
+      "fold": 7
+    },
+    {
+      "field_id": "nl_field_83",
+      "fold": 4
+    },
+    {
+      "field_id": "nl_field_84",
+      "fold": 8
+    },
+    {
+      "field_id": "nl_field_85",
+      "fold": 3
+    },
+    {
+      "field_id": "nl_field_85439",
+      "fold": 6
+    },
+    {
+      "field_id": "nl_field_87",
+      "fold": 9
+    },
+    {
+      "field_id": "nl_field_88",
+      "fold": 10
+    },
+    {
+      "field_id": "nl_field_89",
+      "fold": 1
+    },
+    {
+      "field_id": "nl_field_91",
+      "fold": 7
+    },
+    {
+      "field_id": "nl_field_94",
+      "fold": 9
+    },
+    {
+      "field_id": "nl_field_95",
+      "fold": 7
+    },
+    {
+      "field_id": "nl_field_96",
+      "fold": 8
+    },
+    {
+      "field_id": "nl_field_99",
+      "fold": 10
+    }
+  ],
+  "corpus_hash": "996f7960d51d5c9bbcff02d76acebbdf55ca6a736bf65bfa9fbf03d180fdd3eb",
+  "fold_sizes": {
+    "1": 17,
+    "10": 16,
+    "2": 17,
+    "3": 17,
+    "4": 17,
+    "5": 17,
+    "6": 16,
+    "7": 16,
+    "8": 16,
+    "9": 16
+  },
+  "holdout_file_sha256": "c1be63f7aecf55617b1ebd5f8050afa9480893a1a0e9679af1fb2923e7a34d23",
+  "holdout_seal_hash": "be973254f805ebbe14539fef6174707d3537423c9f9cf30addbb530992e9b91f",
+  "manifest_file_sha256": "01d3678c84671319d62df0d406a5a6befbd14fc181a78ed46c77ab72acbac874",
+  "n_all_fields": 235,
+  "n_folds": 10,
+  "n_holdout_fields": 70,
+  "n_training_fields": 165,
+  "schema_version": 1,
+  "seed": 20260822,
+  "spec_hash": "dc0be0812b31061e5509e9468e1349a63764395c5c7d12c92197bb1bc5034cf7",
+  "study_id": "AGRIPLAN-PARETO-001"
+}
