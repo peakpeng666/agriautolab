@@ -8,6 +8,8 @@ from agriautolab.selection.cv import (
     CvFoldRecord,
     assign_grouped_folds,
     build_cv_assignment_evidence,
+    field_ids_from_manifest,
+    seal_cv_assignment_in_block_d_ledger,
     write_cv_assignment,
 )
 
@@ -19,5 +21,7 @@ __all__ = [
     "CvFoldRecord",
     "assign_grouped_folds",
     "build_cv_assignment_evidence",
+    "field_ids_from_manifest",
+    "seal_cv_assignment_in_block_d_ledger",
     "write_cv_assignment",
 ]
