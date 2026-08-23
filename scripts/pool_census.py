@@ -21,9 +21,8 @@ from collections import defaultdict
 from pathlib import Path
 
 from agriautolab.contracts.vehicle import VehicleSpec
-from agriautolab.evidence.ledger import artifact_chain_entry
 from agriautolab.pipeline.config import PipelineConfig
-from agriautolab.selection.pools import census_from_runs
+from agriautolab.selection.pools import census_from_runs, seal_pool_census_ledger
 
 
 def _sha256_file(path: Path) -> str:
@@ -45,8 +44,8 @@ def main() -> None:
     vehicles = tuple(VehicleSpec.model_validate(v) for v in json.loads(args.vehicles.read_text(encoding="utf-8")))
     cv = json.loads(args.cv.read_text(encoding="utf-8"))
     fold_of = {e["field_id"]: e["fold"] for e in cv["assignments"]}
-    holdout = set(json.loads((args.cv.parent / "holdout_seal.json").read_text(encoding="utf-8"))["field_ids"]) \
-        if (args.cv.parent / "holdout_seal.json").exists() else None
+    holdout_path = args.cv.parent / "holdout_seal.json"
+    holdout = set(json.loads(holdout_path.read_text(encoding="utf-8"))["field_ids"]) if holdout_path.exists() else None
 
     census = census_from_runs(args.runs, configs, vehicles)
     instances = census.pop("instances")
@@ -60,7 +59,7 @@ def main() -> None:
         rows = by_field[field]
         is_holdout = holdout is not None and field in holdout
         ok_sizes = [len(p.observed_ok) for p in rows]
-        gap = [len(p.applicable - p.observed_ok) for p in rows]  # 静态适用但被拒 = 选择难度
+        gap = [len(p.applicable - p.observed_ok) for p in rows]
         fields_doc.append({
             "field_id": field,
             "split": "holdout" if is_holdout else "train",
@@ -68,11 +67,11 @@ def main() -> None:
             "n_instances": len(rows),
             "mean_ok": round(statistics.mean(ok_sizes), 4),
             "mean_applicable_minus_ok": round(statistics.mean(gap), 4),
-            "zero_ok_instances": sum(1 for s in ok_sizes if s == 0),
+            "zero_ok_instances": sum(1 for size in ok_sizes if size == 0),
         })
 
-    train = [f for f in fields_doc if f["split"] == "train"]
-    hold = [f for f in fields_doc if f["split"] == "holdout"]
+    train = [field for field in fields_doc if field["split"] == "train"]
+    hold = [field for field in fields_doc if field["split"] == "holdout"]
     doc = {
         "study_id": "AGRIPLAN-PARETO-001",
         "stage": "D2-pool-census",
@@ -83,26 +82,26 @@ def main() -> None:
             "cv_spec_hash": cv["spec_hash"],
         },
         "invariants": {
-            "o_subset_a": True, "a_subset_n": True,
-            "note": "census_from_runs 逐实例强制校验，违例当场抛错而非记录",
+            "o_subset_a": True,
+            "a_subset_n": True,
+            "complete_nominal_matrix": True,
+            "note": "逐实例强制 O⊆A⊆N 且 nominal 配置矩阵完整；违例当场失败",
         },
         "nominal_size": census["nominal_size"],
         "applicable_by_vehicle": census["applicable_by_vehicle"],
         "n_instances": census["n_instances"],
         "fields": fields_doc,
         "summary": {
-            "train_fields": len(train), "holdout_fields": len(hold),
-            "train_mean_ok_per_instance": round(statistics.mean(f["mean_ok"] for f in train), 4),
-            "holdout_mean_ok_per_instance": round(statistics.mean(f["mean_ok"] for f in hold), 4),
+            "train_fields": len(train),
+            "holdout_fields": len(hold),
+            "train_mean_ok_per_instance": round(statistics.mean(field["mean_ok"] for field in train), 4),
+            "holdout_mean_ok_per_instance": round(statistics.mean(field["mean_ok"] for field in hold), 4),
             "holdout_note": "holdout 的 O 层聚合仅描述性；建模消费在 H3 开留出集前禁止",
         },
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(doc, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
-    # Block D ledger 追加 index=1（继承 genesis 链）
-    entries = [json.loads(line) for line in args.ledger.read_text(encoding="utf-8").splitlines() if line.strip()]
-    previous = entries[-1]["entry_hash"]
     payload = {
         "artifact": "pool_census",
         "file_sha256": _sha256_file(args.output),
@@ -111,11 +110,11 @@ def main() -> None:
         "n_instances": doc["n_instances"],
         "cv_spec_hash": cv["spec_hash"],
     }
-    entry = artifact_chain_entry(len(entries), previous, payload)
-    with args.ledger.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(entry, ensure_ascii=False, sort_keys=True) + "\n")
-    print(f"census: fields={len(fields_doc)} instances={doc['n_instances']} "
-          f"applicable={doc['applicable_by_vehicle']} ledger_index={entry['index']}")
+    entry = seal_pool_census_ledger(payload, args.ledger)
+    print(
+        f"census: fields={len(fields_doc)} instances={doc['n_instances']} "
+        f"applicable={doc['applicable_by_vehicle']} ledger_index={entry['index']}"
+    )
 
 
 if __name__ == "__main__":
