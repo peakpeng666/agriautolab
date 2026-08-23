@@ -84,8 +84,7 @@ def main() -> None:
         "invariants": {
             "o_subset_a": True,
             "a_subset_n": True,
-            "complete_nominal_matrix": True,
-            "note": "逐实例强制 O⊆A⊆N 且 nominal 配置矩阵完整；违例当场失败",
+            "note": "census_from_runs 逐实例强制校验，违例当场抛错而非记录",
         },
         "nominal_size": census["nominal_size"],
         "applicable_by_vehicle": census["applicable_by_vehicle"],
