@@ -9,6 +9,7 @@ import html
 import json
 from pathlib import Path
 
+from agriautolab.corpus.derived_status import derive_status
 from agriautolab.pareto.front import ObjectiveVector, pareto_front, pool_hash
 
 
@@ -24,11 +25,16 @@ def generate(runs_path: Path, manifest_path: Path, output_svg: Path, output_csv:
         raise RuntimeError("生成论文图需要项目声明的 pyarrow>=16") from error
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     rows = pq.read_table(runs_path).to_pylist()
-    valid_instances = sorted({str(row["instance_id"]) for row in rows if row.get("runstatus") == "ok"})
+
+    def is_ok(row) -> bool:
+        # 分析层统一状态入口：validator 事实优先于运行时归并
+        return derive_status(str(row["runstatus"]), row.get("failure_reason")) == "ok"
+
+    valid_instances = sorted({str(row["instance_id"]) for row in rows if is_ok(row)})
     if not valid_instances:
         raise ValueError("runs.parquet 中没有 OK 实例")
     selected = instance_id or valid_instances[0]
-    selected_rows = [row for row in rows if str(row["instance_id"]) == selected and row.get("runstatus") == "ok"]
+    selected_rows = [row for row in rows if str(row["instance_id"]) == selected and is_ok(row)]
     if not selected_rows:
         raise ValueError(f"instance_id={selected!r} 没有 OK 运行")
     points = {
@@ -36,8 +42,17 @@ def generate(runs_path: Path, manifest_path: Path, output_svg: Path, output_csv:
         for row in selected_rows
     }
     front = pareto_front(points)
-    refs = manifest["hypervolume_reference"]
-    reference = (float(refs["path_length"]), float(refs["headland_turns"]), float(refs["row_crossings"]))
+    # 归一化用该实例的解析参考点（parquet 的 ref_* 列），协议模板参考点
+    # 只是占位（basis 自述 placeholder），用作图归一化会系统性失真。
+    ref_row = selected_rows[0]
+    try:
+        reference = (
+            float(ref_row["ref_path_length"]),
+            float(ref_row["ref_headland_turns"]),
+            float(ref_row["ref_row_crossings"]),
+        )
+    except (KeyError, TypeError, ValueError) as error:
+        raise ValueError("runs.parquet 缺少逐实例参考点列 ref_*（用带参考点列的语料重新生成）") from error
 
     with output_csv.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)

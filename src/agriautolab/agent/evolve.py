@@ -24,7 +24,7 @@ from agriautolab.agent.gates import (
 )
 from agriautolab.agent.ledger import EvolutionLedger, EvolutionRecord, GateRecord
 from agriautolab.agent.proposer import ProposalContext, ProposalCandidate
-from agriautolab.agent.reviewer import DEFAULT_REVIEWERS, AdversarialReviewer, majority_refuted
+from agriautolab.agent.reviewer import DEFAULT_REVIEWERS, AdversarialReviewer, final_refuted
 from agriautolab.contracts.enums import CoverageStage
 from agriautolab.contracts.problem import CoverageProblem
 from agriautolab.contracts.protocol import BenchmarkProtocol
@@ -155,7 +155,7 @@ def evolve_pool(
         was_kept = False
         if all_passed and function is not None:
             verdicts = tuple(reviewer.review(candidate, function) for reviewer in reviewers)
-            review_refuted = majority_refuted(verdicts)
+            review_refuted = final_refuted(verdicts)
             review_reasons = tuple(reason for verdict in verdicts for reason in verdict.reasons)
             if not review_refuted and identity not in kept_extra:
                 objectives = _candidate_points(function, instances, protocol)

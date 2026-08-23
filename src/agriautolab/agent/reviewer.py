@@ -25,6 +25,8 @@ from agriautolab.agent.proposer import ProposalCandidate
 class ReviewVerdict:
     refuted: bool
     reasons: tuple[str, ...]
+    # hard=True 的否决不可被投票翻案（正确性类检查）；advisory 检查仍走多数。
+    hard: bool = False
 
 
 class AdversarialReviewer(Protocol):
@@ -47,11 +49,11 @@ class CorrectnessReviewer:
             try:
                 value = function(probe)
             except Exception as error:  # noqa: BLE001 -- 探针失败就是反例本身，必须记录而不是上抛
-                return ReviewVerdict(True, (f"探针 {index}（{probe}）抛出 {type(error).__name__}: {error}",))
+                return ReviewVerdict(True, (f"探针 {index}（{probe}）抛出 {type(error).__name__}: {error}",), hard=True)
             if not isinstance(value, (int, float)) or not math.isfinite(float(value)):
-                return ReviewVerdict(True, (f"探针 {index} 返回非有限数：{value!r}",))
+                return ReviewVerdict(True, (f"探针 {index} 返回非有限数：{value!r}",), hard=True)
             if abs(float(value)) > math.pi / 2.0 + 1e-12:
-                return ReviewVerdict(True, (f"探针 {index} 越界：{float(value)!r}",))
+                return ReviewVerdict(True, (f"探针 {index} 越界：{float(value)!r}",), hard=True)
         return ReviewVerdict(False, tuple(
             f"探针 {index} 通过（返回 {function(probe)!r}）" for index, probe in enumerate(self.PROBES)
         ))
@@ -113,3 +115,10 @@ def majority_refuted(verdicts: tuple[ReviewVerdict, ...]) -> bool:
     """多数否决即淘汰。平票（偶数复核器）按否决处理——保守侧。"""
     refuted = sum(1 for verdict in verdicts if verdict.refuted)
     return refuted * 2 >= len(verdicts)
+
+
+def final_refuted(verdicts: tuple[ReviewVerdict, ...]) -> bool:
+    """终判：任何 hard 否决直接淘汰（不被多数翻案），其余按多数。"""
+    if any(verdict.refuted and verdict.hard for verdict in verdicts):
+        return True
+    return majority_refuted(verdicts)

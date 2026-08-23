@@ -33,7 +33,18 @@ def main() -> None:
         n_folds=args.folds,
         seed=args.seed,
     )
-    write_cv_assignment(evidence, args.output)
+    if args.ledger is not None and args.output.exists():
+        # 已封存重跑：先在临时位置渲染，与封存哈希不一致时覆盖前拒绝
+        from agriautolab.evidence.atomic import commit_guarded, sealed_sha_for
+
+        if sealed_sha_for(args.ledger, "cv_assignment", "cv_assignment_file_sha256") is not None:
+            tmp = args.output.with_name(args.output.name + ".tmp")
+            write_cv_assignment(evidence, tmp)
+            commit_guarded(tmp, args.output, args.ledger, "cv_assignment", "cv_assignment_file_sha256")
+        else:
+            write_cv_assignment(evidence, args.output)
+    else:
+        write_cv_assignment(evidence, args.output)
     ledger_entry = None
     if args.ledger is not None:
         ledger_entry = seal_cv_assignment_in_block_d_ledger(evidence, args.output, args.ledger)
