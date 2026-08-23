@@ -16,12 +16,22 @@ from agriautolab.datasets.fields2benchmark import (
 
 
 def _self_check() -> None:
+    """用与各国声明 CRS 自洽的小矩形检查导入和许可过滤链。"""
     with tempfile.TemporaryDirectory() as temp:
         root = Path(temp)
         archive = root / "wkt.zip"
+        origins = {
+            "NL_demo": (155000.0, 463000.0),
+            "EE_demo": (600000.0, 6500000.0),
+            "LT_demo": (500000.0, 6100000.0),
+        }
         with zipfile.ZipFile(archive, "w") as handle:
-            for name in ("NL_demo", "EE_demo", "LT_demo"):
-                handle.writestr(f"{name}.wkt", Polygon([(0, 0), (10, 0), (10, 5), (0, 5), (0, 0)]).wkt)
+            for name, (ox, oy) in origins.items():
+                polygon = Polygon([
+                    (ox, oy), (ox + 10.0, oy), (ox + 10.0, oy + 5.0),
+                    (ox, oy + 5.0), (ox, oy),
+                ])
+                handle.writestr(f"{name}.wkt", polygon.wkt)
         records = load_fields2benchmark_wkt_zip(archive)
         manifest = export_corpus(records, path=root / "out",
                                  allow_analysis=True, allow_redistribution=True)
