@@ -1,0 +1,18 @@
+{
+  "protocol_id": "AGRIPLAN-C-235",
+  "coverage_target": "original_field",
+  "coverage_threshold": 0.0,
+  "area_epsilon_m2": 1e-9,
+  "resample_step_m": 0.25,
+  "clearance_sample_step_m": 0.25,
+  "hypervolume_reference": {
+    "path_length": 1000000.0,
+    "headland_turns": 100000.0,
+    "row_crossings": 1000000.0,
+    "basis": "corpus-template-placeholder; 正典参考点是逐实例 analytic_reference，随 runs.parquet 的 ref_* 列落盘"
+  },
+  "reverse_cost": {
+    "reverse_length_multiplier": 1.0,
+    "gear_shift_penalty_m": 0.0
+  }
+}

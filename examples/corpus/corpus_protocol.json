@@ -1,0 +1,25 @@
+{
+  "benchmark_protocol_hash": "03babc3f32002b8220ed22f6037b57402573e35dd581339258902fcfa949d5ae",
+  "cv_folds": 10,
+  "protocol_id": "AGRIPLAN-C-235-CORPUS",
+  "reconciliation_sampling": {
+    "min_with_multiple_rings": 2,
+    "min_with_obstacles": 6,
+    "seed": 20260821,
+    "total": 14
+  },
+  "row_crossable": true,
+  "row_direction_mode": "principal_axis",
+  "row_offsets_rad": [
+    0.0,
+    0.3920685613182424,
+    0.7841371226364848,
+    1.1762056839547272,
+    1.5682742452729697
+  ],
+  "row_spacings_m": [
+    0.75,
+    3.0
+  ],
+  "vehicles_hash": "8040026a0833afa89652ac82e20f8c9f3006a7fc6265bfa0de0eeb2e7f745756"
+}
