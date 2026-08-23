@@ -1,5 +1,6 @@
 """D3-D4 协议先于结果封存的证据测试。"""
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -66,3 +67,28 @@ def test_selection_protocol_refuses_code_document_drift(tmp_path: Path):
     protocol.write_text(json.dumps(document, sort_keys=True), encoding="utf-8")
     with pytest.raises(ValueError, match="spec_hash"):
         seal_selection_protocol(protocol_path=protocol, ledger_path=ledger)
+
+
+def test_committed_selection_protocol_replays_exactly_and_is_ledger_index_two():
+    root = Path(__file__).resolve().parents[2]
+    protocol_path = root / "evidence" / "block_d" / "selection_protocol_v1.json"
+    ledger_path = root / "evidence" / "block_d" / "ledger.jsonl"
+    document = json.loads(protocol_path.read_text(encoding="utf-8"))
+    expected = selection_protocol_payload(
+        cv_spec_hash=document["cv_spec_hash"],
+        pool_hash=document["pool_hash"],
+    )
+    expected["spec_hash"] = selection_protocol_hash(
+        cv_spec_hash=document["cv_spec_hash"],
+        pool_hash=document["pool_hash"],
+    )
+    assert document == expected
+
+    entries = tuple(json.loads(line) for line in ledger_path.read_text(encoding="utf-8").splitlines())
+    verify_artifact_chain(entries)
+    assert len(entries) == 3
+    entry = entries[2]
+    assert entry["index"] == 2
+    assert entry["payload"]["artifact"] == "selection_protocol_v1"
+    assert entry["payload"]["spec_hash"] == document["spec_hash"]
+    assert entry["payload"]["file_sha256"] == hashlib.sha256(protocol_path.read_bytes()).hexdigest()
