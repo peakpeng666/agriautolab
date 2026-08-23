@@ -25,9 +25,13 @@ def principal_axis(polygon) -> tuple[float, float]:
     return canonical_direction(float(principal[0]), float(principal[1]))
 
 
-class PrincipalAxisSwath:
+class PrincipalAxisSwathGenerator:
     algorithm_id = "principal_axis"
 
     def run(self, mains: tuple[PolygonSpec, ...], *, working_width_m: float, problem: CoverageProblem) -> SwathsArtifact:
         ux, uy = principal_axis(polygon_from_spec(mains[0]))
         return swaths_along_direction(mains, ux, uy, working_width_m=working_width_m)
+
+
+# legacy 别名：canonical 类名见 docs/NAMING.md。
+PrincipalAxisSwath = PrincipalAxisSwathGenerator

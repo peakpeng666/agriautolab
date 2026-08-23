@@ -10,7 +10,7 @@ from agriautolab.contracts.vehicle import VehicleSpec
 from agriautolab.coverage.stages.path import DubinsPath
 
 
-class DubinsTransit:
+class DubinsPathPlanner:
     algorithm_id = "dubins_transit"
 
     def __init__(self, sample_step_m: float = 0.25) -> None:
@@ -20,3 +20,7 @@ class DubinsTransit:
 
     def run(self, route: RouteArtifact, robot: VehicleSpec) -> PathArtifact:
         return DubinsPath(self.sample_step_m).run(route, robot)
+
+
+# legacy 别名：canonical 类名见 docs/NAMING.md。
+DubinsTransit = DubinsPathPlanner

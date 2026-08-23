@@ -185,7 +185,7 @@ def _reeds_shepp_segments(start: Pose2D, goal: Pose2D, radius: float, step: floa
     return tuple(output), serial
 
 
-class ReedsSheppTransit:
+class ReedsSheppPathPlanner:
     algorithm_id = "reeds_shepp_transit"
 
     def __init__(self, sample_step_m: float = 0.25, *, cost_model: ReverseCostModel) -> None:
@@ -234,3 +234,7 @@ class ReedsSheppTransit:
             serial += 1
             previous_end = end_pose
         return PathArtifact(segments=tuple(segments))
+
+
+# legacy 别名：canonical 类名见 docs/NAMING.md。
+ReedsSheppTransit = ReedsSheppPathPlanner

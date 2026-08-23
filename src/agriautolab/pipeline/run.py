@@ -11,19 +11,19 @@ from dataclasses import dataclass, field
 import time
 from typing import Any, Callable, Mapping
 
-from agriautolab.algorithms.decomposition.boustrophedon_cells import BoustrophedonCells
+from agriautolab.algorithms.decomposition.boustrophedon_cells import BoustrophedonDecomposition
 from agriautolab.algorithms.headland.no_headland import NoHeadland
-from agriautolab.algorithms.headland.uniform_headland import UniformHeadland
-from agriautolab.algorithms.path.dubins_transit import DubinsTransit
-from agriautolab.algorithms.path.reeds_shepp_transit import ReedsSheppTransit
-from agriautolab.algorithms.route.boustrophedon_order import BoustrophedonOrder
-from agriautolab.algorithms.route.rural_postman_greedy import RuralPostmanGreedy
-from agriautolab.algorithms.route.skip_one_order import SkipOneOrder
-from agriautolab.algorithms.swath.fixed_angle import FixedAngleSwath
-from agriautolab.algorithms.swath.longest_edge import LongestEdgeSwathDirection
-from agriautolab.algorithms.swath.min_width import MinWidthSwath
-from agriautolab.algorithms.swath.principal_axis import PrincipalAxisSwath
-from agriautolab.algorithms.swath.row_aligned import RowAlignedSwath
+from agriautolab.algorithms.headland.uniform_headland import ConstantWidthHeadland
+from agriautolab.algorithms.path.dubins_transit import DubinsPathPlanner
+from agriautolab.algorithms.path.reeds_shepp_transit import ReedsSheppPathPlanner
+from agriautolab.algorithms.route.boustrophedon_order import BoustrophedonRoutePlanner
+from agriautolab.algorithms.route.rural_postman_greedy import GreedyRuralPostmanRoutePlanner
+from agriautolab.algorithms.route.skip_one_order import SkipOneRoutePlanner
+from agriautolab.algorithms.swath.fixed_angle import FixedAngleSwathGenerator
+from agriautolab.algorithms.swath.longest_edge import LongestEdgeSwathGenerator
+from agriautolab.algorithms.swath.min_width import MinimumWidthSwathGenerator
+from agriautolab.algorithms.swath.principal_axis import PrincipalAxisSwathGenerator
+from agriautolab.algorithms.swath.row_aligned import RowAlignedSwathGenerator
 from agriautolab.contracts.enums import RunStatus
 from agriautolab.contracts.artifacts import (
     CellsArtifact, HeadlandArtifact, PathArtifact, RouteArtifact, SwathsArtifact,
@@ -40,21 +40,21 @@ from agriautolab.pareto.front import ObjectiveVector
 from agriautolab.pipeline.config import PipelineConfig
 from agriautolab.validation.validator import PathValidator, ValidationResult
 
-_DECOMPOSITIONS = {"no_decomposition": NoDecomposition, "boustrophedon_cells": BoustrophedonCells}
-_HEADLANDS = {"no_headland": NoHeadland, "uniform_headland": UniformHeadland}
+_DECOMPOSITIONS = {"no_decomposition": NoDecomposition, "boustrophedon_cells": BoustrophedonDecomposition}
+_HEADLANDS = {"no_headland": NoHeadland, "uniform_headland": ConstantWidthHeadland}
 _SWATHS = {
-    "fixed_angle": FixedAngleSwath,
-    "principal_axis": PrincipalAxisSwath,
-    "min_width": MinWidthSwath,
-    "longest_edge": LongestEdgeSwathDirection,
-    "row_aligned": RowAlignedSwath,
+    "fixed_angle": FixedAngleSwathGenerator,
+    "principal_axis": PrincipalAxisSwathGenerator,
+    "min_width": MinimumWidthSwathGenerator,
+    "longest_edge": LongestEdgeSwathGenerator,
+    "row_aligned": RowAlignedSwathGenerator,
 }
 _ROUTES = {
-    "boustrophedon_order": BoustrophedonOrder,
-    "skip_one_order": SkipOneOrder,
-    "rural_postman_greedy": RuralPostmanGreedy,
+    "boustrophedon_order": BoustrophedonRoutePlanner,
+    "skip_one_order": SkipOneRoutePlanner,
+    "rural_postman_greedy": GreedyRuralPostmanRoutePlanner,
 }
-_PATHS = {"dubins_transit": DubinsTransit, "reeds_shepp_transit": ReedsSheppTransit}
+_PATHS = {"dubins_transit": DubinsPathPlanner, "reeds_shepp_transit": ReedsSheppPathPlanner}
 
 
 @dataclass
