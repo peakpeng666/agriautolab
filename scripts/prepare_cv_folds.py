@@ -7,7 +7,13 @@ import argparse
 import json
 from pathlib import Path
 
-from agriautolab.selection.cv import CV_FOLDS, CV_SEED, build_cv_assignment_evidence, write_cv_assignment
+from agriautolab.selection.cv import (
+    CV_FOLDS,
+    CV_SEED,
+    build_cv_assignment_evidence,
+    seal_cv_assignment_in_block_d_ledger,
+    write_cv_assignment,
+)
 
 
 def main() -> None:
@@ -15,6 +21,7 @@ def main() -> None:
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--holdout", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--ledger", type=Path, help="可选：把折表封为 Block D 分析账本 genesis")
     parser.add_argument("--folds", type=int, default=CV_FOLDS)
     parser.add_argument("--seed", type=int, default=CV_SEED)
     parser.add_argument("--print-json", action="store_true", help="审计/CI 用：把完整规范 JSON 打到 stdout")
@@ -27,12 +34,17 @@ def main() -> None:
         seed=args.seed,
     )
     write_cv_assignment(evidence, args.output)
+    ledger_entry = None
+    if args.ledger is not None:
+        ledger_entry = seal_cv_assignment_in_block_d_ledger(evidence, args.output, args.ledger)
     print(
         "cv assignment: "
         f"all={evidence.n_all_fields}, holdout={evidence.n_holdout_fields}, "
         f"train={evidence.n_training_fields}, folds={evidence.fold_sizes}, "
         f"assignment_hash={evidence.assignment_hash}, spec_hash={evidence.spec_hash}"
     )
+    if ledger_entry is not None:
+        print(f"block-d ledger genesis={ledger_entry['entry_hash']}")
     if args.print_json:
         print("---BEGIN-CV-ASSIGNMENT-JSON---")
         print(json.dumps(evidence.model_dump(mode="json"), ensure_ascii=False, indent=2, sort_keys=True))
