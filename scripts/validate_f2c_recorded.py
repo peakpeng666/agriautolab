@@ -22,11 +22,14 @@ def _run(path: Path) -> None:
 
 
 def _self_check() -> None:
+    """用当前冻结的 13 列 RecordedCsvAdapter schema 做最小自比。"""
     with tempfile.TemporaryDirectory() as temp:
         path = Path(temp) / "recorded.csv"
         path.write_text(
-            "request_id,path_length,swath_count,swath_length_sum,main_field_area\n"
-            "demo,10,2,8,50\n",
+            "request_id,path_length,swath_count,swath_length_sum,main_field_area,"
+            "transit_entry_leg_m,transit_turn_total_m,transit_turn_count,"
+            "transit_inter_cell_m,transit_exit_leg_m,transit_other_m,working_crs,route_algorithm\n"
+            "demo,10,2,8,50,0,2,1,0,0,0,EPSG:32631,boustrophedon\n",
             encoding="utf-8",
         )
         _run(path)
