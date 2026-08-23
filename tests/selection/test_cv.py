@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from agriautolab.evidence.ledger import verify_artifact_chain
 from agriautolab.selection.cv import (
     CV_ASSIGNMENT_ALGORITHM,
     CV_FOLDS,
@@ -13,6 +14,8 @@ from agriautolab.selection.cv import (
     assign_grouped_folds,
     build_cv_assignment_evidence,
     field_ids_from_manifest,
+    seal_cv_assignment_in_block_d_ledger,
+    write_cv_assignment,
 )
 
 
@@ -51,7 +54,7 @@ def test_field_universe_comes_from_result_independent_manifest_licenses() -> Non
     assert field_ids_from_manifest(manifest) == ("field_a", "field_b")
 
 
-def test_build_evidence_excludes_holdout_and_binds_source_files(tmp_path: Path) -> None:
+def _fixture_sources(tmp_path: Path) -> tuple[Path, Path]:
     manifest_path = tmp_path / "manifest.json"
     holdout_path = tmp_path / "holdout.json"
     manifest_path.write_text(json.dumps({
@@ -70,7 +73,11 @@ def test_build_evidence_excludes_holdout_and_binds_source_files(tmp_path: Path) 
         "field_ids": ["field_b"],
         "seal_hash": "b" * 64,
     }), encoding="utf-8")
+    return manifest_path, holdout_path
 
+
+def test_build_evidence_excludes_holdout_and_binds_source_files(tmp_path: Path) -> None:
+    manifest_path, holdout_path = _fixture_sources(tmp_path)
     evidence = build_cv_assignment_evidence(manifest_path, holdout_path, n_folds=3, seed=7)
     assert evidence.n_all_fields == 4
     assert evidence.n_holdout_fields == 1
@@ -81,6 +88,37 @@ def test_build_evidence_excludes_holdout_and_binds_source_files(tmp_path: Path) 
 
     roundtrip = CvAssignmentEvidence.model_validate_json(evidence.model_dump_json())
     assert roundtrip == evidence
+
+
+def test_cv_assignment_can_be_sealed_as_idempotent_block_d_genesis(tmp_path: Path) -> None:
+    manifest_path, holdout_path = _fixture_sources(tmp_path)
+    evidence = build_cv_assignment_evidence(manifest_path, holdout_path, n_folds=3, seed=7)
+    assignment_path = tmp_path / "cv_assignment.json"
+    ledger_path = tmp_path / "block_d_ledger.jsonl"
+    write_cv_assignment(evidence, assignment_path)
+
+    first = seal_cv_assignment_in_block_d_ledger(evidence, assignment_path, ledger_path)
+    replay = seal_cv_assignment_in_block_d_ledger(evidence, assignment_path, ledger_path)
+    assert replay == first
+    entries = tuple(json.loads(line) for line in ledger_path.read_text(encoding="utf-8").splitlines())
+    assert len(entries) == 1
+    assert entries[0]["payload"]["assignment_hash"] == evidence.assignment_hash
+    verify_artifact_chain(entries)
+
+    assignment_path.write_text(assignment_path.read_text(encoding="utf-8") + " ", encoding="utf-8")
+    with pytest.raises(ValueError, match="genesis"):
+        seal_cv_assignment_in_block_d_ledger(evidence, assignment_path, ledger_path)
+
+
+def test_committed_v7_cv_assignment_exactly_regenerates() -> None:
+    root = Path(__file__).resolve().parents[2]
+    expected_path = root / "evidence" / "v7" / "cv_assignment.json"
+    expected = CvAssignmentEvidence.model_validate_json(expected_path.read_text(encoding="utf-8"))
+    regenerated = build_cv_assignment_evidence(
+        root / "evidence" / "v7" / "manifest.json",
+        root / "evidence" / "v7" / "holdout_seal.json",
+    )
+    assert regenerated == expected
 
 
 def test_d1_frozen_constants_match_preregistration() -> None:
