@@ -1,6 +1,6 @@
 """语料级 Pareto 聚合：池身份、有效池与参考点永远随结果一起返回。
 
-两条作用域纪律（Block C 复核 R1 确立）：
+两条作用域纪律（复核轮确立）：
 
 1. 前沿大小不可跨有效池比较：不同实例的 NOT_APPLICABLE 数量不同，
    有效池（产出 ok 行的配置数）随之不同。前沿大小必须与有效池、
@@ -64,7 +64,7 @@ def _reference_of(row: dict, fallback: HypervolumeReference | None, has_ref_colu
         if fallback is None:
             raise ValueError(
                 "runs.parquet 没有逐实例参考点列（ref_path_length/...），"
-                "且未提供全局参考点；语料运行请用 Block C R1 之后的 runner 重新生成"
+                "且未提供全局参考点；语料运行请用带逐实例参考点列的 runner 重新生成"
             )
         return fallback
     return HypervolumeReference(

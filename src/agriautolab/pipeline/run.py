@@ -150,7 +150,7 @@ def _require_param(config: PipelineConfig, name: str, stage: str) -> float:
 
 
 def _center_free_polygons(cell: Any, body_width_m: float) -> tuple:
-    """cell 内缩 body/2 的车体中心可行域（PolygonSpec 元组），语义同 Block A FieldGeometry.center_free。
+    """cell 内缩 body/2 的车体中心可行域（PolygonSpec 元组），语义同 FieldGeometry.center_free。
 
     真实地块实测：内缩可把颈缩地块劈成 MultiPolygon——
     两个部件都是合法扫掠域，按片返回而不是拒绝；语义同 BCD 的多部件 cell 处理。

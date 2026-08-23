@@ -106,7 +106,7 @@ def _reference_vehicle() -> VehicleSpec:
 
 def validation_gate(function: HeuristicFn, problem: CoverageProblem, vehicle: VehicleSpec,
                      protocol: BenchmarkProtocol) -> GateOutcome:
-    """第二道：产出路径必须过 Block A 的 PathValidator。不通过直接淘汰，不许修一下再用。"""
+    """第二道：产出路径必须过独立 PathValidator。不通过直接淘汰，不许修一下再用。"""
     try:
         result = run_pipeline(problem, vehicle, candidate_config(_candidate_angle(function, problem, vehicle)), protocol)
     except Exception as error:  # noqa: BLE001 -- 闸门把一切失败转为淘汰记录（保留原因），不让循环崩溃

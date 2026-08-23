@@ -3,7 +3,7 @@
 只记成功候选就是发表偏倚——「演化找到了 3 个好启发式」和
 「演化试了 40 个、37 个被闸门否决」是两个完全不同的主张，
 后者才是可复现实验该有的记录。
-Block A 的 EvidenceLedger 与 EvidenceRecord 强类型绑定（运行证据），
+evidence 层的 EvidenceLedger 与 EvidenceRecord 强类型绑定（运行证据），
 演化记录字段不同，这里按同一哈希链纪律单独建账。
 """
 

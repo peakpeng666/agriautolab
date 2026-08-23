@@ -116,9 +116,9 @@ row_angle_vs_principal, turning_ratio, swath_count_at_minwidth。
 
 
 class LLMProposer:
-    """真实模型后端。Block B 不发起任何网络请求，只定义接口与提示词模板。
+    """真实模型后端。本模块不发起任何网络请求，只定义接口与提示词模板。
 
-    模型客户端由构造注入（Block C 接真模型）；不注入就调用是配置错误，
+    模型客户端由构造注入（真模型由调用方接入）；不注入就调用是配置错误，
     当场报错而不是降级到 mock——静默降级会让「测试后端」混进真实证据链。
     """
 
@@ -135,12 +135,12 @@ class LLMProposer:
     def propose(self, *, stage: CoverageStage, context: ProposalContext, rng: np.random.Generator) -> ProposalCandidate:
         if self._client is None:
             raise RuntimeError(
-                "LLMProposer 没有注入模型客户端：Block B 不携带网络后端，"
-                "实际调用属于 Block C；测试请用 MockProposer"
+                "LLMProposer 没有注入模型客户端：本模块不携带网络后端；"
+                "测试请用 MockProposer"
             )
         source = self._client.complete(self.build_prompt(stage=stage, context=context))
         return ProposalCandidate(
             algorithm_id=f"evolved_llm_{context.round_index:03d}",
             source_code=source,
-            description="LLM 提议（Block C 注入真实后端后产生）",
+            description="LLM 提议（注入真实后端后产生）",
         )

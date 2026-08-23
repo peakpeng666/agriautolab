@@ -1,6 +1,6 @@
 """最长边 swath：方向平行于多边形自身最长的那条外环边。
 
-与 Block A 的 longest_edge_swath（MBR 最长边）不是同一个量：凸多边形上两者一致，
+与阶段基线的 longest_edge_swath（MBR 最长边）不是同一个量：凸多边形上两者一致，
 凹多边形上会给出不同方向。保留两个算法正是为了在池子里体现这个差异。"""
 
 import math

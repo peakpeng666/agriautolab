@@ -147,7 +147,7 @@ def dubins_word(start: Pose2D, goal: Pose2D, radius: float) -> DubinsWord:
 def dubins_length(p0: tuple[float, float, float], p1: tuple[float, float, float], radius: float) -> float:
     """(x,y,theta) -> (x,y,theta) 的最短 Dubins 路长。radius 必须 > 0。
 
-    R=0（可原地转向）在此抛 KinematicModelError，与 Block A 任务 6 对 DubinsPath
+    R=0（可原地转向）在此抛 KinematicModelError，与 DubinsPath 契约对 R=0
     入口的裁决一致：d = distance/R 与曲率 1/R 在零半径处同时发散。
     """
     if radius <= 0.0:

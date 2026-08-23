@@ -243,7 +243,7 @@ def _failure_row(
 class CorpusRunner:
     """单机顺序运行全网格；checkpoint 每行 fsync，崩溃后按 run_key 精确续跑。
 
-    规模基线是 350×配置池×5 行偏移×2 行距×机具规格。Block B 的单配置毫秒级，
+    规模基线是 350×配置池×5 行偏移×2 行距×机具规格。单配置毫秒级，
     本块不引入并行/数据库；真正需要防的是中途失败后从头重跑，以及代码变化后误命中旧缓存。
     """
 
@@ -300,7 +300,7 @@ class CorpusRunner:
                         vehicle_hash = content_hash(vehicle)
                         features = extract_instance_features(problem, vehicle, clock=self.clock)
                         run_instance_id = f"{problem.problem_id}:vehicle:{vehicle_index}"
-                        # 逐实例解析参考点（Block B pareto.hypervolume.analytic_reference）：
+                        # 逐实例解析参考点（pareto.hypervolume.analytic_reference）：
                         # 固定全局参考点下的超体积跨实例测的是地块大小，不是算法质量。
                         # 参考点随行落盘，聚合端独立重算，不采信任何单侧声明。
                         instance_reference = analytic_reference(problem, vehicle)
@@ -444,7 +444,7 @@ class CorpusRunner:
         (root / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
         _write_artifact_ledger(root / "ledger.jsonl", manifest_hash, selected)
         # 跑完压缩断点（§4.6，偏离 keys-only 预案的留痕见 AUDIT_NOTE）：
-        # keys-only 会让续跑后 parquet 重建丢 path_json（违反 Block C #8 的路径保留精神）；
+        # keys-only 会让续跑后 parquet 重建丢 path_json（违反路径几何必须保留的既定纪律）；
         # gzip 同样收磁盘与 I/O（实测 2.0 GB -> ~1/8），零数据损失。mtime=0 保证字节确定。
         import gzip as _gzip
         with checkpoint.open("rb") as src, _gzip.GzipFile(filename=str(checkpoint) + ".gz", mode="wb", compresslevel=6, mtime=0, fileobj=None) as dst:

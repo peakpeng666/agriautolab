@@ -10,6 +10,9 @@
   PR/Issue 模板、CHANGELOG、版本 0.4.0
 - ruff 首扫清零：修掉 1 处 F821 潜在未定义名（`PolygonSpec` 注解）与
   26 处未用导入、4 处未用变量
+- 命名/注释对齐第二批：39 处「Block A/B/C」轮次标签从生产源码改写为
+  语义描述（历史归 AUDIT_NOTE/CHANGELOG）；README 目录树补齐
+  agent/datasets/validation 三包；模块 docstring 覆盖率核验 100%
 
 ## [0.4.0] — 2026-08-23
 

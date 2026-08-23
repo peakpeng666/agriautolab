@@ -198,7 +198,7 @@ def to_metric_crs(geometry: BaseGeometry, *, source_crs: str) -> tuple[BaseGeome
     """把几何变换到米制 CRS，并返回目标 CRS 名称。
 
     先核对 source_crs 的声明与坐标量程自洽（_verify_declared_crs）：
-    声明不核对就等于没有声明——这是 Block A 地头宽度那个洞的同构体。
+    声明不核对就等于没有声明——这是地头宽度可证伪性那个洞的同构体。
 
     米制投影原样保留，避免不必要的重投影误差；经纬度按地块质心选局部 UTM。
     目标 CRS 必须进入 provenance，因为换一个投影，长度、面积与路径最优性都会一起改变。

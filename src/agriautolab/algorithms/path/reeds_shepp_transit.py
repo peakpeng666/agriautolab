@@ -32,7 +32,7 @@ def _sample_arc(pose: Pose2D, angle: float, *, left: bool, radius: float, step: 
         else:
             yaw = pose.yaw_rad - partial
             x = pose.x + radius * (math.sin(pose.yaw_rad) - math.sin(yaw))
-            # 右转分支与左转镜像对称（Block A DubinsPath 原式）：此处曾把 y 的差分方向
+            # 右转分支与左转镜像对称（DubinsPath 原式）：此处曾把 y 的差分方向
             # 抄反，采样弧翻到对称象限，row_aligned 对角场景 y 掉到 -1.9、outside_area 13.2 m²。
             y = pose.y + radius * (math.cos(yaw) - math.cos(pose.yaw_rad))
         points.append(Point(x=x, y=y))

@@ -78,7 +78,7 @@ class RowScenario:
 
     PRINCIPAL_AXIS / LONGEST_EDGE 的 offset_rad 是相对相应几何基准方向的偏移；
     FIXED_OFFSET 以全局 x 轴为基准。这里的 PI_DISCRETE 只用于协议扫描网格，
-    与 Block B 已冻结的解析 Dubins 圆周率口径分开。
+    与已冻结的解析 Dubins 圆周率口径分开。
     """
 
     row_direction_mode: RowDirectionMode
