@@ -7,7 +7,7 @@
 - main_field_area 取「地块 − 地头环带」的面积（假设 A）。F2C 侧 headland.area()
   的真实语义（主田面积还是环带面积、是否扣障碍）由 golden 比对裁决——
   compute_ours_detail 同时给出环带面积与地块面积，供假设 B 对账用，
-  不许在看到残差之前就猜一个对齐口径。
+  对齐口径必须在查看残差之后确定。
 """
 
 from __future__ import annotations
@@ -43,7 +43,7 @@ def _route_for(route_algorithm: str):
         raise RouteAlgorithmMismatchError(
             f"我方没有 route_algorithm={route_algorithm!r} 的对应实现；"
             f"可用：{sorted(OURS_ROUTE_ALGORITHMS)}。"
-            "不许拿名字相近的实现顶替——skip_one_order 与 F2C RP_Snake 的回扫方向不同。"
+            "禁止以名字相近的实现顶替：skip_one_order 与 F2C RP_Snake 的回扫方向不同。"
         )
     return factory()
 

@@ -36,20 +36,23 @@ Benchmark 不得 import Terminal；Algorithm 不得知道 selector、LLM、排�
   （pool_hash 必须随前沿量记录）、精确 3D 超体积（参考点由协议必填声明、解析上界导出、
   越界显式标记不静默截断）、加权切比雪夫标量化（可选中非凸前沿点，加权和不能）
 - `features/`：12 个农业几何特征 + 逐特征提取耗时 + 不变性契约（200 组随机刚体变换测试）
-- `agent/`：沙箱（AST 静态扫描 + 受限 exec，纪律不是安全边界）、四道闸
+- `agent/`：沙箱（AST 静态扫描 + 受限 exec，非安全边界）、四道闸
   （契约/校验/确定性/不变性）、对抗式复核（默认 refuted，多数否决）、
   演化循环（适应度 = 超体积增量，EoH-S CPI 的多目标对应物）、哈希链演化账本（淘汰也记账）
 - `prereg/AGRIPLAN-PARETO-001.yaml` + 字节级封存脚本 + `HoldoutVault`（纪律不是安全）
 - 指标新增：`transit_length`（与 path_length ρ=1.000，DIAGNOSTIC 不进主向量）、
   `headland_turn_count`（与禁用的 turn_count 语义不同，notes 写明）、`row_crossings`
 
-## 明确未实现
+## 范围边界
 
-- benchmark runner、selector、agent、LLM/API、MCP、Web 或终端交互层
-- Reeds-Shepp、动态重规划、真实车辆动力学、滑移、能耗、电池、质量和摩擦
-- Boustrophedon 等分解算法、多个 headland/swath/route/path 候选算法
-- Fields2Benchmark/Fields2Cover 外部基线适配器与论文级批量实验
-- 非单 Polygon 的 headland 基线输出；复杂拓扑应在后续阶段显式扩展契约
+以下能力已存在：语料运行器（corpus/）、偏好条件推荐器（selection/）、
+Agent 演化循环（agent/，LLM 后端为注入接口、默认不联网）、Reeds-Shepp
+运动学、Boustrophedon 分解、Fields2Benchmark 接入与 Fields2Cover 对账
+（cross_validation/ 与 evidence/o2/）。
+
+以下确实超出范围：动态重规划、真实车辆动力学、滑移、能耗、电池、
+质量与摩擦、任何硬件在环。复杂拓扑地块经 MultiPolygon 契约支持，
+不在此文档展开。
 
 ## 安装与测试
 

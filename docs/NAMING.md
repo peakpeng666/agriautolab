@@ -50,17 +50,13 @@
 legacy 关键字与属性。参数键 `path_sample_step_m` 优先，`dubins_sample_step_m`
 作为 legacy 键继续被接受。
 
-## 3. 类名对照（canonical 类 + legacy 别名）
+## 3. 类名现状与收敛方向
 
-`DubinsPathPlanner`/`DubinsTransit`、`ReedsSheppPathPlanner`/`ReedsSheppTransit`、
-`BoustrophedonDecomposition`/`BoustrophedonCells`、`ConstantWidthHeadland`/
-`UniformHeadland`、`MinimumWidthSwathGenerator`/`MinWidthSwath`、
-`FixedAngleSwathGenerator`/`FixedAngleSwath`、`PrincipalAxisSwathGenerator`/
-`PrincipalAxisSwath`、`LongestEdgeSwathGenerator`/`LongestEdgeSwathDirection`、
-`RowAlignedSwathGenerator`/`RowAlignedSwath`、`BoustrophedonRoutePlanner`/
-`BoustrophedonOrder`、`SkipOneRoutePlanner`/`SkipOneOrder`、
-`GreedyRuralPostmanRoutePlanner`/`RuralPostmanGreedy`、
-`TransferBreakdown`/`TransitBreakdown`。旧名一律保留为模块级别名。
+目前 13 个算法类存在 canonical/legacy 双名（`DubinsPathPlanner`/`DubinsTransit`
+等，旧名保留为模块级别名）。**收敛方向：Study-001 关闭后统一回短名**
+（`DubinsTransit`、`MinWidthSwath`、`BoustrophedonOrder`…），删除 Generator/
+Planner 后缀层——双名层无生产消费者，维护成本大于收益。收敛前受封存
+身份约束（selection 模型路径、D5/D6 分析代码哈希）不改动。
 
 ## 4. 包结构
 

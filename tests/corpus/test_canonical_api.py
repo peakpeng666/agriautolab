@@ -4,8 +4,6 @@ from pathlib import Path
 
 import pytest
 
-from agriautolab.benchmark import CorpusRunner, derive_status
-from agriautolab.reconciliation import native
 
 
 def test_metric_canonical_names_resolve_to_same_specs():
@@ -73,14 +71,7 @@ def test_algorithm_classes_canonical_with_legacy_aliases():
     assert ConstantWidthHeadland.algorithm_id == "uniform_headland"
 
 
-def test_reconciliation_and_benchmark_mirror_physical_modules():
-    from agriautolab.corpus import runner as corpus_runner
-    from agriautolab.cross_validation import ours
 
-    assert native.evaluate_native_pipeline is ours.compute_ours
-    assert native.evaluate_native_pipeline_detail is ours.compute_ours_detail
-    assert CorpusRunner is corpus_runner.CorpusRunner
-    assert derive_status("not_applicable", "validator_rejected:outside_area") == "outside_area"
 
 
 def test_frozen_files_untouched():

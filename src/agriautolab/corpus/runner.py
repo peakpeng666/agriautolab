@@ -108,7 +108,7 @@ _VALIDATOR_REJECTION_CLASSES = frozenset({
 def _corpus_run_status(
     status: RunStatus, failure_reason: str | None, *, config: PipelineConfig, vehicle: VehicleSpec
 ) -> str:
-    """语料级具名状态：没有 other 桶，未知的拒绝原因当场抛错（响亮失败）。
+    """语料级具名状态：没有 other 桶，未知拒绝原因立即抛错终止。
 
     ok/timeout/memout/crash/not_applicable 保持 ASlib 六值语义；
     约束违反与数值错误升格为具名值（validator 拒绝原因原样成为状态名），
@@ -136,12 +136,12 @@ def _corpus_run_status(
                 return klass
             raise ValueError(
                 f"未知的 validator 拒绝原因 {klass!r}：请先把它加进 _VALIDATOR_REJECTION_CLASSES，"
-                "不许落进任何兜底桶（分类完备性规则）"
+                "须归入具名分类（分类完备性规则）"
             )
         raise ValueError(
             f"CONSTRAINT_VIOLATION 缺少可分类的 failure_reason（得到 {failure_reason!r}）"
         )
-    raise ValueError(f"无法分类的 RunStatus: {status!r}——加具名映射，不许兜底")
+    raise ValueError(f"无法分类的 RunStatus: {status!r}：补充具名映射")
 
 
 def _append_checkpoint(path: Path, row: dict[str, object]) -> None:
@@ -219,7 +219,7 @@ def _failure_row(
     reference_columns: dict[str, object],
     features,
 ) -> dict[str, object]:
-    """失败行统一构造：失败是数据，类别必须分对，且行 schema 与成功行完全一致。"""
+    """失败行统一构造：失败按数据记录，类别必须正确，行 schema 与成功行一致。"""
     return {
         "run_key": key,
         "field_id": record.field_id,
@@ -353,7 +353,7 @@ class CorpusRunner:
                                     row[f"metric__{metric.metric_id}"] = metric.value
                             except KinematicModelError as error:
                                 # 算法与机具不匹配（如 RS 之于不可倒车车辆）是 NOT_APPLICABLE
-                                # 不是崩溃：失败是数据，但失败类别必须分对。
+                                # 不是崩溃：失败按数据记录，类别必须正确。
                                 row = _failure_row(
                                     key, record, run_instance_id, vehicle_index, config,
                                     RunStatus.NOT_APPLICABLE, error, reference_columns, features,
@@ -363,7 +363,7 @@ class CorpusRunner:
                                 # main_field 塌缩（coverage/stages/headland.py 的固定消息），
                                 # 30/390 全 crash。算法在该实例上给不出解，与机具不匹配
                                 # 同属 NOT_APPLICABLE——crash 要归零，不是可接受状态。
-                                # 只认这一个消息标记：其余 ValueError 仍走 CRASH，不许扩大豁免面。
+                                # 仅识别这一个消息标记：其余 ValueError 仍走 CRASH，豁免面不扩大。
                                 status = RunStatus.NOT_APPLICABLE if "塌缩" in str(error) else RunStatus.CRASH
                                 row = _failure_row(
                                     key, record, run_instance_id, vehicle_index, config,
@@ -387,7 +387,7 @@ class CorpusRunner:
             status = str(row["runstatus"])
             counts[status] = counts.get(status, 0) + 1
         # runstatus 是运行时归并决策；derived_status 由 failure_reason 派生（validator
-        # 事实优先）。两者分歧逐类进 manifest——「归并了什么」必须可见，不许只活在
+        # 事实优先）。两者分歧逐类进 manifest：归并内容保持可见，不只记录在
         # AUDIT_NOTE 里（v7 复核：2 020 行 not_applicable 实为 outside_area 拒绝）。
         from agriautolab.corpus.derived_status import (
             DERIVED_STATUS_DEFINITION, derive_status, status_diff_counts,
@@ -397,7 +397,7 @@ class CorpusRunner:
             derived = derive_status(str(row["runstatus"]), row.get("failure_reason"))
             derived_counts[derived] = derived_counts.get(derived, 0) + 1
         nominal_pool = len(configs)
-        # 有效池/退化池统计一律取聚合器的结果（单一真相源）。
+        # 有效池/退化池统计一律取聚合器的结果（避免两处维护同一事实）。
         # v4 实测教训：runner 自算的 effective_pool 只含 >=1 ok 的实例，450 个零 ok
         # 实例在 manifest 里静默消失——同一事实两处住，修了聚合器漏了 runner。
         from agriautolab.corpus.aggregate import summarize_pareto
