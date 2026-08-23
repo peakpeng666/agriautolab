@@ -9,7 +9,7 @@ git clone https://github.com/peakpeng666/agriautolab.git ~/agriautolab
 cd ~/agriautolab
 bash scripts/install/setup_wsl.sh        # 一条命令；含 F2C 源码构建，首次 20-40 分钟
 source .venv/bin/activate
-python -m pytest -q                       # 预期 530 passed / 30 skipped
+python -m pytest -q                       # 预期 546 passed / 30 skipped
 ```
 
 `setup_wsl.sh` 幂等：连跑两次，第二次全部跳过不重装。逐项自校验用

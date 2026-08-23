@@ -5,6 +5,11 @@
 
 ## [未发布]
 
+- 第三次转折发起（docs/TURNING_POINT.md）：生成式研究线章程 + 两份外部
+  AI 输入的批判性核验（H2 退化实证、空白前提联网抽查成立）
+- 修正案 04：H2 田内重复测量设计、H3 偏好条件 Tchebycheff 悔值首要端点
+- 文档小债清偿：12 特征（3 处）、安装预期 530→546（INSTALL_TRANSCRIPT
+  为历史证据不改）
 - 工程成熟化：GitHub Actions CI（ruff + 双 Python 矩阵 pytest）、ruff 接入
   （冻结件排除）、README 重写（项目级 + 目录树 + 徽章）、CONTRIBUTING、
   PR/Issue 模板、CHANGELOG、版本 0.4.0

@@ -68,7 +68,7 @@ def _components(free: BaseGeometry):
 
 
 def extract_instance_features(problem: CoverageProblem, vehicle: VehicleSpec, *, clock=time.perf_counter) -> InstanceFeatures:
-    """提取 10 个实例特征与各自耗时。row_structure 为 None 时 row_angle_vs_principal 缺席。"""
+    """提取 12 个实例特征与各自耗时：7 个基础几何 + 3 个行结构条件（row_structure 为 None 时缺席）+ turning_ratio 与 swath_count_at_minwidth。"""
     field = polygon_from_spec(problem.field)
     obstacle_items = tuple(
         (spec.geometry_id, polygon_from_spec(spec))
