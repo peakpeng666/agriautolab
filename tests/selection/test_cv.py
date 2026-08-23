@@ -12,6 +12,7 @@ from agriautolab.selection.cv import (
     CvAssignmentEvidence,
     assign_grouped_folds,
     build_cv_assignment_evidence,
+    field_ids_from_manifest,
 )
 
 
@@ -39,14 +40,28 @@ def test_invalid_group_inputs_fail_loudly() -> None:
         assign_grouped_folds(["a", "b"], n_folds=3)
 
 
+def test_field_universe_comes_from_result_independent_manifest_licenses() -> None:
+    manifest = {
+        "licenses": {"field_a": "cc0", "field_b": "cc0"},
+        # field_b 模拟零有效池/无摘要田：它不在 result-derived 映射里也不能被 D1 丢掉。
+        "effective_pool_size_by_instance": {
+            "field_a:principal_axis:0:0.75:vehicle:0": 1,
+        },
+    }
+    assert field_ids_from_manifest(manifest) == ("field_a", "field_b")
+
+
 def test_build_evidence_excludes_holdout_and_binds_source_files(tmp_path: Path) -> None:
     manifest_path = tmp_path / "manifest.json"
     holdout_path = tmp_path / "holdout.json"
     manifest_path.write_text(json.dumps({
         "corpus_hash": "a" * 64,
+        "licenses": {
+            "field_a": "cc0", "field_b": "cc0", "field_c": "cc0", "field_d": "cc0",
+        },
         "effective_pool_size_by_instance": {
             "field_a:principal_axis:0:0.75:vehicle:0": 1,
-            "field_b:principal_axis:0:0.75:vehicle:0": 0,
+            # field_b 故意不出现：holdout 身份不能依赖有效池摘要。
             "field_c:principal_axis:0:0.75:vehicle:0": 2,
             "field_d:principal_axis:0:0.75:vehicle:0": 3,
         },
