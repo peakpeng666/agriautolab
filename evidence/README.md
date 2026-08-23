@@ -8,7 +8,8 @@
 |---|---|---|
 | `env_geometry.json` | 几何引擎契约：已验证的 GEOS/shapely 组合（换引擎=换真值） | `tests/test_geometry_engine.py` 消费 |
 | `o2/` | 与 Fields2Cover 的数值对账：金标 CSV、请求清单、环境指纹、对账脚本 | `../docs` 与 AUDIT_NOTE O2 段 |
-| `v7/` | 终语料溯源件：manifest 副本、留出集封存、状态交叉表、大件 sha256、ledger 链复算记录 | `evidence/v7/README.md` |
+| `v7/` | 终语料溯源件：manifest 副本、留出集封存、D1 CV 折表、状态交叉表、大件 sha256、ledger 链复算记录 | `evidence/v7/README.md` |
+| `block_d/` | 选择/统计分析证据链；genesis 为 D1 field-grouped CV 折身份，后续分析只追加不重建 | `evidence/block_d/README.md` |
 
 大件（runs.parquet / checkpoint.jsonl.gz / ledger.jsonl，GB 级）**不进仓库**，
 留在数据目录，凭 `v7/provenance.json` 的 sha256 随时对账——复核者需要的
