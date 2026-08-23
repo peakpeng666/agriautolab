@@ -79,7 +79,7 @@ def _load_configs(path: Path) -> tuple[PipelineConfig, ...]:
 
     items = json.loads(path.read_text(encoding="utf-8"))
     if len(items) != 13:
-        raise ValueError(f"正式协议名义配置池锁定为 13；当前 JSON 给了 {len(items)}。Block C 不擅自发明第 13 个配置。")
+        raise ValueError(f"正式协议名义配置池锁定为 13；当前 JSON 给了 {len(items)}。运行器不擅自发明第 13 个配置。")
     configs = []
     for index, item in enumerate(items):
         reason = item.pop("reason", None)
@@ -120,7 +120,7 @@ def _seal_holdout(records, output_dir: Path, *, fraction: float, seed: int) -> N
         "fraction": fraction,
         "seal_hash": seal.seal_hash,
         "grouping": "field_id",
-        "note": "按 field_id 分组，与 C-R1 的折分组一致；按实例封存 = 同地块跨集 = 泄漏",
+        "note": "按 field_id 分组，与折分组纪律一致；按实例封存 = 同地块跨集 = 泄漏",
     }, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"holdout: 封存 {len(holdout)}/{len(set(field_ids))} 块 "
           f"(fraction={fraction}, seed={seed}) -> {seal_path}")
@@ -134,7 +134,7 @@ def main() -> None:
     parser.add_argument("--benchmark-protocol", type=Path)
     parser.add_argument("--corpus-protocol", type=Path)
     parser.add_argument("--output", type=Path)
-    # 任务 10：必须先封存再跑。预注册参数 field 级 30%、seed 20260821。
+    # 必须先封存再跑。预注册参数 field 级 30%、seed 20260821。
     parser.add_argument("--holdout-fraction", type=float, default=0.3)
     parser.add_argument("--holdout-seed", type=int, default=20260821)
     parser.add_argument("--self-check", action="store_true")

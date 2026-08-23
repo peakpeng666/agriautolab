@@ -13,6 +13,10 @@
 - 命名/注释对齐第二批：39 处「Block A/B/C」轮次标签从生产源码改写为
   语义描述（历史归 AUDIT_NOTE/CHANGELOG）；README 目录树补齐
   agent/datasets/validation 三包；模块 docstring 覆盖率核验 100%
+- 迭代痕迹清零：src/tests/scripts 全量扫描轮次标签、run 版本号、复核编号
+  （C-R1 等）、任务号、裸章节号、日期——全部语义化或移出；测试目录
+  `tests/block_c/`→`tests/corpus/`、`test_r1_fixes.py`→`test_corpus_guards.py`；
+  `evidence/README.md` 证据集索引（历史唯一住所 = AUDIT_NOTE）
 
 ## [0.4.0] — 2026-08-23
 

@@ -96,7 +96,7 @@ def test_subprocess_and_recorded_return_same_result_type(tmp_path):
 
 
 def test_relative_difference_denominator_is_always_golden_and_keeps_its_sign() -> None:
-    """任务 9 分母纪律：分母恒为 reference，符号留在数里，不随谁大谁小切换。
+    """分母纪律：分母恒为 reference，符号留在数里，不随谁大谁小切换。
 
     实测样本（f2b_004_ee_field_64）：ours=1872.3412 golden=1614.3647。
     旧的 max(|a|,|b|) 分母给 13.7783%，按 golden 分母是 15.9801% —— 相差 2.2 个百分点。
@@ -130,7 +130,7 @@ def test_comparator_refuses_when_the_two_sides_used_different_working_crs() -> N
 
 
 def test_comparator_refuses_when_the_two_sides_used_different_route_algorithms() -> None:
-    """任务 3：路线阶段必须配对。这正是 −38.11% 的由来。"""
+    """路线阶段必须配对。这正是 −38.11% 的由来。"""
     with pytest.raises(RouteAlgorithmMismatchError) as error:
         compare_results((result(route="boustrophedon"),), (result(route="snake"),))
     message = str(error.value)

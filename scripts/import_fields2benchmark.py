@@ -34,7 +34,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--wkt-zip", type=Path)
     parser.add_argument("--output", type=Path)
-    # 任务 8：「用」与「发」拆成两个开关，都无默认值。
+    # 「用」与「发」拆成两个开关，都无默认值。
     # 许可 -> 用途的映射是待人裁定的法律解读，见 docs/refs/licenses/fields2benchmark.md。
     parser.add_argument("--allow-analysis", action=argparse.BooleanOptionalAction, default=None)
     parser.add_argument("--allow-redistribution", action=argparse.BooleanOptionalAction, default=None)

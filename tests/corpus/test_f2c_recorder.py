@@ -66,7 +66,7 @@ def test_recorder_side_avoids_311_only_typing_names(path: pathlib.Path) -> None:
 def test_recorder_and_adapter_share_one_chain_implementation() -> None:
     """等价性由「只有一份实现」保证，不靠事后比对两份输出。
 
-    上一轮有两个一次性壳（/home/peak/f2c_golden_wrapper.py 与
+    录制期有两个一次性壳（/home/peak/f2c_golden_wrapper.py 与
     o2_workspace/record_golden_standalone.py），它们随时可能各自漂移。
     """
     adapter_source = (REPO_ROOT / "src" / "agriautolab" / "cross_validation" / "f2c.py").read_text(

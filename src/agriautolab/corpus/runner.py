@@ -443,7 +443,7 @@ class CorpusRunner:
         manifest = {**manifest_base, "manifest_hash": manifest_hash}
         (root / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
         _write_artifact_ledger(root / "ledger.jsonl", manifest_hash, selected)
-        # 跑完压缩断点（§4.6，偏离 keys-only 预案的留痕见 AUDIT_NOTE）：
+        # 跑完压缩断点（留痕见 AUDIT_NOTE）：
         # keys-only 会让续跑后 parquet 重建丢 path_json（违反路径几何必须保留的既定纪律）；
         # gzip 同样收磁盘与 I/O（实测 2.0 GB -> ~1/8），零数据损失。mtime=0 保证字节确定。
         import gzip as _gzip

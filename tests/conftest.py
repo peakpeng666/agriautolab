@@ -1,4 +1,4 @@
-"""给几何、阶段契约与 Block C 语料测试提供紧凑、确定的夹具。
+"""给几何、阶段契约与语料测试提供紧凑、确定的夹具。
 
 纯合成 fixture；不读取真实 350 地块，不要求 F2C。
 """
@@ -25,7 +25,7 @@ from agriautolab.metrics.coverage import CoverageTargets, resolve_coverage_targe
 from agriautolab.pipeline.config import PipelineConfig
 
 
-# Block B：协议必填的超体积参考点。测试里只满足字段约束，不参与任何数值断言；
+# 协议必填的超体积参考点。测试里只满足字段约束，不参与任何数值断言；
 # 超体积自身的断言在各测试内用独立声明的参考点。
 HYPERVOLUME_TEST_REFERENCE = HypervolumeReference(
     path_length=1.0e7,
@@ -34,7 +34,7 @@ HYPERVOLUME_TEST_REFERENCE = HypervolumeReference(
     basis="test-constant",
 )
 
-# 任务 7：协议必填的倒车代价。测试里取几何中性值（乘子 1.0、换挡罚 0.0），
+# 协议必填的倒车代价。测试里取几何中性值（乘子 1.0、换挡罚 0.0），
 # 即「纯几何长度」，因此不改变任何既有断言的数值。
 REVERSE_COST_TEST_SPEC = ReverseCostSpec(reverse_length_multiplier=1.0, gear_shift_penalty_m=0.0)
 
@@ -89,7 +89,7 @@ def robot() -> VehicleSpec:
 def c_record():
     return FieldRecord(
         field_id="NL_synthetic",
-        # 坐标落在 EPSG:28992 的定义域内（任务 5 的可证伪检查）：
+        # 坐标落在 EPSG:28992 的定义域内（可证伪检查）：
         # RD New 的合法 easting 从 646 起步，原点附近的 (0,0) 是假声明。
         geometry=Polygon([
             (155000, 463000), (155100, 463000), (155100, 463050), (155000, 463050), (155000, 463000),

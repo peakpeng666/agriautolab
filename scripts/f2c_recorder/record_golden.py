@@ -7,12 +7,12 @@
 于是「录制壳与 PythonBindingAdapter 等价」是**只有一份实现**，不是事后比对两份输出。
 
 为什么不重建 binding、也不给仓库降级：F2C binding 绑在 WSL 的 python3.10，
-agriautolab 要求 3.11+。两进程是既定架构（Block C 三适配器设计就是为它准备的），
+两进程是既定架构（三适配器设计就是为它准备的），
 不是需要消除的障碍。
 
 输出两份：
   --output       golden CSV，schema 与 RecordedCsvAdapter 锁死的 13 列一致
-  --route-output swath 访问顺序与几何（JSON），任务 3 的身份证明用
+  --route-output swath 访问顺序与几何（JSON），路线配对的身份证明用
 
 任何请求失败立即中止——缺行的 golden 文件比没有 golden 更坏。
 """

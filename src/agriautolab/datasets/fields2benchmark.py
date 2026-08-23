@@ -282,7 +282,7 @@ def export_corpus(
 ) -> ExportManifest:
     """导出可审计的 WKT JSONL 语料；用途必须由调用方逐项显式声明。
 
-    为什么是两个开关而不是一个 allow_non_commercial（任务 8）：
+    为什么是两个开关而不是一个 allow_non_commercial：
     「用」与「发」是两件事。LT 的 113 块（占 350 的 32%）上游写的是
     「Non-commercial use only」+「Copyright」——非商业**使用**有明文许可，
     **再分发**没有任何授权。一刀切成一个布尔量，等于把「不能发」误读成「不能用」，

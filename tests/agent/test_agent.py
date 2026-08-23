@@ -190,5 +190,5 @@ def test_llm_proposer_refuses_without_injected_client() -> None:
     context = ProposalContext(stage=CoverageStage.SWATH, round_index=0, pool_config_ids=())
     with pytest.raises(RuntimeError, match="MockProposer"):
         proposer.propose(stage=CoverageStage.SWATH, context=context, rng=np.random.default_rng(0))
-    # 提示词模板本身是可构建的（Block C 接真模型的入口）
+    # 提示词模板本身是可构建的（注入真模型的入口）
     assert "swath_angle_offset_rad" in proposer.build_prompt(stage=CoverageStage.SWATH, context=context)
