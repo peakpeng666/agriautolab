@@ -79,6 +79,7 @@ def selection_protocol_payload(*, cv_spec_hash: str, pool_hash: str) -> dict:
             "scikit_learn_version": RECOMMENDER_SKLEARN_VERSION,
             "params": dict(RECOMMENDER_PARAMS),
             "fit": "one multi-output model per config; rows restricted to instances where config in A_x",
+            "sample_weight": "equal_per_analyzable_instance",
             "target": "22-vector of deterministic regrets",
             "inference": "filter candidates by A_x then choose minimum predicted regret at preference index",
             "hyperparameter_search": False,
