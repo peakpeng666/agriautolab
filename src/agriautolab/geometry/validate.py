@@ -67,8 +67,8 @@ def polygon_to_spec(geometry: BaseGeometry, geometry_id: str) -> PolygonSpec:
 def polygon_parts_to_specs(geometry: BaseGeometry, geometry_id: str) -> tuple[PolygonSpec, ...]:
     """把 Polygon 或 MultiPolygon 拆成有序的 PolygonSpec 元组。
 
-    存在的理由（2026-08-21 实测）：对账集改分层抽样后，14 块里有 6 块的地头环带是
-    MultiPolygon（外圈 + 每个障碍周围一圈），1 块（ee_field_35）连主田都被障碍夹断成两片。
+    存在的理由：含障碍地块的地头环带常是 MultiPolygon（外圈 + 每个障碍周围一圈），
+    主田也可能被障碍夹断成多片（真实对账集 14 块中前者 6 块、后者 1 块）。
     此前 polygon_to_spec 直接抛「当前基线要求单 Polygon」，于是含障碍地块根本跑不完 ——
     而 RMA 那条关于障碍的裁决恰恰需要这些地块才能验。
 

@@ -174,7 +174,7 @@ def headland_turn_count(path: PathArtifact) -> int:
 class TransferBreakdown:
     """转移长度的五项完备分解，专为定位「转移超额到底出在哪一项」而设。
 
-    存在的理由（2026-08-21 实测）：12 块 F2B 地上 swath_length_sum 只差 +0.169%，
+    存在的理由：对账集 12 块地上 swath_length_sum 只差 +0.169%，
     path_length 差 -5.30%，而 transit 差 -38.1% —— 残差全在转移里。
     只有总数查不出 38% 从哪来：得知道它是首尾腿、掉头，还是跨 cell 转场。
 

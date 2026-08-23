@@ -338,8 +338,8 @@ def reeds_shepp_words(start: Pose2D, goal: Pose2D, radius: float) -> tuple[RSWor
     """
     if radius <= 0.0:
         raise KinematicModelError(f"Reeds-Shepp 半径必须大于 0，实际 {radius!r}")
-    # 闭合容差带坐标尺度（v6 全量实测）：UTM ~6.5e6 处 ULP≈9.3e-10，合法词的公式
-    # 舍入闭合误差实测 1.86e-9（≈1.3 ULP；ee_field_105 全部 48 候选同值）——绝对 1e-9
+    # 闭合容差带坐标尺度：UTM ~6.5e6 处 ULP≈9.3e-10，合法词的公式
+    # 舍入闭合误差实测 1.86e-9（≈1.3 ULP，全部 48 候选同值）——绝对 1e-9
     # 会把好词全拒掉（v6 的 66 crash 根因）。取 8 ULP 与 1e-9 的较大者：小坐标行为
     # 不变（既有电池 rel 1e-12 仍过），大坐标只放行表示噪声（真错的词在 1e-6 以上）。
     closure_tolerance = max(1e-9, 8.0 * math.ulp(max(abs(start.x), abs(start.y), 1.0)))
@@ -365,7 +365,7 @@ def reeds_shepp_words(start: Pose2D, goal: Pose2D, radius: float) -> tuple[RSWor
 def _forward_only_words(start: Pose2D, goal: Pose2D, radius: float) -> tuple[RSWord, ...]:
     """把 Dubins 的六字并入候选：能倒车的车当然也可以选择不倒车。
 
-    为什么必须显式并进来（实测，2026-08-21）：Reeds-Shepp 的 48 字是**候选最优字集**，
+    为什么必须显式并进来（实测）：Reeds-Shepp 的 48 字是**候选最优字集**，
     不是可行字全集。当倒车严格更优时（同点掉头 pi < 7pi/3），48 字里一个纯前进字都没有——
     于是倒车罚开到 1e9，规划器仍然只能在倒车字里挑，选出一条造价 3e9 的路。
     协议声明「倒车极贵」而规划器照样倒车，这是行为缺陷，不是测试写错。

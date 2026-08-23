@@ -98,7 +98,7 @@ def extract_instance_features(problem: CoverageProblem, vehicle: VehicleSpec, *,
     record("obstacle_area_ratio", lambda: obstacle_union.area / field.area)
     if problem.row_structure is not None:
         record("row_angle_vs_principal", lambda: _row_angle_vs_principal(free, problem.row_structure.direction_rad))
-        # 行距可见性（2026-08-21 可辨识性缺口整改）：row_crossings 与 1/spacing 成比例、
+        # 行距可见性（可辨识性要求）：row_crossings 与 1/spacing 成比例、
         # 最优配置随行距移动，而旧特征集对 spacing 完全盲——仅差行距的两个实例特征相同、
         # 标签可能不同，推荐器学到的是欠定映射。
         record("crossing_density", lambda: math.sqrt(free.area) / problem.row_structure.spacing_m)

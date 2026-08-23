@@ -152,7 +152,7 @@ def _require_param(config: PipelineConfig, name: str, stage: str) -> float:
 def _center_free_polygons(cell: Any, body_width_m: float) -> tuple:
     """cell 内缩 body/2 的车体中心可行域（PolygonSpec 元组），语义同 Block A FieldGeometry.center_free。
 
-    真实地块（235 全量 v3 实测，nl_field_7）：内缩可把颈缩地块劈成 MultiPolygon——
+    真实地块实测：内缩可把颈缩地块劈成 MultiPolygon——
     两个部件都是合法扫掠域，按片返回而不是拒绝；语义同 BCD 的多部件 cell 处理。
     """
     from agriautolab.geometry.footprint import QUAD_SEGS
@@ -207,7 +207,7 @@ def run_pipeline(
         # 扫掠域取车体中心可行域（cell 内缩 body/2），不是地头：分母仍是原田
         # （resolve(problem, None) 的既定语义），这里只是让中心线不把车体带出边界——
         # 否则 no_headland 组合被 outside_area 全部拒绝，运动学内缩与地头是两回事。
-        # 颈缩地块内缩成多片：逐片展开成独立扫掠域（v3 实测 nl_field_7 两片）。
+        # 颈缩地块内缩成多片：逐片展开成独立扫掠域（实测颈缩地块两片）。
         mains = tuple(
             part
             for cell in cells.cells
