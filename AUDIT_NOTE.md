@@ -1725,3 +1725,22 @@ NAMING.md 钉死。
 **此后 AGRIPLAN-PARETO-001 confirmatory protocol 冻结**——任何进一步
 改动走新 study 注册。examples/corpus/（三份真实协议 + README）补齐；
 CLI 明确延后。EoH-S 升级为 Study-002 直接基线。
+
+## D1 核验与 D2 三层池普查（2026-08-24）
+
+**D1 批判性核验（外部完成、本端独立验证）**：折指派从第一性原理重放
+（SHA256(seed\x1f field_id).digest() 排序 → round-robin）与落盘文件
+165/165 逐田一致；Block D ledger genesis 复算一致；「12 块 holdout 田
+缺失于 effective_pool 摘要」属实——effective_pool 是结果派生摘要不是
+全集，误用会让 selection 数据集被悄悄净化（乐观偏置）。D1 改用
+manifest licenses 键（结果无关）作 field universe 并加回归测试，正确。
+
+**D2 落地**：selection/pools.py 三层池契约——N（nominal 13）/
+A（static-applicable：目录声明的问题类型兼容性 × 机具能力配对，
+RS 需 can_reverse，不看 validator）/ O（observed-OK，derived 口径）。
+恒等式 O ⊆ A ⊆ N 逐实例强制，违例当场抛错（O⊄A = 契约 bug 非数据现象）。
+普查（scripts/pool_census.py）：4,700 实例，A 层 v0=11 / v1=13，
+train 侧 165 田（30 块零 ok 田）、holdout 侧 70 田的 O 层聚合明确标注
+「仅描述性，建模消费在 H3 开留出集前禁止」。产物哈希进 Block D ledger
+index=1，链两-entry 复算通过。**nominal/static-applicable/observed-OK
+从此是三个不可混淆的正式数据契约。**
