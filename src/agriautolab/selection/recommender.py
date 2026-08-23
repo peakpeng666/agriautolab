@@ -10,6 +10,7 @@ from typing import Iterable, Sequence
 from agriautolab.selection.evaluation import SelectionInstance
 from agriautolab.selection.protocol import (
     RECOMMENDER_PARAMS,
+    RECOMMENDER_SKLEARN_VERSION,
     SELECTION_FEATURE_IDS,
     selection_protocol_hash,
 )
@@ -37,6 +38,12 @@ class PreferenceConditionedRecommender:
         """按配置拟合 22 维 regret；只用该配置静态适用且 oracle 可定义的实例。"""
         if not instances:
             raise ValueError("训练实例不能为空")
+        actual_sklearn = importlib.metadata.version("scikit-learn")
+        if actual_sklearn != RECOMMENDER_SKLEARN_VERSION:
+            raise RuntimeError(
+                f"selection protocol 要求 scikit-learn=={RECOMMENDER_SKLEARN_VERSION}，"
+                f"当前为 {actual_sklearn}"
+            )
         from sklearn.ensemble import ExtraTreesRegressor
 
         nominal_sets = {instance.nominal for instance in instances}
