@@ -33,7 +33,7 @@ from agriautolab.contracts.protocol import BenchmarkProtocol
 from agriautolab.contracts.vehicle import VehicleSpec
 from agriautolab.coverage.stages.decomposition import NoDecomposition
 from agriautolab.evidence.hashing import content_hash
-from agriautolab.metrics.path import TransitBreakdown, transit_breakdown
+from agriautolab.metrics.path import TransferBreakdown, transit_breakdown
 from agriautolab.metrics.path import headland_turn_count as headland_turn_count_metric
 from agriautolab.metrics.path import row_crossings as row_crossings_metric
 from agriautolab.pareto.front import ObjectiveVector
@@ -102,7 +102,7 @@ class PipelineResult:
     objectives: ObjectiveVector | None
     headland_width_m: float | None
     # 转移五项分解。总数查不出超额出在哪一项——这是 G-A 诊断闸要的强制分类。
-    transit: TransitBreakdown
+    transit: TransferBreakdown
     timing: PipelineTiming = PipelineTiming(0.0, 0.0, 0.0)
 
 
@@ -241,7 +241,8 @@ def run_pipeline(
             lambda: _ROUTES[config.route]().run(swaths),
         )
 
-    sample_step = float(config.params.get("dubins_sample_step_m", 0.25))
+    # 规范参数键 path_sample_step_m；dubins_sample_step_m 为 legacy 键，两者等价。
+    sample_step = float(config.params.get("path_sample_step_m", config.params.get("dubins_sample_step_m", 0.25)))
     if config.path == "reeds_shepp_transit":
         # 允许域 = 可作业区：等长孪生词里优先选把掉头收进场内的那个（见该阶段 docstring）。
         from agriautolab.geometry.kernel import FieldGeometry
