@@ -1,0 +1,99 @@
+{
+  "analysis": {
+    "estimand": "field-level preference-conditioned weighted Tchebycheff regret on holdout; D_f = L_f^rec - 0.5 * L_f^rand_applicable; one-shot holdout consumption",
+    "infeasible_recommendations": 6046,
+    "n_analyzable_fields": 58,
+    "n_holdout_fields_total": 70,
+    "n_zero_ok_only_fields": 12,
+    "preregistered_failure_checks": {
+      "any_triggered": true,
+      "criterion_1_mean_regret_not_below_half_random": true,
+      "criterion_2_infeasible_rate_above_random_applicable": false
+    },
+    "random_applicable_infeasible_rate": 0.3308411446709313,
+    "recommendation_count": 24816,
+    "recommender_infeasible_rate": 0.24363313990973565,
+    "sbs_config_id": "485fccc852cf18e4a45880dfbf66df297780674ddff52e1ec061659d888650ea",
+    "scope_validity": "Preference-conditional selection under the frozen 2-D agricultural CPP simulation protocol; holdout consumed once at D7.",
+    "track_68_excluding_probe_fields": {
+      "mean_D": 0.058717510697747215,
+      "mean_random_applicable_loss": 0.569889227634958,
+      "mean_recommender_loss": 0.3436621245152262,
+      "median_D": -0.10510520090865455,
+      "n_fields": 58,
+      "negative_D_share": 0.7068965517241379,
+      "permutation": {
+        "method": "sign-flip permutation, one-sided (smaller), add-one",
+        "n": 58,
+        "n_as_or_more_extreme": 8208,
+        "n_permutations": 10000,
+        "observed_mean": 0.058717510697747194,
+        "pvalue": 0.8208179182081792,
+        "seed": 20260822,
+        "statistic": "mean_D"
+      }
+    },
+    "track_70": {
+      "mean_D": 0.058717510697747215,
+      "mean_random_applicable_loss": 0.569889227634958,
+      "mean_recommender_loss": 0.3436621245152262,
+      "median_D": -0.10510520090865455,
+      "n_fields": 58,
+      "negative_D_share": 0.7068965517241379,
+      "permutation": {
+        "method": "sign-flip permutation, one-sided (smaller), add-one",
+        "n": 58,
+        "n_as_or_more_extreme": 8208,
+        "n_permutations": 10000,
+        "observed_mean": 0.058717510697747194,
+        "pvalue": 0.8208179182081792,
+        "seed": 20260822,
+        "statistic": "mean_D"
+      }
+    }
+  },
+  "environment": {
+    "numpy": "2.2.6",
+    "python": "3.10.12",
+    "scikit_learn": "1.7.2"
+  },
+  "hypothesis": "H3",
+  "identity": {
+    "analysis_code_hash": "1f9cb0556b1aa1265df995be17a7d7f7095b3016dbf3ca53857fcde355513c00",
+    "analysis_code_sha256_by_path": {
+      "scripts/analyze_h3.py": "fddb8308ea455de9e9a28d0f0cd7f7651d8e74278ce5b2d7c10cf37f53856afc",
+      "src/agriautolab/confirmatory/h3.py": "382bb93abc284d0b360f8bc0704a47c131cf2d493ac575c141bc75f9ae1bf51a",
+      "src/agriautolab/corpus/derived_status.py": "71daa5860cf25cb1614c16a92081f1e53f2a071e0ba82bf50637172e3c602232",
+      "src/agriautolab/pareto/front.py": "f7293ac8ceda09780afd89778ac7829293670fe4e5d3dd271befe25ab2328196",
+      "src/agriautolab/pareto/preference_grid.py": "79e463cbb3db8dd03ee2ae480efb4484a7074e8339da0a8cf1b50c05f5cc8144",
+      "src/agriautolab/selection/evaluation.py": "ddafbb28cc131d449b8e3b39287347d83787a82b107e8c719c35586b6a8beea6",
+      "src/agriautolab/selection/experiment.py": "18f5ab5baf90ccddd76ee8b324cfe64ebe1779ef62e82ca6cff1015c83912d51",
+      "src/agriautolab/selection/pools.py": "3b3b460c677ba554bb6dbbf7509d7ac27a5e6369de1dddf4dc825bcb26adeeb5",
+      "src/agriautolab/selection/recommender.py": "23162e94438fa776cf60972f108b860ab220c48a9f5f3fc9f0589eed913926db"
+    },
+    "configs_sha256": "502b1e9053b598d62daafa0b3a819f3cebc8385cb356aa908433582b93083a57",
+    "cv_spec_hash": "dc0be0812b31061e5509e9468e1349a63764395c5c7d12c92197bb1bc5034cf7",
+    "holdout_seal_hash": "be973254f805ebbe14539fef6174707d3537423c9f9cf30addbb530992e9b91f",
+    "metadata_file_sha256": "56774ec88242c9175ebeab99207239cb30a8723b11dc32ffd9b118e8eb923c6c",
+    "model_file_sha256": "68363444635effaa1714e01339cc409fe9a2589783420419e32a53b9bb9dd82f",
+    "pool_hash": "aa0e4aaada76bf19cb24459e6b1cc53ec7aa199ac9d27cf50a634f98fc99e184",
+    "protocol_bundle_hash": "5d7b4d66ae02702faec68d3d32a83cd687fb426c72a22ea771e7d07306482bc4",
+    "protocol_sha256_by_source": {
+      "AUDIT_NOTE.md#R1-1": "162f28a32db646335019f9900130177d2c4aa3e8079188d9db71e9b74d6b5efb",
+      "prereg/AGRIPLAN-PARETO-001.amendment-02.md": "f0416911d7c0a22d0fe39afad472f564154fd2d0e2daf313c9b31437f3511323",
+      "prereg/AGRIPLAN-PARETO-001.amendment-03.md": "f0b0d42dadd3cc9287e032f9f3981244a82e8ecbc26f5fb7ca7e810f529a80c3",
+      "prereg/AGRIPLAN-PARETO-001.amendment-04.md": "f4c16b78c48f34f33b5f42b6a595fdde8c9aaffa3626463025bd5f69a495a860",
+      "prereg/AGRIPLAN-PARETO-001.amendment-05.md": "97f4f2328bfe25d53711dc97c0e46d81471deb1315cf20b15c85f874244cbf87",
+      "prereg/AGRIPLAN-PARETO-001.yaml": "8d1326de651ed91cce66ed01fc24a7a527064fe9ec7c1cedd83793e7c23f6a80"
+    },
+    "runs_parquet_sha256": "a143d7cd912c06a38ffa4596f990a6c4b3745a729350ee50e327e015779cccdd",
+    "vehicles_sha256": "ddc031ed0fe788afcdd5aaec2e436b293671b6c31ce3e3760af57902c4b4e81b"
+  },
+  "scope": {
+    "field_universe": "70 sealed holdout fields; dual-track 70/68 per amendment 05",
+    "model_consumption": "final-fit recommender from D4 (in-sample on training, one-shot on holdout)",
+    "statistical_unit": "field"
+  },
+  "stage": "D7-H3-confirmatory",
+  "study_id": "AGRIPLAN-PARETO-001"
+}

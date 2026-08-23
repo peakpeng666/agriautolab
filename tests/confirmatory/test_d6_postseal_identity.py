@@ -64,11 +64,14 @@ def test_d6_result_is_bound_to_every_predecessor_input_protocol_code_and_pratt_r
     verify_artifact_chain(entries)
     # D7 等后续合法封存可追加；前六条语义作为 D6 固定前缀钉住
     assert len(entries) >= 6
-    assert tuple(entry["index"] for entry in entries) == tuple(range(6))
-    d1, d2, d3, d4, d5, d6 = entries
+    # 后续合法封存（H3 index=6 等）可追加：钉连续性与前六条语义
+    assert tuple(entry["index"] for entry in entries) == tuple(range(len(entries)))
+    # D6 前六条是固定语义；H3 及之后的合法封存允许追加
+    first_six = entries[:6]
+    d1, d2, d3, d4, d5, d6 = first_six
     actual_artifacts = (
         d1["payload"]["event"],
-        *(entry["payload"]["artifact"] for entry in entries[1:]),
+        *(entry["payload"]["artifact"] for entry in first_six[1:]),
     )
     assert actual_artifacts == EXPECTED_LEDGER_ARTIFACTS
     assert d6["previous_hash"] == d5["entry_hash"]
