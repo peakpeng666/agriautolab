@@ -13,7 +13,6 @@ import math
 from dataclasses import dataclass
 from typing import Mapping
 
-from agriautolab.contracts.geometry import Point, PolygonSpec
 from agriautolab.contracts.problem import CoverageProblem
 from agriautolab.contracts.protocol import HypervolumeReference
 from agriautolab.contracts.vehicle import VehicleSpec

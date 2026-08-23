@@ -28,7 +28,6 @@ def naive_cut_count(free: Polygon, obstacle_xs) -> int:
     events = sorted(set([bounds[0], bounds[2]] + list(obstacle_xs)))
     for xa, xb in zip(events, events[1:]):
         mid = (xa + xb) / 2.0
-        line = Polygon([(mid, bounds[1]), (mid, bounds[3]), (mid, bounds[3]), (mid, bounds[1])])
         from shapely import LineString
         intersection = free.intersection(LineString([(mid, bounds[1] - 1), (mid, bounds[3] + 1)]))
         parts = 0
@@ -104,7 +103,6 @@ def test_real_field_defects_regression_synthetic() -> None:
         [(0, 0), (100, 0), (100, 80), (0, 80)],
         [[(40, 30), (60, 30), (60, 50), (40, 50)]],                   # 洞尖不落在段边界
     )
-    import shapely
 
     for name, geometry, expected in (("lens", lens, lens.area), ("donut", donut, donut.area)):
         spec = polygon_to_spec(geometry, name)

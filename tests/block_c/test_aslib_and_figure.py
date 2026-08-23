@@ -32,6 +32,7 @@ def test_aslib_three_scenarios_and_fixed_cv(tmp_path, c_record, c_vehicle, c_con
     scenarios_a = export_aslib_scenarios(corpus / "runs.parquet", out_a, cv_folds=3, row_crossable=True)
     scenarios_b = export_aslib_scenarios(corpus / "runs.parquet", out_b, cv_folds=3, row_crossable=True)
     assert {path.name for path in scenarios_a} == {"path_length", "headland_turns", "row_crossings"}
+    assert [path.name for path in scenarios_a] == [path.name for path in scenarios_b]
     for name in ("path_length", "headland_turns", "row_crossings"):
         description = (out_a / "crossable" / name / "description.txt").read_text(encoding="utf-8")
         assert "ASlib assumes a single objective" in description

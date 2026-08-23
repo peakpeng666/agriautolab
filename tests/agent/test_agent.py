@@ -12,7 +12,7 @@ from agriautolab.agent.gates import (
 from agriautolab.agent.ledger import EvolutionLedger, EvolutionRecord
 from agriautolab.agent.proposer import MOCK_CANDIDATES, LLMProposer, MockProposer, ProposalContext
 from agriautolab.agent.reviewer import (
-    DEFAULT_REVIEWERS, CorrectnessReviewer, DegenerateCaseReviewer, InvarianceReviewer, majority_refuted,
+    DEFAULT_REVIEWERS, majority_refuted,
 )
 from agriautolab.agent.sandbox import SandboxViolation, run_sandboxed, scan_source
 from agriautolab.contracts.enums import CoverageStage, CoverageTarget

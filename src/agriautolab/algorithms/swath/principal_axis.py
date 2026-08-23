@@ -1,6 +1,5 @@
 """主轴 swath：边界点协方差的最大特征向量方向（PCA 主轴）。"""
 
-import math
 
 import numpy as np
 

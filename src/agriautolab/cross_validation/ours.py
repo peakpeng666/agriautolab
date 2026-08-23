@@ -13,7 +13,6 @@
 from __future__ import annotations
 
 import shapely
-from shapely.geometry.base import BaseGeometry
 
 from agriautolab.algorithms.headland.uniform_headland import UniformHeadland
 from agriautolab.algorithms.path.dubins_transit import DubinsTransit

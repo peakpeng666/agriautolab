@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agriautolab"
-version = "0.1.0"
+version = "0.4.0"
 description = "Research-grade geometry and coverage-planning foundations for agricultural robots."
 requires-python = ">=3.10"
 dependencies = [
@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest"]
+dev = ["pytest", "ruff"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -24,3 +24,25 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+extend-exclude = [
+  # 字节冻结件（r2.zip 基线），任何工具不得改写
+  "src/agriautolab/cross_validation/f2c.py",
+  "scripts/f2c_recorder",
+]
+
+[tool.ruff.lint]
+# 只启用高信噪比规则：pyflakes 全部 + pycodestyle 错误级 + 少量实用项。
+# 风格级（E501 长行等）不拦人——中文注释的宽度判断不可靠。
+select = ["F", "E9", "B006", "ISC001"]
+
+[tool.ruff.lint.per-file-ignores]
+# 兼容层的再导出是有意的（docs/NAMING.md：legacy 别名永久保留）
+"__init__.py" = ["F401"]
+"src/agriautolab/coverage/stages/*.py" = ["F401"]
+# legacy 别名行（OldName = NewName）是刻意存在的「未使用赋值」
+"src/agriautolab/algorithms/**/*.py" = ["F841"]
+"src/agriautolab/metrics/path.py" = ["F841"]
