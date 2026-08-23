@@ -171,7 +171,8 @@ def _check_canonical_uniqueness() -> None:
         seen.add(spec.canonical)
 
 
-_check_canonical_uniqueness()
-
-
 _install_defaults()
+
+
+# 默认指标装完再查重（顺序反了就是对空表空跑）
+_check_canonical_uniqueness()
