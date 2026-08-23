@@ -28,12 +28,13 @@ def seal_selection_protocol(*, protocol_path: str | Path, ledger_path: str | Pat
     """把 selection protocol 封为 Block D index=2；重复重放保持字节不变。"""
     protocol_file = Path(protocol_path)
     document = json.loads(protocol_file.read_text(encoding="utf-8"))
-    expected_hash = selection_protocol_hash(
-        cv_spec_hash=str(document["cv_spec_hash"]),
-        pool_hash=str(document["pool_hash"]),
-    )
-    if document.get("spec_hash") != expected_hash:
-        raise ValueError("selection protocol spec_hash 与代码规范不一致")
+    cv_spec_hash = str(document["cv_spec_hash"])
+    pool_hash = str(document["pool_hash"])
+    expected_document = selection_protocol_payload(cv_spec_hash=cv_spec_hash, pool_hash=pool_hash)
+    expected_hash = selection_protocol_hash(cv_spec_hash=cv_spec_hash, pool_hash=pool_hash)
+    expected_document["spec_hash"] = expected_hash
+    if document != expected_document:
+        raise ValueError("selection protocol 文档与代码生成的完整冻结规范不一致")
 
     ledger_file = Path(ledger_path)
     entries = tuple(
@@ -46,8 +47,8 @@ def seal_selection_protocol(*, protocol_path: str | Path, ledger_path: str | Pat
         "artifact": "selection_protocol_v1",
         "file_sha256": _sha256_file(protocol_file),
         "spec_hash": expected_hash,
-        "cv_spec_hash": document["cv_spec_hash"],
-        "pool_hash": document["pool_hash"],
+        "cv_spec_hash": cv_spec_hash,
+        "pool_hash": pool_hash,
         "preference_grid_hash": document["preference_grid"]["hash"],
     }
     existing = [entry for entry in entries if entry["payload"].get("artifact") == "selection_protocol_v1"]
@@ -86,6 +87,8 @@ def seal_selection_cv_result(*, result_path: str | Path, ledger_path: str | Path
         return existing[0]
     if len(entries) != 3 or entries[2]["payload"].get("artifact") != "selection_protocol_v1":
         raise ValueError("CV 结果只能在已封 selection protocol 之后追加")
+    if entries[2]["payload"].get("spec_hash") != protocol_hash:
+        raise ValueError("CV 结果声明的 protocol_hash 与 ledger index=2 不一致")
     entry = artifact_chain_entry(3, entries[-1]["entry_hash"], payload)
     with ledger_file.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(entry, ensure_ascii=False, sort_keys=True) + "\n")
