@@ -65,9 +65,26 @@ def seal_selection_protocol(*, protocol_path: str | Path, ledger_path: str | Pat
     return entry
 
 
-def seal_selection_cv_result(*, result_path: str | Path, ledger_path: str | Path, protocol_hash: str) -> dict:
-    """真实训练侧 CV 跑完后封 index=3；协议 index=2 必须先存在。"""
+def seal_selection_cv_result(
+    *,
+    result_path: str | Path,
+    model_path: str | Path,
+    metadata_path: str | Path,
+    ledger_path: str | Path,
+    protocol_hash: str,
+) -> dict:
+    """训练侧 CV + 最终模型一起封 index=3；三件产物缺一不可。"""
     result_file = Path(result_path)
+    model_file = Path(model_path)
+    metadata_file = Path(metadata_path)
+    for path in (result_file, model_file, metadata_file):
+        if not path.is_file():
+            raise ValueError(f"selection result artifact 不存在：{path}")
+
+    metadata = json.loads(metadata_file.read_text(encoding="utf-8"))
+    if metadata.get("protocol_hash") != protocol_hash:
+        raise ValueError("recommender metadata 的 protocol_hash 与 CV 结果协议不一致")
+
     ledger_file = Path(ledger_path)
     entries = tuple(
         json.loads(line)
@@ -77,18 +94,20 @@ def seal_selection_cv_result(*, result_path: str | Path, ledger_path: str | Path
     verify_artifact_chain(entries)
     payload = {
         "artifact": "selection_cv_result",
-        "file_sha256": _sha256_file(result_file),
+        "cv_file_sha256": _sha256_file(result_file),
+        "model_file_sha256": _sha256_file(model_file),
+        "metadata_file_sha256": _sha256_file(metadata_file),
         "protocol_hash": protocol_hash,
     }
     existing = [entry for entry in entries if entry["payload"].get("artifact") == "selection_cv_result"]
     if existing:
         if len(existing) != 1 or existing[0]["index"] != 3 or existing[0]["payload"] != payload:
-            raise ValueError("已封存的 selection CV 结果与当前重放冲突")
+            raise ValueError("已封存的 selection CV/model 产物与当前重放冲突")
         return existing[0]
     if len(entries) != 3 or entries[2]["payload"].get("artifact") != "selection_protocol_v1":
-        raise ValueError("CV 结果只能在已封 selection protocol 之后追加")
+        raise ValueError("CV/model 结果只能在已封 selection protocol 之后追加")
     if entries[2]["payload"].get("spec_hash") != protocol_hash:
-        raise ValueError("CV 结果声明的 protocol_hash 与 ledger index=2 不一致")
+        raise ValueError("CV/model 结果声明的 protocol_hash 与 ledger index=2 不一致")
     entry = artifact_chain_entry(3, entries[-1]["entry_hash"], payload)
     with ledger_file.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(entry, ensure_ascii=False, sort_keys=True) + "\n")
