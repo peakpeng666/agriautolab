@@ -76,7 +76,7 @@ class PolygonSpec(BaseModel):
         和 Fields2Cover 都以 WKT 交换，而本仓库的 PolygonSpec 用点列。
 
         陷阱：这里绝不能调 make_valid。自交地块必须报错退回给数据准备环节，
-        偷偷修好的拓扑会让后续所有面积指标建立在一块没人见过的多边形上。
+        隐式修复的拓扑会使后续面积指标基于一块未经记录的多边形。
         """
         import shapely
         from shapely.errors import ShapelyError

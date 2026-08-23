@@ -34,7 +34,7 @@ def _boxes(points: Mapping[ConfigId, ObjectiveVector], reference: HypervolumeRef
 
 
 def beyond_reference(points: Mapping[ConfigId, ObjectiveVector], *, reference: HypervolumeReference) -> frozenset[ConfigId]:
-    """任一目标达到或超过参考点的解：超体积贡献记 0 且必须显式标记，不许静默截断。"""
+    """任一目标达到或超过参考点的解：超体积贡献记 0 且显式标记，不静默截断。"""
     return frozenset(
         config_id
         for config_id, vector in points.items()

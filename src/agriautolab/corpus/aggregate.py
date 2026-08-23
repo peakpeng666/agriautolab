@@ -6,7 +6,7 @@
    有效池（产出 ok 行的配置数）随之不同。前沿大小必须与有效池、
    pool_hash 一起记录；有效池 <= 1 的实例不进单点前沿统计（单点前沿
    在那里是"没得选"，不是"无权衡"），有效池 = 0 的实例连前沿都无法
-   定义，必须单列计数，不许在 n_instances 里静默消失。
+   定义，必须单列计数，不在 n_instances 中静默消失。
 2. 原始超体积不可跨实例聚合：HV 的量纲随地块大小走（参考点固定时
    小地块 HV 反而大），聚合它画出的是地块面积分布。跨实例只聚合
    hv / Π(ref_i)——分母是解析参考点的乘积，纯协议侧、不随池或观测
@@ -34,7 +34,7 @@ class CorpusParetoSummary:
 
     n_instances: int                                   # 有效池 >= 1 的实例数（前沿分布的定义域）
     n_instances_in_corpus: int                         # parquet 中出现过的实例总数（任何状态）
-    n_instances_with_zero_ok_configs: int              # 有效池 = 0：无前沿可言，单列不许静默消失
+    n_instances_with_zero_ok_configs: int              # 有效池 = 0：无前沿可言，单列计数
     pool_hash: str
     front_size_distribution: tuple[int, ...]
     front_instance_ids: tuple[str, ...]                # 与上行同序（实例名对齐，供 manifest 等消费方映射）
@@ -91,7 +91,7 @@ def summarize_pareto(runs_parquet: str | Path, *, reference: HypervolumeReferenc
 
     # 状态一律经 derived_status（validator 事实优先于运行时归并，单一真相源）：
     # 零地头 carve 归并出的 not_applicable 若带 validator_rejected 理由，
-    # 在这里按它真实的拒绝类参与统计，不许被读成「没跑过」。
+    # 在这里按其真实拒绝类参与统计，避免被误读为未运行。
     effective_pool: dict[str, int] = {}
     instances_in_corpus: set[str] = set()
     for row in rows:

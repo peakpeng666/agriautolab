@@ -363,7 +363,7 @@ class QuarantinedField:
     """被隔离的地块：几何不合法（如自交），剔除而非修复。
 
     真实 EuroCrops 数据实测 350 块中 2 块自交（具体 id 与隔离记录见 AUDIT_NOTE，
-    实测如此）。仓库纪律禁止 make_valid——被偷偷修好的拓扑会让后续
+    实测如此）。本仓库禁止 make_valid：隐式修复的拓扑会使后续
     所有面积指标建立在一块没人见过的多边形上；正确的处置是显式剔除并记录，
     剔除本身进入 manifest 与证据链。
     """
@@ -380,7 +380,7 @@ def load_fields2benchmark_wkt_zip_with_quarantine(
     返回 (合法记录, 隔离清单)。隔离不是修复：被剔除的地块连同 shapely 的
     is_valid_reason 一起进清单，导出端把它写进 manifest。
     未知国家前缀仍标记 UNKNOWN 交由导出闸门拒绝——新版本数据集扩国家时
-    会“响亮地失败”，不会悄悄继承错误许可。
+    会立即抛错，不会静默继承错误许可。
     """
     records: list[FieldRecord] = []
     quarantined: list[QuarantinedField] = []

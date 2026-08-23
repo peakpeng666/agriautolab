@@ -107,7 +107,7 @@ class PipelineResult:
 
 
 def _objectives_or_none(problem, path, validation) -> ObjectiveVector | None:
-    """不可行组合没有目标向量：失败是数据（RunStatus + 结构化原因），不是异常。
+    """不可行组合没有目标向量：失败按数据记录（RunStatus + 结构化原因），不作为异常抛出。
 
     无地头 + 前进-only Dubins 就是典型：掉头向界外鼓出最多 2R，outside_area
     必然拒绝——掉头空间正是地头存在的理由，这里不伪造数字、不放宽门槛。

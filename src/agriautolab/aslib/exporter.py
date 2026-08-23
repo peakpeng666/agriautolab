@@ -1,4 +1,4 @@
-"""把三目标语料拆成三个 ASlib 风格单目标 scenario；绝不偷偷加权。"""
+"""把三目标语料拆成三个 ASlib 风格单目标 scenario；不做隐式加权。"""
 
 from __future__ import annotations
 

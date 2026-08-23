@@ -2,17 +2,16 @@
 
 [![CI](https://github.com/peakpeng666/agriautolab/actions/workflows/ci.yml/badge.svg)](https://github.com/peakpeng666/agriautolab/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
-[![tests](https://img.shields.io/badge/tests-598%20passed-brightgreen)](tests/)
+[![tests](https://github.com/peakpeng666/agriautolab/actions/workflows/ci.yml/badge.svg)](https://github.com/peakpeng666/agriautolab/actions/workflows/ci.yml)
 
 农业覆盖路径规划（Coverage Path Planning）的**研究级基准与分析层**：
 把 13 个可组合规划配置在 235 块真实农田上全部跑通（61,100 次运行、
 零崩溃、零未分类失败），量化「路程 / 地头掉头 / 作物行横穿等价量」
 三目标之间的权衡，并在冻结证据纪律下研究偏好条件算法选择。
 
-三层冻结（L1 域核心 / L2 算法层 / L3 基准层）已交付，分层与依赖方向见
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。L4 选择层（Block D）已完成 D1–D6：
-三层池普查与选择协议先于结果封存，训练侧 10 折 CV 和最终推荐器已落盘，
-H1/H2 正式结果已封入分析账本；**H3/D7 尚未执行，留出集未作模型评估消费**。
+分层与依赖方向见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
+选择层的阶段性进度以 [evidence/block_d/](evidence/block_d/) 的分析账本为准
+（每一步的封存条目即事实，不在 README 复述过程状态）。
 三目标第三维历史 wire ID 为 `row_crossings`，规范语义名为
 `row_crossing_equivalent`；它表达连续跨行等价量，不冒充实际逐行整数计数。
 
@@ -29,7 +28,7 @@ bash agriautolab/scripts/install/setup_wsl.sh
 
 ```bash
 pip install -e .[dev] "shapely==2.1.2"
-pytest -q          # 598 passed / 30 skipped
+pytest -q          # 以 CI 徽章为准（计数随提交演进，不在文档硬编码）
 ```
 
 净室安装记录与九项自校验见 [docs/INSTALL_TRANSCRIPT.md](docs/INSTALL_TRANSCRIPT.md)。
