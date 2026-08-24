@@ -39,7 +39,7 @@ def test_recommender_never_bypasses_static_applicable_gate():
         model.recommend(instances[0].features, (), 0)
     with pytest.raises(ValueError, match="未拟合"):
         model.recommend(instances[0].features, ("ghost",), 0)
-    with pytest.raises(ValueError, match="\[0, 21\]"):
+    with pytest.raises(ValueError, match=r"\[0, 21\]"):
         model.recommend(instances[0].features, (A, B), 22)
 
 
