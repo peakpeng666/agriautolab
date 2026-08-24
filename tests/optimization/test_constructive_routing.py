@@ -90,6 +90,43 @@ def test_cvrp_nearest_feasible_respects_capacity_and_closes_routes() -> None:
     assert evaluation.total_distance_m == pytest.approx(24.0)
 
 
+def test_cvrp_decimal_exact_fit_survives_binary_roundoff() -> None:
+    problem = CVRPProblem(
+        problem_id="decimal-fit",
+        depot=node("D", 0.0, 0.0),
+        customers=(
+            customer("A", 1.0, 0.0, 0.1),
+            customer("B", 2.0, 0.0, 0.2),
+        ),
+        vehicle_capacity=0.3,
+    )
+    adapter = CVRPConstructiveProblem(problem)
+    solution = construct_solution(adapter, CVRPNearestFeasibleCustomerHeuristic(adapter))
+
+    assert solution.routes == (("D", "A", "B", "D"),)
+    assert evaluate_cvrp_solution(problem, solution).vehicle_count == 1
+
+
+def test_cvrp_subunit_capacity_does_not_gain_absolute_free_slack() -> None:
+    problem = CVRPProblem(
+        problem_id="subunit-capacity",
+        depot=node("D", 0.0, 0.0),
+        customers=(
+            customer("A", 1.0, 0.0, 1e-15),
+            customer("B", 2.0, 0.0, 1e-15),
+        ),
+        vehicle_capacity=1e-15,
+    )
+    adapter = CVRPConstructiveProblem(problem)
+    solution = construct_solution(adapter, CVRPNearestFeasibleCustomerHeuristic(adapter))
+
+    assert solution.routes == (("D", "A", "D"), ("D", "B", "D"))
+
+    overloaded = CVRPSolution(routes=(("D", "A", "B", "D"),))
+    with pytest.raises(ValueError, match="超过车辆容量"):
+        evaluate_cvrp_solution(problem, overloaded)
+
+
 def test_cvrp_contract_rejects_customer_larger_than_vehicle_capacity() -> None:
     with pytest.raises(ValidationError, match="单车容量永远无法服务"):
         CVRPProblem(
