@@ -40,9 +40,21 @@ class CVRPEvaluation:
     vehicle_count: int
 
 
-def _capacity_allows(demand: float, available: float) -> bool:
+def _remaining_capacity_after(demand: float, available: float) -> float | None:
+    """若当前容量容得下需求，返回扣减后的剩余容量；否则返回 None。
+
+    不先累加 route demand：多个有限需求的和仍可能上溢为 inf。逐项扣减把容量检查
+    始终约束在两个有限数之间；容差只允许浮点尾差，不把真实超载变成可行。
+    """
     tolerance = 1e-12 * max(abs(demand), abs(available), 1.0)
-    return demand <= available + tolerance
+    if demand > available + tolerance:
+        return None
+    remaining = available - demand
+    return 0.0 if remaining < 0.0 else remaining
+
+
+def _capacity_allows(demand: float, available: float) -> bool:
+    return _remaining_capacity_after(demand, available) is not None
 
 
 class CVRPConstructiveProblem:
@@ -122,12 +134,15 @@ class CVRPConstructiveProblem:
             )
 
         customer = self._customers[action]
+        remaining_capacity = _remaining_capacity_after(customer.demand, state.remaining_capacity)
+        if remaining_capacity is None:  # pragma: no cover -- feasible_actions 已做同一检查
+            raise ConstructionError(f"客户 {action!r} 超过当前剩余容量")
         remaining_customers = tuple(
             customer_id for customer_id in state.unserved_customer_ids if customer_id != action
         )
         return CVRPState(
             current_node_id=action,
-            remaining_capacity=state.remaining_capacity - customer.demand,
+            remaining_capacity=remaining_capacity,
             unserved_customer_ids=remaining_customers,
             current_route=state.current_route + (action,),
             completed_routes=state.completed_routes,
@@ -160,9 +175,14 @@ def evaluate_cvrp_solution(problem: CVRPProblem, solution: CVRPSolution) -> CVRP
         if any(node_id not in customers_by_id for node_id in customer_ids):
             raise ValueError(f"CVRP 路线 {route_index} 含未知客户或中途仓库")
 
-        route_demand = sum(customers_by_id[node_id].demand for node_id in customer_ids)
-        if not _capacity_allows(route_demand, problem.vehicle_capacity):
-            raise ValueError(f"CVRP 路线 {route_index} 超过车辆容量")
+        remaining_capacity = problem.vehicle_capacity
+        for customer_id in customer_ids:
+            next_remaining = _remaining_capacity_after(
+                customers_by_id[customer_id].demand, remaining_capacity
+            )
+            if next_remaining is None:
+                raise ValueError(f"CVRP 路线 {route_index} 超过车辆容量")
+            remaining_capacity = next_remaining
 
         visited_customer_ids.extend(customer_ids)
         total_distance_m += route_length_m(nodes_by_id, route)
