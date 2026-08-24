@@ -79,8 +79,7 @@ heuristic candidates` 是三种不同计数，文档与论文中不得简写成�
 
 当前真实包名就是文档事实，不再维护“计划中的 canonical 幽灵目录”：
 
-- `contracts/`：跨模块强类型数据契约；`routing.py` 放 TSP/CVRP 输入契约，
-  `numerics.py` 放不含领域求解逻辑的 binary64 上界比较策略；
+- `contracts/`：跨模块强类型数据契约；`routing.py` 放 TSP/CVRP 输入契约；
 - `optimization/`：constructive problem / heuristic / evaluator 方法学验证层；
 - `algorithms/constructive/`：标准问题的人工 constructive baselines；
 - `pipeline/`：农业 CPP 五阶段组合与执行；
