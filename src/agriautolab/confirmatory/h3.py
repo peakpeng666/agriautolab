@@ -3,10 +3,12 @@
 口径全部来自修正案 03/04/05：统计单位是田；D_f = L_f^rec − 0.5·L_f^rand
 （random_applicable 精确期望）；符号翻转置换 10^4、种子 20260822、单侧
 （D_f 更小为备择）；双轨并报（70 块 / 剔除 2 块调试探针田的 68 块）；
-零 ok 实例保留计数不进损失。"""
+零 ok 实例保留计数不进损失。
+"""
 
 from __future__ import annotations
 
+from statistics import median
 from typing import Sequence
 
 PERMUTATION_N = 10_000
@@ -14,8 +16,12 @@ PERMUTATION_SEED = 20260822
 PROBE_FIELDS = frozenset({"ee_field_37", "ee_field_117"})
 
 
-def permutation_sign_flip_test(d_values: Sequence[float], *, n_permutations: int = PERMUTATION_N,
-                               seed: int = PERMUTATION_SEED) -> dict:
+def permutation_sign_flip_test(
+    d_values: Sequence[float],
+    *,
+    n_permutations: int = PERMUTATION_N,
+    seed: int = PERMUTATION_SEED,
+) -> dict:
     """单侧（更小）符号翻转置换检验；加一法保证 p > 0。"""
     import numpy as np
 
@@ -49,7 +55,7 @@ def _track(fields, field_d: dict) -> dict:
         "mean_recommender_loss": sum(rec) / len(rec),
         "mean_random_applicable_loss": sum(ra) / len(ra),
         "mean_D": sum(d_values) / len(d_values),
-        "median_D": sorted(d_values)[len(d_values) // 2],
+        "median_D": median(d_values),
         "negative_D_share": sum(1 for value in d_values if value < 0) / len(d_values),
         "permutation": test,
     }
@@ -72,7 +78,10 @@ def analyze_h3(recommender, training_instances, holdout_instances) -> dict:
         for field in analyzable
     }
     track_70 = _track(analyzable, field_d)
-    track_68 = _track([f for f in analyzable if f.field_id not in PROBE_FIELDS], field_d)
+    track_68 = _track(
+        [field for field in analyzable if field.field_id not in PROBE_FIELDS],
+        field_d,
+    )
 
     # 随机可适用基线的不可行率：uniform over A_x 抽到非 OK 配置的概率
     instance_share = []
@@ -80,22 +89,36 @@ def analyze_h3(recommender, training_instances, holdout_instances) -> dict:
         if instance.analyzable:
             missing = len(instance.applicable - instance.observed_ok)
             instance_share.append(missing / len(instance.applicable))
-    random_infeasible_rate = sum(instance_share) / len(instance_share) if instance_share else 0.0
-    recommendation_count = sum(f.recommendation_count for f in fields)
-    infeasible = sum(f.infeasible_recommendations for f in fields)
-    recommender_infeasible_rate = infeasible / recommendation_count if recommendation_count else 0.0
+    random_infeasible_rate = (
+        sum(instance_share) / len(instance_share)
+        if instance_share
+        else 0.0
+    )
+    recommendation_count = sum(field.recommendation_count for field in fields)
+    infeasible = sum(field.infeasible_recommendations for field in fields)
+    recommender_infeasible_rate = (
+        infeasible / recommendation_count
+        if recommendation_count
+        else 0.0
+    )
 
     failure = {
         "criterion_1_mean_regret_not_below_half_random": track_70["mean_D"] >= 0.0,
-        "criterion_2_infeasible_rate_above_random_applicable": recommender_infeasible_rate > random_infeasible_rate,
+        "criterion_2_infeasible_rate_above_random_applicable": (
+            recommender_infeasible_rate > random_infeasible_rate
+        ),
         "any_triggered": False,
     }
-    failure["any_triggered"] = failure["criterion_1_mean_regret_not_below_half_random"] or \
-        failure["criterion_2_infeasible_rate_above_random_applicable"]
+    failure["any_triggered"] = (
+        failure["criterion_1_mean_regret_not_below_half_random"]
+        or failure["criterion_2_infeasible_rate_above_random_applicable"]
+    )
 
     return {
-        "estimand": "field-level preference-conditioned weighted Tchebycheff regret on holdout; "
-                    "D_f = L_f^rec - 0.5 * L_f^rand_applicable; one-shot holdout consumption",
+        "estimand": (
+            "field-level preference-conditioned weighted Tchebycheff regret on holdout; "
+            "D_f = L_f^rec - 0.5 * L_f^rand_applicable; one-shot holdout consumption"
+        ),
         "sbs_config_id": sbs_config_id,
         "n_holdout_fields_total": len(fields),
         "n_analyzable_fields": len(analyzable),
@@ -107,6 +130,8 @@ def analyze_h3(recommender, training_instances, holdout_instances) -> dict:
         "track_70": track_70,
         "track_68_excluding_probe_fields": track_68,
         "preregistered_failure_checks": failure,
-        "scope_validity": "Preference-conditional selection under the frozen 2-D agricultural CPP "
-                           "simulation protocol; holdout consumed once at D7.",
+        "scope_validity": (
+            "Preference-conditional selection under the frozen 2-D agricultural CPP "
+            "simulation protocol; holdout consumed once at D7."
+        ),
     }

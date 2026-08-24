@@ -5,10 +5,16 @@
 
 ## [未发布]
 
-- **D7/H3 封存（Study-001 结案）**：留出集一次性消费，H3 未获支持
+- **D7.1 post-seal integrity corrigendum**：原 H3 结果与 ledger index 0..6
+  保持字节/链语义不回写，新增 index=7 修正件；披露 D7 两次“评估完成后、
+  写盘前”身份守门中止意味着严格 one-shot 执行主张不成立；补齐所有
+  protocol/input/D4 model exact-SHA 前置硬门，已封 H3 后 holdout 重跑
+  fail-closed；修复偶数样本 median 实现。H3 冻结主统计量 `mean_D`、p 值、
+  失效判据与 Holm 结论不变。
+- **D7/H3 原始封存（Study-001 结案）**：H3 未获支持
   （mean_D=+0.0587，p=0.821，失效判据 1 触发；判据 2 通过；双轨一致）；
-  Holm 终表 H1 支持 / H2 支持 / H3 不支持；confirmatory/h3.py + 双模式
-  分析脚本 + 5 条合成测试；封存前两次身份守门中止事故留痕（零泄漏）
+  Holm 终表 H1 支持 / H2 支持 / H3 不支持；封存前两次身份守门中止事故
+  contemporaneous 留痕。D7.1 对其执行纪律与次要 median 实现做只追加修正。
 - D2 三层池普查：selection/pools.py（N/A/O 契约 + 逐实例包含校验）、
   scripts/pool_census.py、evidence/block_d/pool_census.json（4,700 实例，
   A 层 v0=11/v1=13）+ Block D ledger index=1；5 条测试

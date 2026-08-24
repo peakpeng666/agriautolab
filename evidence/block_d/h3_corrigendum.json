@@ -1,0 +1,77 @@
+{
+  "artifact": "h3_postseal_corrigendum",
+  "corrective_controls": [
+    "preflight protocol hash verification before holdout data access",
+    "exact D4 model and metadata SHA-256 verification before deserialization",
+    "D1 CV/holdout file-byte verification",
+    "D2 runs/configs/vehicles byte verification",
+    "D3 selection-protocol byte verification",
+    "D6 predecessor data/protocol reconciliation",
+    "hard refusal to rerun holdout after h3_confirmatory_result is present",
+    "conventional even-n median regression test",
+    "append-only post-seal corrigendum ledger entry"
+  ],
+  "date": "2026-08-24",
+  "findings": [
+    {
+      "correction": "All protocol/input/model-byte gates now run before joblib deserialization and before load_selection_instances can read holdout rows. A sealed H3 entry causes immediate refusal of any later holdout execution.",
+      "finding": "The frozen protocol identity gate ran after analyze_h3. Two aborted executions therefore completed H3 computation before failing identity validation; the third execution produced the sealed result.",
+      "id": "D7.1-P1-01",
+      "impact_on_primary_inference": "unchanged",
+      "kind": "protocol_deviation",
+      "observed_boundary": "The two aborted executions stopped before result-file write, stdout result publication, or ledger mutation, as documented in the contemporaneous audit note.",
+      "severity": "P1"
+    },
+    {
+      "correction": "Preflight now verifies exact D4 model and metadata SHA-256 values before joblib.load, then cross-checks the deserialized object's protocol/cv/pool identity.",
+      "finding": "The D7 implementation checked model metadata cv_spec_hash but did not require the model and metadata file SHA-256 values to equal the exact D4 ledger index=3 bytes before deserialization.",
+      "id": "D7.1-P1-02",
+      "impact_on_primary_inference": "unchanged",
+      "kind": "artifact_identity_gap",
+      "observed_boundary": "The model_file_sha256 and metadata_file_sha256 recorded in the sealed H3 result are byte-identical to the values pinned at D4 ledger index=3.",
+      "severity": "P1"
+    },
+    {
+      "affected_original_values": {
+        "n_fields": 58,
+        "track_68_excluding_probe_fields.median_D": -0.10510520090865455,
+        "track_70.median_D": -0.10510520090865455
+      },
+      "corrected_value": null,
+      "correction": "statistics.median now defines median_D for any future study/run.",
+      "finding": "median_D used the upper middle order statistic for even n instead of the conventional average of the two central values.",
+      "id": "D7.1-P2-01",
+      "impact_on_primary_inference": "unchanged: H3's preregistered test statistic is mean_D, not median_D",
+      "kind": "descriptive_statistic_bug",
+      "severity": "P2",
+      "why_not_recomputed": "Per-field D values were not sealed in h3_result.json. The project will not reconsume holdout outcomes merely to repair a secondary descriptive statistic."
+    }
+  ],
+  "original_seal": {
+    "ledger_entry_hash": "8f85746404481c5e18c444861be14626b11ac38456ff9eb1482df266e3ffd17a",
+    "ledger_index": 6,
+    "merge_commit": "160b3536c876e7c1d0320c02b847057a38a56ba1",
+    "release": "v0.5.0",
+    "result_file_sha256": "3dbc41ea35640c3b430e882af1acb7bb74360120203b554c594ad92ddbf6b6f0",
+    "result_path": "evidence/block_d/h3_result.json"
+  },
+  "primary_inference": {
+    "criterion_1_triggered": true,
+    "criterion_2_triggered": false,
+    "h3_supported": false,
+    "holm_family_conclusion": "H1 supported; H2 supported; H3 not supported",
+    "mean_D": 0.058717510697747215,
+    "mean_random_applicable_loss": 0.569889227634958,
+    "mean_recommender_loss": 0.3436621245152262,
+    "permutation_pvalue": 0.8208179182081792
+  },
+  "stage": "D7.1-postseal-integrity-corrigendum",
+  "status": {
+    "h3_primary_inference_changed": false,
+    "h3_result_file_mutated": false,
+    "ledger_entries_0_through_6_mutated": false,
+    "one_shot_execution_claim_valid": false,
+    "study_001_primary_conclusion": "H1 supported; H2 supported; H3 not supported"
+  },
+  "study_id": "AGRIPLAN-PARETO-001"
+}
