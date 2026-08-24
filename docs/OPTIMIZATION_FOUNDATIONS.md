@@ -16,8 +16,8 @@ evaluator 边界；最终研究对象仍是农业 CPP。
 这条边界保证启发式（包括未来 LLM 生成候选）不能自行放宽容量、访问或农业几何
 约束，也不能自报性能。公共 engine 还要求 `feasible_actions` 提供稳定顺序：评分并列
 按该顺序决胜，而不是隐式要求任意 Action 类型支持大小比较。heuristic 执行异常、
-非法评分类型、float 转换溢出和 NaN/Inf 统一 fail closed 为 `ConstructionError`，
-并保留原异常链。
+非法评分类型、NaN/Inf，以及自定义评分对象在 `float(...)` 转换时抛出的异常统一
+fail closed 为 `ConstructionError`，并保留原异常链。
 
 ## 2. 当前标准问题与 API
 
@@ -59,22 +59,23 @@ coverage component，因此不使用 `CoverageStage` 分类。
 - CVRP 容量触发的回仓与路线闭合；
 - Problem 必须暴露仍合法的提前回仓 action，而 nearest-feasible heuristic 才负责
   推迟回仓；
-- `0.1 + 0.2 = 0.3` 类二进制尾差不能误杀数学上刚好装满的路线；
-- `100 × 0.01 = 1.0` 不能因连续减法累计误差错误拆成第二辆车；constructor 因此
-  每个候选都从当前 route 身份重新 `fsum(demand/capacity)`，不保存累计剩余容量；
-- `1e-15` 级容量不能因固定 `1e-12` 绝对容差获得“免费容量”；
-- 有限 demand 的绝对和可能上溢时仍必须正确拒绝超载；
-- evaluator 的容量复算必须与 constructor 的候选负载路径计算独立；回归测试会故意
-  破坏 constructor helper，仍要求 evaluator 拒绝 1.2× 超载；
+- hard capacity 以输入 binary64 值本身为事实；`nextafter(capacity,+∞)` 即使只高
+  1 ULP 也必须拒绝，最小 subnormal 处更不能把 2× demand 当作“一个 ULP 尾差”；
+- 可精确表示的二进制需求（例如 128 个 `1/128`）必须精确装满一车；constructor
+  通过共同二进制整数单位累计负载，不做连续浮点减法；
+- `0.1 + 0.2` 与 `0.3` 等十进制直觉不能覆盖 binary64 输入事实。若 exact binary64
+  总需求大于 capacity，就应判为超载，而不是用 ULP 容差重新解释；
+- 1e308 级有限 demand/总运力比较必须避免浮点聚合溢出；schema 与 evaluator 使用
+  `Fraction.from_float` 的精确有理数值完成关键总量复算；
+- evaluator 的容量复算必须与 constructor 的共同整数单位算法独立；回归测试会故意
+  破坏 constructor 可行性函数，仍要求 evaluator 拒绝 1.2× 超载；
 - 有限坐标派生出不可表示的边长/总路程时 evaluator 必须 fail closed；
 - 明确可行的 CVRP 实例中，greedy 次序可能因车队上限被 refute；
-- 非数值、float 转换溢出、NaN/Inf heuristic score 必须 fail closed；
+- 非数值、任意 `float(score)` 转换异常、NaN/Inf heuristic score 必须 fail closed；
 - 评分完全并列、Action 不可排序时，公共 engine 仍按稳定枚举顺序工作。
 
-容量比较不使用固定 absolute tolerance。`contracts.numerics` 只容忍有限个相邻
-binary64 表示步长；上界为零时严格比较。这个 roundoff policy 只处理最终表示误差，
-**不用于补偿累计数值算法误差**；若累计误差改变可行域，应修改计算路径而不是扩大
-容差。
+这里不为 CVRP hard capacity 定义数值容差。若未来 benchmark 本身规定定点十进制容量、
+测量误差或业务安全余量，应在问题契约中显式建模，而不是在比较函数里隐含放宽约束。
 
 ## 5. 研究纪律
 
