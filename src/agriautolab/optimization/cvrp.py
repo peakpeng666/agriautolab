@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from agriautolab.contracts.numerics import not_greater_than_with_roundoff
 from agriautolab.contracts.routing import CVRPCustomer, CVRPProblem, RoutingNode
 from agriautolab.optimization.constructive import ConstructionError
 from agriautolab.optimization.routing import route_length_m, sum_distances_m
@@ -43,11 +44,11 @@ class CVRPEvaluation:
 def _remaining_capacity_after(demand: float, available: float) -> float | None:
     """若当前容量容得下需求，返回扣减后的剩余容量；否则返回 None。
 
-    不先累加 route demand：多个有限需求的和仍可能上溢为 inf。逐项扣减把容量检查
-    始终约束在两个有限数之间；容差只允许浮点尾差，不把真实超载变成可行。
+    不累加绝对 route demand：多个有限需求的和仍可能上溢为 `inf`。比较只容忍
+    `contracts.numerics` 规定的少量 binary64 舍入步长，不使用固定绝对容差；
+    `available == 0` 时任何正需求都必须拒绝。
     """
-    tolerance = 1e-12 * max(abs(demand), abs(available), 1.0)
-    if demand > available + tolerance:
+    if not not_greater_than_with_roundoff(demand, available):
         return None
     remaining = available - demand
     return 0.0 if remaining < 0.0 else remaining
