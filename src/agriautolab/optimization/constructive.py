@@ -58,7 +58,7 @@ class ConstructiveHeuristic(Protocol[StateT, ActionT]):
 
 
 class ConstructionError(RuntimeError):
-    """构造过程或启发式输出违反公共契约。"""
+    """构造过程或启发式运行违反公共契约。"""
 
 
 def _finite_score(
@@ -66,9 +66,16 @@ def _finite_score(
     state: StateT,
     action: ActionT,
 ) -> float:
-    """把启发式输出收敛为有限 float；类型/范围错误统一转成领域异常。"""
+    """执行评分并收敛为有限 float；候选异常不能穿透公共 engine 边界。"""
     try:
-        value = float(heuristic.score(state, action))
+        raw_value = heuristic.score(state, action)
+    except Exception as error:  # noqa: BLE001 -- 插件边界；原异常通过 chaining 保留
+        raise ConstructionError(
+            f"启发式 {heuristic.heuristic_id!r} 对动作 {action!r} 评分时抛出异常"
+        ) from error
+
+    try:
+        value = float(raw_value)
     except (TypeError, ValueError, OverflowError) as error:
         raise ConstructionError(
             f"启发式 {heuristic.heuristic_id!r} 对动作 {action!r} 返回不可用评分"
