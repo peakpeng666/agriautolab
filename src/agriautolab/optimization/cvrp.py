@@ -1,8 +1,9 @@
 """欧氏 CVRP 的构造状态机与独立评价器。
 
-容量约束由问题状态机维护，启发式只能给当前可服务客户排序；当前车辆无法继续
-服务时，状态机强制回仓并开启下一条路线。最终 evaluator 重新检查客户覆盖、容量、
-车辆数与总距离，不采信构造器自报指标。
+容量、客户覆盖、回仓合法性与车队上限由问题状态机维护；heuristic 只在当前合法动作
+之间决定策略。离开仓库后，提前回仓本身是合法动作，不能被 Problem adapter 以
+“还有客户装得下”为由隐藏。最终 evaluator 重新检查客户覆盖、容量、车辆数与总距离，
+不采信构造器自报指标。
 """
 
 from __future__ import annotations
@@ -59,7 +60,7 @@ def _capacity_allows(demand: float, available: float) -> bool:
 
 
 class CVRPConstructiveProblem:
-    """把 `CVRPProblem` 适配为逐客户选择的 constructive problem。"""
+    """把 `CVRPProblem` 适配为逐客户/回仓选择的 constructive problem。"""
 
     def __init__(self, problem: CVRPProblem) -> None:
         self.problem = problem
@@ -86,6 +87,7 @@ class CVRPConstructiveProblem:
         return not state.unserved_customer_ids and state.current_node_id == self.problem.depot.node_id
 
     def feasible_actions(self, state: CVRPState) -> tuple[str, ...]:
+        """枚举硬约束下真实可行动作；不在 Problem 层嵌入 route-closure 策略。"""
         depot_id = self.problem.depot.node_id
         if not state.unserved_customer_ids:
             return () if state.current_node_id == depot_id else (depot_id,)
@@ -95,11 +97,13 @@ class CVRPConstructiveProblem:
             for customer_id in state.unserved_customer_ids
             if _capacity_allows(self._customers[customer_id].demand, state.remaining_capacity)
         )
-        if feasible_customers:
-            # unserved_customer_ids 始终保持 node_id 排序；评分并列因此有稳定 tie-break。
+        if state.current_node_id == depot_id:
+            # 仓库不能原地“回仓”形成空路线；schema 保证至少有一个客户可由满载车辆服务。
             return feasible_customers
 
-        return () if state.current_node_id == depot_id else (depot_id,)
+        # 客户动作保持 node_id 稳定顺序，回仓固定放最后。提前回仓是合法策略选择，
+        # 是否采用由 heuristic 决定，而不是由 Problem 以 fill-until-stuck 方式写死。
+        return feasible_customers + (depot_id,)
 
     def apply_action(self, state: CVRPState, action: str) -> CVRPState:
         depot_id = self.problem.depot.node_id
