@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from agriautolab.optimization.tsp import TSPConstructiveProblem, TSPState, euclidean_distance
+from agriautolab.optimization.routing import euclidean_node_distance_m
+from agriautolab.optimization.tsp import TSPConstructiveProblem, TSPState
 
 
 @dataclass(frozen=True)
@@ -17,4 +18,4 @@ class TSPNearestNeighborHeuristic:
     def score(self, state: TSPState, action: str) -> float:
         current = self.problem.node(state.current_node_id)
         candidate = self.problem.node(action)
-        return euclidean_distance(current, candidate)
+        return euclidean_node_distance_m(current, candidate)
