@@ -111,6 +111,36 @@ def test_cvrp_contract_rejects_demand_above_total_fleet_capacity() -> None:
         )
 
 
+def test_cvrp_fleet_capacity_check_is_safe_when_finite_demands_would_overflow_sum() -> None:
+    with pytest.raises(ValidationError, match="总需求超过"):
+        CVRPProblem(
+            problem_id="overflowing-fleet-sum",
+            depot=node("D", 0.0, 0.0),
+            customers=(
+                customer("A", 1.0, 0.0, 9e307),
+                customer("B", 2.0, 0.0, 9e307),
+            ),
+            vehicle_capacity=1e308,
+            max_vehicles=1,
+        )
+
+
+def test_cvrp_evaluator_rejects_overloaded_route_even_when_demand_sum_would_overflow() -> None:
+    problem = CVRPProblem(
+        problem_id="overflowing-route-sum",
+        depot=node("D", 0.0, 0.0),
+        customers=(
+            customer("A", 1.0, 0.0, 9e307),
+            customer("B", 2.0, 0.0, 9e307),
+        ),
+        vehicle_capacity=1e308,
+    )
+    overloaded = CVRPSolution(routes=(("D", "A", "B", "D"),))
+
+    with pytest.raises(ValueError, match="超过车辆容量"):
+        evaluate_cvrp_solution(problem, overloaded)
+
+
 def test_cvrp_fleet_limit_can_refute_a_greedy_order_even_when_problem_is_feasible() -> None:
     problem = CVRPProblem(
         problem_id="greedy-packing-trap",
