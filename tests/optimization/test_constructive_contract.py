@@ -23,6 +23,18 @@ class _OneStepProblem:
         return "done"
 
 
+def test_constructive_engine_normalizes_heuristic_execution_failure() -> None:
+    class CrashingHeuristic:
+        heuristic_id = "crashing-score"
+
+        def score(self, state, action):
+            raise ZeroDivisionError("candidate bug")
+
+    with pytest.raises(ConstructionError, match="评分时抛出异常") as exc_info:
+        construct_solution(_OneStepProblem(), CrashingHeuristic())
+    assert isinstance(exc_info.value.__cause__, ZeroDivisionError)
+
+
 def test_constructive_engine_normalizes_invalid_score_type_to_domain_error() -> None:
     class InvalidScoreHeuristic:
         heuristic_id = "invalid-score"
