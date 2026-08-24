@@ -3,15 +3,21 @@
 [![CI](https://github.com/peakpeng666/agriautolab/actions/workflows/ci.yml/badge.svg)](https://github.com/peakpeng666/agriautolab/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 
-农业覆盖路径规划（Coverage Path Planning）的**研究级基准与分析层**：
-把 13 个可组合规划配置在 235 块真实农田上全部跑通（61,100 次运行、
-零崩溃、零未分类失败），量化「路程 / 地头掉头 / 作物行横穿等价量」
-三目标之间的权衡，并在冻结证据纪律下研究偏好条件算法选择。
+面向农业机器人规划研究的**算法实验、基准与分析框架**。当前最成熟的领域内核是
+农业覆盖路径规划（Coverage Path Planning, CPP）：把 13 个可组合规划配置在
+235 块真实农田上全部跑通（61,100 次运行、零崩溃、零未分类失败），量化
+「路程 / 地头掉头 / 作物行横穿等价量」三目标权衡，并在冻结证据纪律下研究
+偏好条件算法选择。
 
-分层与依赖方向见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
-选择层的阶段性进度以 [evidence/block_d/](evidence/block_d/) 的分析账本为准
-（每一步的封存条目即事实，不在 README 复述过程状态）。
-三目标第三维历史 wire ID 为 `row_crossings`，规范语义名为
+仓库同时把 TSP/CVRP 纳入正式的组合优化方法学层，用强类型问题契约、构造式启发式
+协议与独立 evaluator 承接“经典算法复现 → LLM 算法复现 → 农业算法与 LLM 结合”。
+标准问题用于验证算法设计方法本身，不替代农业 CPP 主研究对象，也不改写 Study-001
+的任何冻结证据。
+
+分层与依赖方向见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)，组合优化公共边界见
+[docs/OPTIMIZATION_FOUNDATIONS.md](docs/OPTIMIZATION_FOUNDATIONS.md)。选择层的阶段性进度以
+[evidence/block_d/](evidence/block_d/) 的分析账本为准（每一步封存条目即事实，不在
+README 复述过程状态）。三目标第三维历史 wire ID 为 `row_crossings`，规范语义名为
 `row_crossing_equivalent`；它表达连续跨行等价量，不冒充实际逐行整数计数。
 
 ## 快速开始
@@ -37,14 +43,15 @@ pytest -q          # 以 CI 徽章为准（计数随提交演进，不在文档�
 ```text
 └── agriautolab
     ├── src/agriautolab            // 主包
-    │   ├── contracts/             // 契约层：问题、几何、机具、协议（依赖最底层）
+    │   ├── contracts/             // 强类型问题/几何/机具/协议契约；含 TSP/CVRP 路由契约
+    │   ├── optimization/          // 通用 constructive problem/heuristic/evaluator 方法学层
     │   ├── geometry/              // 几何内核：robust_union、校验、离散化
     │   ├── kinematics/            // Dubins / Reeds-Shepp 运动学
-    │   ├── agent/                 // LLM 演化循环（提案-闸门-账本，mock 后端）
-    │   ├── algorithms/            // 五阶段算法实现（canonical 类名 + legacy 别名）
+    │   ├── agent/                 // 农业 swath 启发式演化循环（LLM 后端注入，默认 mock）
+    │   ├── algorithms/            // 农业五阶段算法 + 标准问题人工 constructive baselines
     │   ├── coverage/              // 冻结的阶段基线（兼容层）
     │   ├── datasets/              // Fields2Benchmark 接入：许可过滤、CRS 守卫、隔离
-    │   ├── pipeline/              // 五阶段组合与执行入口
+    │   ├── pipeline/              // 农业五阶段组合与执行入口
     │   ├── validation/            // 独立路径校验器（几何/运动学/行穿越）
     │   ├── metrics/               // 指标注册表：不可比指标进门即拒
     │   ├── features/              // 12 个实例特征 + 规范名词汇表
@@ -55,10 +62,10 @@ pytest -q          # 以 CI 徽章为准（计数随提交演进，不在文档�
     │   ├── cross_validation/      // F2C 数值对账（f2c.py 字节冻结）
     │   ├── aslib/                 // ASlib 格式导出（每目标一个 scenario）
     │   └── evidence/              // 内容哈希、哈希链账本、留出集封存
-    ├── configs/corpus_13.json     // 13 配置池（哈希钉死 502b1e90…）
+    ├── configs/corpus_13.json     // 13 个冻结 pipeline configuration
     ├── prereg/                    // 原预注册永不回改 + 修正案 01–05（05 为最终封口）
     ├── evidence/                  // v7 溯源、F2C 对账、Block D 分析链
-    ├── docs/                      // 架构、命名、转折章程、安装/发布记录
+    ├── docs/                      // 架构、命名、优化方法学边界、安装/发布记录
     ├── scripts/                   // 安装、语料运行、对账、分析入口
     ├── tests/                     // 解析真值、不变量、确定性、证据重放、回归
     └── AUDIT_NOTE.md              // 全部迭代与整改的完整留痕（导师可查）
