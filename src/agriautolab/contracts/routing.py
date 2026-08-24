@@ -7,14 +7,13 @@ TSP/CVRP 在 AgriAutoLab 中不是示例代码，而是自动算法设计方法�
 
 from __future__ import annotations
 
-import math
+from fractions import Fraction
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from agriautolab.contracts.enums import ProblemKind, ScenarioDynamics, TaskType
 from agriautolab.contracts.geometry import Point
-from agriautolab.contracts.numerics import not_greater_than_with_roundoff
 from agriautolab.contracts.problem import BaseProblemSpec
 
 
@@ -59,6 +58,10 @@ class CVRPProblem(BaseProblemSpec):
     `max_vehicles=None` 表示不额外限制车辆数；若给定，则它是硬约束。问题契约只做
     无争议的静态不可行性检查（单客户超容量、总需求超总运力）；更强的装箱可行性
     由具体求解过程决定，避免在 schema 层偷偷求一个 NP-hard 子问题。
+
+    容量语义以输入 binary64 数值本身为事实：`demand > capacity` 不因 ULP 或固定
+    绝对容差被改写为可行。车队总运力用这些 binary64 值的精确有理数表示比较，避免
+    有限浮点求和/乘法溢出改变 hard constraint。
     """
 
     task_type: Literal[TaskType.MULTI_POINT_ROUTING] = TaskType.MULTI_POINT_ROUTING
@@ -75,26 +78,24 @@ class CVRPProblem(BaseProblemSpec):
         if len(set(node_ids)) != len(node_ids):
             raise ValueError("CVRP 仓库与客户 node_id 必须全局唯一")
 
-        # 单客户静态检查与 constructor/evaluator 的路线负载比较共用同一 binary64
-        # roundoff policy；不能在 schema 严格比较、运行时却放宽，形成两套可行性定义。
         oversized = [
             customer.node_id
             for customer in self.customers
-            if not not_greater_than_with_roundoff(customer.demand, self.vehicle_capacity)
+            if customer.demand > self.vehicle_capacity
         ]
         if oversized:
             raise ValueError(f"CVRP 存在单车容量永远无法服务的客户：{oversized}")
 
-        # 每位客户需求都 <= 单车容量；若车辆数不少于客户数，总运力必然足够。
-        # 车辆更少时比较 Σ(demand / capacity) 与车辆数，避免有限绝对量求和/乘法
-        # 溢出。上界比较与构造器共用同一 roundoff policy，不能各自发明容差。
+        # 若车辆数不少于客户数，每个客户单独一车即可。车辆更少时，用 binary64 的
+        # 精确有理数值比较总需求与总运力；Fraction 不会把 1e308 级合法有限输入
+        # 聚合成 inf，也不会给 subnormal 或普通尺度超载增加隐含容差。
         if self.max_vehicles is not None and self.max_vehicles < len(self.customers):
-            normalized_total_demand = math.fsum(
-                customer.demand / self.vehicle_capacity for customer in self.customers
+            total_demand = sum(
+                (Fraction.from_float(customer.demand) for customer in self.customers),
+                Fraction(0),
             )
-            if not not_greater_than_with_roundoff(
-                normalized_total_demand, float(self.max_vehicles)
-            ):
+            total_capacity = Fraction.from_float(self.vehicle_capacity) * self.max_vehicles
+            if total_demand > total_capacity:
                 raise ValueError(
                     "CVRP 总需求超过 max_vehicles × vehicle_capacity，问题静态不可行"
                 )
