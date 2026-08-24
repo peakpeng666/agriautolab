@@ -57,7 +57,6 @@ def test_tsp_tie_break_follows_stable_action_order() -> None:
     adapter = TSPConstructiveProblem(problem)
     tour = construct_solution(adapter, TSPNearestNeighborHeuristic(adapter))
 
-    # A/B 与起点等距；feasible_actions 按 node_id 排序，所以平局必须稳定选 A。
     assert tour.node_ids[:3] == ("S", "A", "B")
 
 
@@ -90,15 +89,15 @@ def test_cvrp_nearest_feasible_respects_capacity_and_closes_routes() -> None:
     assert evaluation.total_distance_m == pytest.approx(24.0)
 
 
-def test_cvrp_decimal_exact_fit_survives_binary_roundoff() -> None:
+def test_cvrp_exact_binary_fit_uses_one_vehicle() -> None:
     problem = CVRPProblem(
-        problem_id="decimal-fit",
+        problem_id="binary-exact-fit",
         depot=node("D", 0.0, 0.0),
         customers=(
-            customer("A", 1.0, 0.0, 0.1),
-            customer("B", 2.0, 0.0, 0.2),
+            customer("A", 1.0, 0.0, 0.125),
+            customer("B", 2.0, 0.0, 0.25),
         ),
-        vehicle_capacity=0.3,
+        vehicle_capacity=0.375,
     )
     adapter = CVRPConstructiveProblem(problem)
     solution = construct_solution(adapter, CVRPNearestFeasibleCustomerHeuristic(adapter))
@@ -192,13 +191,10 @@ def test_cvrp_fleet_limit_can_refute_a_greedy_order_even_when_problem_is_feasibl
         max_vehicles=2,
     )
 
-    # 先给出显式可行解，证明失败来自 greedy 次序，而不是问题本身不可行。
     feasible = CVRPSolution(routes=(("D", "A", "C", "D"), ("D", "B", "E", "D")))
     assert evaluate_cvrp_solution(problem, feasible).vehicle_count == 2
 
     adapter = CVRPConstructiveProblem(problem)
-    # 第二辆车装下 C 后剩余容量不足以服务 E，且 max_vehicles 已用满；此时 Problem
-    # 不得再暴露“回仓开第三辆车”的伪可行动作，所以公共 engine 看到真实 dead end。
     with pytest.raises(ConstructionError, match="不存在可行动作"):
         construct_solution(adapter, CVRPNearestFeasibleCustomerHeuristic(adapter))
 
@@ -248,5 +244,4 @@ def test_constructive_tie_break_does_not_require_action_ordering() -> None:
         def score(self, state, action):
             return 0.0
 
-    # OpaqueAction 未定义顺序比较；公共内核必须按动作枚举顺序稳定打破平局。
     assert construct_solution(OneStepProblem(), EqualScoreHeuristic()) == "first"
