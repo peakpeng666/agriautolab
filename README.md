@@ -3,16 +3,15 @@
 [![CI](https://github.com/peakpeng666/agriautolab/actions/workflows/ci.yml/badge.svg)](https://github.com/peakpeng666/agriautolab/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 
-面向农业机器人规划研究的**算法实验、基准与分析框架**。当前最成熟的领域内核是
-农业覆盖路径规划（Coverage Path Planning, CPP）：把 13 个可组合规划配置在
-235 块真实农田上全部跑通（61,100 次运行、零崩溃、零未分类失败），量化
-「路程 / 地头掉头 / 作物行横穿等价量」三目标权衡，并在冻结证据纪律下研究
-偏好条件算法选择。
+面向农业覆盖路径规划（Coverage Path Planning, CPP）的**研究级基准、分析与算法设计实验框架**。
+当前农业主线以 13 个冻结 pipeline configuration 在 235 块真实农田上完成
+61,100 次全量运行（零崩溃、零未分类失败），量化「路程 / 地头掉头 /
+作物行横穿等价量」三目标权衡，并在冻结证据纪律下研究偏好条件算法选择。
 
-仓库同时把 TSP/CVRP 纳入正式的组合优化方法学层，用强类型问题契约、构造式启发式
-协议与独立 evaluator 承接“经典算法复现 → LLM 算法复现 → 农业算法与 LLM 结合”。
-标准问题用于验证算法设计方法本身，不替代农业 CPP 主研究对象，也不改写 Study-001
-的任何冻结证据。
+TSP/CVRP 作为**方法学验证层**进入正式主包：用强类型问题契约、constructive heuristic
+协议与独立 evaluator 验证后续算法设计方法的公共边界。当前只实现人工基线与语义真值；
+TSPLIB/CVRPLIB、EoH/LLM reproduction 与农业迁移仍是后续工作，不能把它们写成已完成能力。
+标准问题服务于农业 CPP 主研究对象，不与其并列改写项目定位，也不改写 Study-001 的任何冻结证据。
 
 分层与依赖方向见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)，组合优化公共边界见
 [docs/OPTIMIZATION_FOUNDATIONS.md](docs/OPTIMIZATION_FOUNDATIONS.md)。选择层的阶段性进度以
@@ -43,8 +42,8 @@ pytest -q          # 以 CI 徽章为准（计数随提交演进，不在文档�
 ```text
 └── agriautolab
     ├── src/agriautolab            // 主包
-    │   ├── contracts/             // 强类型问题/几何/机具/协议契约；含 TSP/CVRP 路由契约
-    │   ├── optimization/          // 通用 constructive problem/heuristic/evaluator 方法学层
+    │   ├── contracts/             // 强类型问题/几何/机具/协议契约；含路由契约与数值上界策略
+    │   ├── optimization/          // constructive problem/heuristic/evaluator 方法学验证层
     │   ├── geometry/              // 几何内核：robust_union、校验、离散化
     │   ├── kinematics/            // Dubins / Reeds-Shepp 运动学
     │   ├── agent/                 // 农业 swath 启发式演化循环（LLM 后端注入，默认 mock）
