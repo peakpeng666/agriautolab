@@ -197,7 +197,9 @@ def test_cvrp_fleet_limit_can_refute_a_greedy_order_even_when_problem_is_feasibl
     assert evaluate_cvrp_solution(problem, feasible).vehicle_count == 2
 
     adapter = CVRPConstructiveProblem(problem)
-    with pytest.raises(ConstructionError, match="第 3 辆车"):
+    # 第二辆车装下 C 后剩余容量不足以服务 E，且 max_vehicles 已用满；此时 Problem
+    # 不得再暴露“回仓开第三辆车”的伪可行动作，所以公共 engine 看到真实 dead end。
+    with pytest.raises(ConstructionError, match="不存在可行动作"):
         construct_solution(adapter, CVRPNearestFeasibleCustomerHeuristic(adapter))
 
 
