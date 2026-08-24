@@ -42,7 +42,7 @@ pytest -q          # 以 CI 徽章为准（计数随提交演进，不在文档�
 ```text
 └── agriautolab
     ├── src/agriautolab            // 主包
-    │   ├── contracts/             // 强类型问题/几何/机具/协议契约；含路由契约与数值上界策略
+    │   ├── contracts/             // 强类型问题/几何/机具/协议契约；含 TSP/CVRP 路由契约
     │   ├── optimization/          // constructive problem/heuristic/evaluator 方法学验证层
     │   ├── geometry/              // 几何内核：robust_union、校验、离散化
     │   ├── kinematics/            // Dubins / Reeds-Shepp 运动学
