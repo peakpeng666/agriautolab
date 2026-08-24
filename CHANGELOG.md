@@ -5,15 +5,20 @@
 
 ## [未发布]
 
-- **组合优化方法学地基**：将 TSP/CVRP 作为 AgriAutoLab 正式 reference problem
-  融入主包，而非旁路教程；新增强类型 `TSPProblem` / `CVRPProblem`、通用
-  `ConstructiveProblem` / `ConstructiveHeuristic` 协议、TSP 最近邻与 CVRP
-  最近可行客户人工基线，以及独立 evaluator。硬约束由 Problem 掌管，heuristic
-  只能给已可行动作评分；平局按稳定动作枚举顺序处理，不要求任意 Action 可比较。
-  新增手算语义真值、greedy 车队装箱反例、非有限评分与 1e308 级容量/距离溢出
-  回归；有限输入产生非有限派生量时 fail-closed。同步重写 README/ARCHITECTURE/
-  NAMING 的事实层，明确 14 个农业算法组件、13 个冻结 pipeline configuration 与
-  N 个生成候选不是同一计数。Study-001 预注册、封存证据与历史 ledger 零改动。
+- **组合优化方法学验证层**：将 TSP/CVRP 作为农业 CPP 自动算法设计前的正式
+  reference problems 融入主包，而非旁路教程或第二研究主线；新增强类型
+  `TSPProblem` / `CVRPProblem`、通用 `ConstructiveProblem` /
+  `ConstructiveHeuristic` 协议、TSP 最近邻与 CVRP 最近可行客户人工基线，以及
+  独立 evaluator。硬约束由 Problem 掌管，heuristic 只在真实可行动作间决策；
+  CVRP 提前回仓从 Problem 内隐策略移回 heuristic，`max_vehicles` 在动作枚举阶段
+  即阻止必然开启第 K+1 辆车的伪可行动作。容量比较移除固定绝对容差，统一为有界
+  binary64 roundoff policy：覆盖 `1e-15` 小尺度误放、`0.1+0.2` 合法尾差与
+  `1e308` 聚合溢出；距离派生溢出同样 fail-closed。CVRP evaluator 不再重放
+  constructor 的逐项容量减法，而以 `fsum(demand/capacity)` 独立复算，并有故意
+  破坏 constructor helper 的可证伪回归。公共 engine 统一封装 heuristic 执行异常、
+  非数值/溢出/NaN/Inf 评分，同时保留异常链。同步校正 README/ARCHITECTURE/
+  NAMING/包元数据的范围与术语，明确农业 CPP 是主研究对象；Study-001 预注册、
+  封存证据与历史 ledger 零改动。
 - **D7.1 post-seal integrity corrigendum**：原 H3 结果与 ledger index 0..6
   保持字节/链语义不回写，新增 index=7 修正件；披露 D7 两次“评估完成后、
   写盘前”身份守门中止意味着严格 one-shot 执行主张不成立；补齐所有
