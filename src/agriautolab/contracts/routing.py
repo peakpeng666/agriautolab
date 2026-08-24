@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from agriautolab.contracts.enums import ProblemKind, ScenarioDynamics, TaskType
 from agriautolab.contracts.geometry import Point
+from agriautolab.contracts.numerics import not_greater_than_with_roundoff
 from agriautolab.contracts.problem import BaseProblemSpec
 
 
@@ -83,16 +84,15 @@ class CVRPProblem(BaseProblemSpec):
             raise ValueError(f"CVRP 存在单车容量永远无法服务的客户：{oversized}")
 
         # 每位客户需求都 <= 单车容量；若车辆数不少于客户数，总运力必然足够。
-        # 仅在车辆数更少时检查总运力，并用 demand/capacity 的无量纲和避免
-        # `sum(demand)` 或 `max_vehicles * capacity` 在合法有限输入上溢出为 inf。
+        # 车辆更少时比较 Σ(demand / capacity) 与车辆数，避免有限绝对量求和/乘法
+        # 溢出。上界比较与构造器共用同一 roundoff policy，不能各自发明容差。
         if self.max_vehicles is not None and self.max_vehicles < len(self.customers):
             normalized_total_demand = math.fsum(
                 customer.demand / self.vehicle_capacity for customer in self.customers
             )
-            tolerance = 1e-12 * max(
-                abs(normalized_total_demand), float(self.max_vehicles), 1.0
-            )
-            if normalized_total_demand > self.max_vehicles + tolerance:
+            if not not_greater_than_with_roundoff(
+                normalized_total_demand, float(self.max_vehicles)
+            ):
                 raise ValueError(
                     "CVRP 总需求超过 max_vehicles × vehicle_capacity，问题静态不可行"
                 )
