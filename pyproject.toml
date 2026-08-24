@@ -5,14 +5,16 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "agriautolab"
 version = "0.5.1.dev0"
-description = "Research-grade benchmark and analysis toolkit for agricultural coverage path planning."
+description = "Research-grade framework for agricultural robot planning, optimization benchmarking, and heuristic design."
 readme = "README.md"
 requires-python = ">=3.10"
 keywords = [
   "agricultural robotics",
   "coverage path planning",
-  "benchmark",
+  "vehicle routing",
+  "constructive heuristics",
   "multi-objective optimization",
+  "benchmark",
 ]
 classifiers = [
   "Programming Language :: Python :: 3",
