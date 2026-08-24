@@ -50,11 +50,9 @@ pytest -q          # 以 CI 徽章为准（计数随提交演进，不在文档�
     │   ├── features/              // 12 个实例特征 + 规范名词汇表
     │   ├── pareto/                // 前沿、超体积、偏好标量化与冻结偏好网格
     │   ├── corpus/                // 语料运行器（断点续跑、清单、账本）
-    │   ├── benchmark/             // corpus 的规范入口（薄转发）
     │   ├── selection/             // 冻结 CV、偏好条件推荐器与评估
     │   ├── confirmatory/          // H1/H2/H3 确证统计 + H3 preflight 守门
     │   ├── cross_validation/      // F2C 数值对账（f2c.py 字节冻结）
-    │   ├── reconciliation/        // cross_validation 的规范名
     │   ├── aslib/                 // ASlib 格式导出（每目标一个 scenario）
     │   └── evidence/              // 内容哈希、哈希链账本、留出集封存
     ├── configs/corpus_13.json     // 13 配置池（哈希钉死 502b1e90…）

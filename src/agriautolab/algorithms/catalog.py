@@ -1,7 +1,10 @@
 """算法目录：五阶段 × 每阶段少量正交候选，全部登记进 AlgorithmRegistry。
 
-池子的成员是 12 个（docs/benchmark_design.md §3.2 的下界，不超额）：多塞算法不增加互补性——
-240 实例 × 12 配置实测单目标 VBS−SBS gap 只有 0.0299，覆盖规划策略嵌套支配，
+目录注册 14 个算法组件（decomposition 2 + headland 2 + swath 5 + route 3 + path 2）；
+冻结实验身份是 configs/corpus_13.json 的 13 个管线配置。两者与演化产生的 N 个候选
+是三个不同概念，不得混称「13 个算法」（docs/benchmark_design.md §3.2 的小池下界理由：
+
+多塞组件不增加互补性——240 实例 × 12 配置实测单目标 VBS−SBS gap 只有 0.0299，覆盖规划策略嵌套支配，
 往池子里加算法长不出 SAT 那种范式互补。把前沿撑开的机制交给 Agent 层（agent/）。
 """
 

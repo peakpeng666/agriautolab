@@ -125,6 +125,9 @@ def evolve_pool(
     ledger = EvolutionLedger()
     memo = StageMemo()
     pool_points = _pool_points(instances, base_pool, protocol, memo)
+    # RNG 流按（主种子, 轮, 组件）派生：修改验证/复核的随机消耗不再移动提议流，
+    # 否则只是加强检查就会改变整条搜索轨迹。
+    master_seed = int(rng.integers(0, 2**63))
     # 已保留候选的逐实例目标向量并入池（后续候选的增量相对「基础池 + 已保留」计算）
     kept_extra: dict[str, list[ObjectiveVector | None]] = {}
     kept: list[KeptCandidate] = []
@@ -137,16 +140,19 @@ def evolve_pool(
                 [config.config_id() for config in base_pool] + list(kept_extra.keys())
             )),
         )
-        candidate: ProposalCandidate = proposer.propose(stage=CoverageStage.SWATH, context=context, rng=rng)
+        proposer_rng = np.random.default_rng([master_seed, round_index, 0])
+        gate_rng = np.random.default_rng([master_seed, round_index, 1])
+        candidate: ProposalCandidate = proposer.propose(stage=CoverageStage.SWATH, context=context, rng=proposer_rng)
         identity = candidate_identity(candidate)
 
         function, contract_outcome = contract_gate(candidate.source_code)
         gates: list[GateOutcome] = [contract_outcome]
         if function is not None:
-            probe = instances[0]
+            # 探针按 problem_id 稳定选取：候选晋升不得依赖实例的输入顺序
+            probe = min(instances, key=lambda item: item.problem.problem_id)
             gates.append(validation_gate(function, probe.problem, probe.vehicle, protocol))
             gates.append(determinism_gate(function, probe.problem, probe.vehicle, protocol))
-            gates.append(invariance_gate(function, probe.problem, probe.vehicle, protocol, rng))
+            gates.append(invariance_gate(function, probe.problem, probe.vehicle, protocol, gate_rng))
         all_passed = all(outcome.passed for outcome in gates)
 
         review_refuted: bool | None = None
@@ -159,13 +165,14 @@ def evolve_pool(
             review_reasons = tuple(reason for verdict in verdicts for reason in verdict.reasons)
             if not review_refuted and identity not in kept_extra:
                 objectives = _candidate_points(function, instances, protocol)
-                # 逐实例合并：基础池 + 已保留候选 + 本候选
-                merged = [
+                # 基线 = 基础池 + 已保留候选（不含本候选）：ΔHV 度量「加入本候选」
+                # 的真实增量。曾把已含本候选的合并池当基线传入，导致恒为 0、
+                # 候选永不可能晋升——真值测试已钉住。
+                baseline = [
                     dict(points, **{key: values[index] for key, values in kept_extra.items()})
                     for index, points in enumerate(pool_points)
                 ]
-                merged = [dict(m, **{identity: objectives[index]}) for index, m in enumerate(merged)]
-                delta = hypervolume_delta(objectives, merged, protocol)
+                delta = hypervolume_delta(objectives, baseline, protocol)
                 was_kept = delta > 0.0 if keep_rule is KeepRule.HYPERVOLUME_DELTA else False
                 if was_kept:
                     kept_extra[identity] = list(objectives)
