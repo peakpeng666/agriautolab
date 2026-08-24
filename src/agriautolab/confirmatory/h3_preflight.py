@@ -31,6 +31,16 @@ def _load_json(path: Path) -> dict:
     return value
 
 
+def _read_verified_ledger(path: Path) -> tuple[dict, ...]:
+    entries = tuple(
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    )
+    verify_artifact_chain(entries)
+    return entries
+
+
 def _require_artifact(entries: tuple[dict, ...], index: int, artifact: str) -> dict:
     if len(entries) <= index:
         raise ValueError(f"Block D ledger 缺少 index={index}")
@@ -47,6 +57,31 @@ def _require_genesis(entries: tuple[dict, ...]) -> dict:
     if entry.get("index") != 0 or entry.get("payload", {}).get("event") != "cv_assignment_sealed":
         raise ValueError("Block D index=0 必须是 cv_assignment_sealed")
     return entry
+
+
+def _require_d1_d6_prefix(entries: tuple[dict, ...]) -> tuple[dict, dict, dict, dict, dict]:
+    d1 = _require_genesis(entries)
+    d2 = _require_artifact(entries, 1, "pool_census")
+    d3 = _require_artifact(entries, 2, "selection_protocol_v1")
+    d4 = _require_artifact(entries, 3, "selection_cv_result")
+    _require_artifact(entries, 4, "h1_confirmatory_result")
+    d6 = _require_artifact(entries, 5, "h2_confirmatory_result")
+    return d1, d2, d3, d4, d6
+
+
+def _reject_existing_h3(entries: tuple[dict, ...]) -> None:
+    if any(
+        entry.get("payload", {}).get("artifact") == "h3_confirmatory_result"
+        for entry in entries
+    ):
+        raise ValueError("H3 已封存；禁止再次执行 holdout。仅允许离线验证既有证据。")
+
+
+def ensure_h3_holdout_unsealed(ledger_path: Path) -> None:
+    """仅读 ledger 的最前置闸门；已封 H3 时不得触碰其他 H3 输入。"""
+    entries = _read_verified_ledger(ledger_path)
+    _require_d1_d6_prefix(entries)
+    _reject_existing_h3(entries)
 
 
 def verify_h3_preflight(
@@ -68,27 +103,13 @@ def verify_h3_preflight(
     """验证 H3 所有冻结输入；返回解析后的安全元数据。
 
     `reject_if_h3_sealed=True` 时，只要 ledger 已含 H3，就在读取其他输入前拒绝。
-    这使已封存研究不可能被 CLI 误触发第二次 holdout 评估。
+    CLI 的 holdout 模式还会先调用 `ensure_h3_holdout_unsealed`，确保连协议文件
+    哈希都不会在已封存状态下被重新消费。
     """
-    entries = tuple(
-        json.loads(line)
-        for line in ledger_path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
-    )
-    verify_artifact_chain(entries)
-
-    d1 = _require_genesis(entries)
-    d2 = _require_artifact(entries, 1, "pool_census")
-    d3 = _require_artifact(entries, 2, "selection_protocol_v1")
-    d4 = _require_artifact(entries, 3, "selection_cv_result")
-    _require_artifact(entries, 4, "h1_confirmatory_result")
-    d6 = _require_artifact(entries, 5, "h2_confirmatory_result")
-
-    if reject_if_h3_sealed and any(
-        entry.get("payload", {}).get("artifact") == "h3_confirmatory_result"
-        for entry in entries
-    ):
-        raise ValueError("H3 已封存；禁止再次执行 holdout。仅允许离线验证既有证据。")
+    entries = _read_verified_ledger(ledger_path)
+    d1, d2, d3, d4, d6 = _require_d1_d6_prefix(entries)
+    if reject_if_h3_sealed:
+        _reject_existing_h3(entries)
 
     if sha256_file(pool_census_path) != d2["payload"].get("file_sha256"):
         raise ValueError("D2 pool census 文件与 ledger index=1 绑定字节不一致")
