@@ -3,12 +3,13 @@
 容量、客户覆盖、回仓合法性与车队上限由问题状态机维护；heuristic 只在当前合法动作
 之间决定策略。离开仓库后，提前回仓本身可以是合法动作，不能被 Problem adapter 以
 “还有客户装得下”为由隐藏；但若回仓必然要求超过 `max_vehicles` 的下一辆车，它就
-不是可行动作。最终 evaluator 重新检查客户覆盖、容量、车辆数与总距离，不采信构造器
-自报指标。
+不是可行动作。最终 evaluator 以独立计算路径重新检查客户覆盖、容量、车辆数与总距离，
+不采信构造器自报指标，也不重放 constructor 的逐项减法状态机。
 """
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 from agriautolab.contracts.numerics import not_greater_than_with_roundoff
@@ -46,9 +47,9 @@ class CVRPEvaluation:
 def _remaining_capacity_after(demand: float, available: float) -> float | None:
     """若当前容量容得下需求，返回扣减后的剩余容量；否则返回 None。
 
-    不累加绝对 route demand：多个有限需求的和仍可能上溢为 `inf`。比较只容忍
-    `contracts.numerics` 规定的少量 binary64 舍入步长，不使用固定绝对容差；
-    `available == 0` 时任何正需求都必须拒绝。
+    constructor 不累加绝对 route demand：多个有限需求的和仍可能上溢为 `inf`。
+    比较只容忍 `contracts.numerics` 规定的少量 binary64 舍入步长，不使用固定绝对
+    容差；`available == 0` 时任何正需求都必须拒绝。
     """
     if not not_greater_than_with_roundoff(demand, available):
         return None
@@ -159,6 +160,24 @@ class CVRPConstructiveProblem:
         return CVRPSolution(routes=state.completed_routes)
 
 
+def _normalized_route_demand(
+    problem: CVRPProblem,
+    customer_ids: tuple[str, ...],
+    customers_by_id: dict[str, CVRPCustomer],
+) -> float:
+    """用独立于 constructor 状态更新的无量纲路径复算路线容量占用。"""
+    try:
+        normalized = math.fsum(
+            customers_by_id[customer_id].demand / problem.vehicle_capacity
+            for customer_id in customer_ids
+        )
+    except OverflowError as error:  # 极端有限输入仍不允许把 inf 送进硬约束判断
+        raise ValueError("CVRP 路线归一化需求超出有限浮点表示范围") from error
+    if not math.isfinite(normalized):
+        raise ValueError("CVRP 路线归一化需求不是有限数")
+    return normalized
+
+
 def evaluate_cvrp_solution(problem: CVRPProblem, solution: CVRPSolution) -> CVRPEvaluation:
     """独立校验 CVRP 可行性并复算总欧氏距离。"""
     depot_id = problem.depot.node_id
@@ -180,14 +199,11 @@ def evaluate_cvrp_solution(problem: CVRPProblem, solution: CVRPSolution) -> CVRP
         if any(node_id not in customers_by_id for node_id in customer_ids):
             raise ValueError(f"CVRP 路线 {route_index} 含未知客户或中途仓库")
 
-        remaining_capacity = problem.vehicle_capacity
-        for customer_id in customer_ids:
-            next_remaining = _remaining_capacity_after(
-                customers_by_id[customer_id].demand, remaining_capacity
-            )
-            if next_remaining is None:
-                raise ValueError(f"CVRP 路线 {route_index} 超过车辆容量")
-            remaining_capacity = next_remaining
+        # evaluator 不复用 constructor 的逐项剩余容量状态机；它独立计算整条路线的
+        # 无量纲容量占用，只共享“最多容忍若干 ULP”的判定政策。
+        normalized_demand = _normalized_route_demand(problem, customer_ids, customers_by_id)
+        if not not_greater_than_with_roundoff(normalized_demand, 1.0):
+            raise ValueError(f"CVRP 路线 {route_index} 超过车辆容量")
 
         visited_customer_ids.extend(customer_ids)
         route_lengths_m.append(route_length_m(nodes_by_id, route))
