@@ -13,12 +13,13 @@
   CVRP 提前回仓从 Problem 内隐策略移回 heuristic，`max_vehicles` 在动作枚举阶段
   即阻止必然开启第 K+1 辆车的伪可行动作。容量比较移除固定绝对容差，统一为有界
   binary64 roundoff policy：覆盖 `1e-15` 小尺度误放、`0.1+0.2` 合法尾差与
-  `1e308` 聚合溢出；距离派生溢出同样 fail-closed。CVRP evaluator 不再重放
-  constructor 的逐项容量减法，而以 `fsum(demand/capacity)` 独立复算，并有故意
-  破坏 constructor helper 的可证伪回归。公共 engine 统一封装 heuristic 执行异常、
-  非数值/溢出/NaN/Inf 评分，同时保留异常链。同步校正 README/ARCHITECTURE/
-  NAMING/包元数据的范围与术语，明确农业 CPP 是主研究对象；Study-001 预注册、
-  封存证据与历史 ledger 零改动。
+  `1e308` 聚合溢出；距离派生溢出同样 fail-closed。constructor 不再保存连续减法
+  得到的剩余容量，而对每个候选从当前 route 身份重新 `fsum(demand/capacity)`，
+  防止 `100×0.01=1.0` 一类精确装满被累计舍入误拆车；CVRP evaluator 使用另一条
+  整路线 `fsum(demand/capacity)` 复算路径，并有故意破坏 constructor 负载函数的
+  可证伪回归。公共 engine 统一封装 heuristic 执行异常、非数值/溢出/NaN/Inf
+  评分，同时保留异常链。同步校正 README/ARCHITECTURE/NAMING/包元数据的范围与
+  术语，明确农业 CPP 是主研究对象；Study-001 预注册、封存证据与历史 ledger 零改动。
 - **D7.1 post-seal integrity corrigendum**：原 H3 结果与 ledger index 0..6
   保持字节/链语义不回写，新增 index=7 修正件；披露 D7 两次“评估完成后、
   写盘前”身份守门中止意味着严格 one-shot 执行主张不成立；补齐所有
