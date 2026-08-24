@@ -37,7 +37,7 @@ corpus / pareto / selection / confirmatory / evidence
 ### 1.2 组合优化方法学验证层
 
 ```text
-contracts/routing + contracts/numerics
+contracts/routing
       ↓
 optimization/constructive
       ↓
@@ -64,7 +64,6 @@ TSPLIB/CVRPLIB corpus、EoH reproduction、真实 LLM provenance 或农业迁移
 ## 2. 依赖纪律
 
 - `contracts/` 是跨模块数据边界，不依赖求解器、推荐器或 LLM；
-- `contracts/numerics.py` 只保存低层 binary64 上界比较策略，不包含领域求解逻辑；
 - `optimization/` 可以依赖 contracts，但不能 import 农业 `pipeline/`、selector 或 LLM；
 - `algorithms/constructive/` 依赖标准问题 adapter 与公共 constructive protocol；
 - 农业 `algorithms/` 不知道 selector、LLM、最终排名或论文结论；
@@ -102,8 +101,8 @@ Study-001 的预注册、H1/H2/H3 结果、corrigendum 与历史 ledger 均属�
 - TSP nearest-neighbor 人工基线；
 - CVRP nearest-feasible-customer 人工基线；
 - TSP/CVRP 独立 evaluator 与手算语义真值测试；
-- 派生距离与容量比较的 fail-closed 浮点边界：有限输入不能静默产生 `inf`，硬容量
-  只容忍有限个 binary64 roundoff steps，不使用固定绝对容差。
+- 派生距离的 fail-closed 浮点边界，以及以输入 binary64 精确值为事实的 CVRP
+  hard-capacity 语义：任何 `demand > capacity` 都不因 ULP/绝对容差获得放行。
 
 标准问题的目的不是把项目改造成通用运筹库，而是给“基本算法复现 → 自动算法设计
 方法验证 → 农业迁移”提供已知语义和可复核 reference tasks。
@@ -131,16 +130,18 @@ TSPLIB/CVRPLIB 数据适配、EoH reproduction、真实模型 provenance 与自�
 
 1. 欧氏边长若因有限坐标差值溢出，evaluator 明确失败；
 2. 多段距离用 `math.fsum`，总量无法有限表示时明确失败；
-3. CVRP constructor **不保存连续减法得到的剩余容量**；每个候选都从当前 route
-   客户身份重新计算 `fsum(demand / capacity)`，避免累计舍入误差改变可行域；
-4. CVRP evaluator 使用另一条整路线 `fsum(demand / capacity)` 复算函数验证容量，
-   与 constructor 共享 roundoff policy，但不共享其状态更新路径；
-5. fleet preflight 比较无量纲 `Σ(demand / capacity)` 与车辆数；
-6. 容量 roundoff 只允许少量相邻 binary64 表示步长；`upper_bound == 0` 时严格比较，
-   禁止固定 `1e-12` 一类绝对容差给小尺度容量“白送空间”。
+3. CVRP 的 capacity/demand 以 schema 接收到的 binary64 数值本身为契约事实，不猜测
+   调用者原本想表达的十进制数，也不给 hard constraint 添加 ULP/绝对容差；
+4. schema 的车队总运力检查用 `Fraction.from_float` 精确比较总需求和
+   `max_vehicles × vehicle_capacity`，因此 1e308 级有限值不会因聚合成 `inf` 失真；
+5. constructor 将 capacity/demand 映射到共同的精确二进制整数单位，状态累计整数
+   `used_capacity_units`，候选容量判断为严格整数 `<=`，没有连续浮点减法漂移；
+6. evaluator 不复用 constructor 的整数单位算法，而以 `Fraction.from_float` 精确求和
+   整条路线需求后严格比较 capacity，避免同一实现缺陷同时骗过构造与复核。
 
-这里的 roundoff policy 是数值表示纪律，不是业务可行性放宽。若需要扩大容差，必须先给出
-量纲与误差来源，不能通过“多加几个 ULP”掩盖累计计算误差。
+因此 `0.1 + 0.2` 与 `0.3` 之类十进制直觉不能覆盖已经进入契约的 binary64 事实；若需要
+表达十进制定点容量，应在未来问题契约中显式增加相应数据类型/单位，而不是用浮点容差
+暗中改变 hard constraint。
 
 ## 7. 范围边界
 
@@ -166,8 +167,8 @@ TSPLIB/CVRPLIB 数据适配、EoH reproduction、真实模型 provenance 与自�
 7. **证据身份永不改**：进入 parquet/manifest/prereg/pool hash 的 wire ID 不因命名
    审美重写；新 API 从第一天使用规范名和单位后缀。
 8. **几何纪律不旁路**：农业几何并集、分母、CRS 与离散化继续走既有守卫。
-9. **浮点容差必须有量纲依据**：硬约束禁止固定绝对 floor；允许的 roundoff 必须与
-   binary64 表示精度绑定并由语义测试钉死，不能补偿累计数值漂移。
+9. **硬约束不得用数值容差偷改语义**：若需要容差，必须属于被明确定义的测量/几何
+   判定协议，而不是用来把已经大于上界的输入重新解释为可行。
 
 ## 9. 安装与测试
 
