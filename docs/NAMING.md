@@ -26,6 +26,9 @@
 - **问题族与领域阶段分开命名**：`ProblemKind.EUCLIDEAN_TSP/CVRP` 描述问题族；
   `CoverageStage` 只描述农业覆盖的 decomposition/headland/swath/route/path，
   不拿 `CoverageStage.ROUTE` 给 TSP/CVRP 强行分类。
+- **研究主线与验证层分开命名**：农业 CPP 是主研究对象；TSP/CVRP 是
+  methodology/reference problems。除非后续研究协议真的改变，不把验证层称为
+  “第二主线”或用包结构反向扩大课题边界。
 
 ## 2. 语义修正（canonical 与 wire identity）
 
@@ -60,7 +63,7 @@ legacy 关键字与属性。参数键 `path_sample_step_m` 优先，`dubins_samp
 农业五阶段的历史算法 ID 已进入 config hash / pool hash，因此只能保留 wire identity。
 类名可以在不改变证据身份的前提下收敛，但不为“整齐”制造无消费者的双名层。
 
-标准组合优化层从第一版起直接使用角色明确的规范名：
+标准组合优化验证层从第一版起直接使用角色明确的规范名：
 
 - `TSPProblem` / `CVRPProblem`：输入问题契约；
 - `TSPConstructiveProblem` / `CVRPConstructiveProblem`：把领域状态适配到公共
@@ -76,8 +79,9 @@ heuristic candidates` 是三种不同计数，文档与论文中不得简写成�
 
 当前真实包名就是文档事实，不再维护“计划中的 canonical 幽灵目录”：
 
-- `contracts/`：跨模块强类型数据契约；`routing.py` 放 TSP/CVRP 输入契约；
-- `optimization/`：通用 constructive problem / heuristic / evaluator 方法学层；
+- `contracts/`：跨模块强类型数据契约；`routing.py` 放 TSP/CVRP 输入契约，
+  `numerics.py` 放不含领域求解逻辑的 binary64 上界比较策略；
+- `optimization/`：constructive problem / heuristic / evaluator 方法学验证层；
 - `algorithms/constructive/`：标准问题的人工 constructive baselines；
 - `pipeline/`：农业 CPP 五阶段组合与执行；
 - `corpus/`：真实语料批量运行与产物；
