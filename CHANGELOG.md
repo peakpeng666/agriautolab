@@ -11,10 +11,17 @@
   protocol/input/D4 model exact-SHA 前置硬门，已封 H3 后 holdout 重跑
   fail-closed；修复偶数样本 median 实现。H3 冻结主统计量 `mean_D`、p 值、
   失效判据与 Holm 结论不变。
+- **release / CI hygiene**：主线版本改为 `0.5.1.dev0`；CI 权限收敛为只读，
+  GitHub Actions 固定到完整 SHA，runner 固定 Ubuntu 24.04，测试工具版本固定，
+  增加 `pip check` / package metadata / `compileall` 守门；Dependabot 仅维护
+  GitHub Actions 供应链；README 撤回旧的严格 one-shot 表述并链接 D7.1。
+
+## [0.5.0] — 2026-08-24
+
 - **D7/H3 原始封存（Study-001 结案）**：H3 未获支持
   （mean_D=+0.0587，p=0.821，失效判据 1 触发；判据 2 通过；双轨一致）；
   Holm 终表 H1 支持 / H2 支持 / H3 不支持；封存前两次身份守门中止事故
-  contemporaneous 留痕。D7.1 对其执行纪律与次要 median 实现做只追加修正。
+  contemporaneous 留痕。D7.1 后续对其执行纪律与次要 median 实现做只追加修正。
 - D2 三层池普查：selection/pools.py（N/A/O 契约 + 逐实例包含校验）、
   scripts/pool_census.py、evidence/block_d/pool_census.json（4,700 实例，
   A 层 v0=11/v1=13）+ Block D ledger index=1；5 条测试
