@@ -75,10 +75,12 @@ class CVRPProblem(BaseProblemSpec):
         if len(set(node_ids)) != len(node_ids):
             raise ValueError("CVRP 仓库与客户 node_id 必须全局唯一")
 
+        # 单客户静态容量检查与运行时逐项扣减共用同一 binary64 roundoff policy；
+        # 不能在 schema 严格比较、运行时却放宽，形成两套“容量可行”的定义。
         oversized = [
             customer.node_id
             for customer in self.customers
-            if customer.demand > self.vehicle_capacity
+            if not not_greater_than_with_roundoff(customer.demand, self.vehicle_capacity)
         ]
         if oversized:
             raise ValueError(f"CVRP 存在单车容量永远无法服务的客户：{oversized}")
