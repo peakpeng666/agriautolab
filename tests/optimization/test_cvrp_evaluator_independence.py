@@ -31,13 +31,12 @@ def test_evaluator_rejects_overload_even_if_constructor_capacity_path_is_broken(
     )
     overloaded = CVRPSolution(routes=(("D", "A", "B", "D"),))
 
-    # 故意破坏 constructor 的候选负载计算：若 evaluator 复用同一路径，这个补丁会
-    # 把 1.2 倍超载伪装成可行。独立 evaluator 必须仍由自己的 0.6+0.6 无量纲
-    # 复算拒绝该路线。
+    # 故意破坏 constructor 的可行性函数：即使构造器会错误放行任意客户，evaluator
+    # 仍必须用自己的 Fraction 精确路线求和拒绝 1.2 倍超载。
     monkeypatch.setattr(
         CVRPConstructiveProblem,
-        "_constructive_load_fraction",
-        lambda self, state, extra_customer_id=None: 0.0,
+        "_customer_fits",
+        lambda self, state, customer_id: True,
     )
 
     with pytest.raises(ValueError, match="超过车辆容量"):
