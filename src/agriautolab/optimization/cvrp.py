@@ -3,8 +3,12 @@
 容量、客户覆盖、回仓合法性与车队上限由问题状态机维护；heuristic 只在当前合法动作
 之间决定策略。离开仓库后，提前回仓本身可以是合法动作，不能被 Problem adapter 以
 “还有客户装得下”为由隐藏；但若回仓必然要求超过 `max_vehicles` 的下一辆车，它就
-不是可行动作。最终 evaluator 以独立计算路径重新检查客户覆盖、容量、车辆数与总距离，
-不采信构造器自报指标，也不重放 constructor 的逐项减法状态机。
+不是可行动作。
+
+constructor 不保存连续减法得到的“剩余容量”状态：那会把每一步 binary64 舍入误差
+累积到后续可行性判断。每个候选都从当前路线客户重新用 `math.fsum(demand/capacity)`
+计算无量纲负载。最终 evaluator 使用另一条独立复算函数检查容量、客户覆盖、车辆数与
+总距离，不采信构造器自报指标。
 """
 
 from __future__ import annotations
@@ -20,10 +24,9 @@ from agriautolab.optimization.routing import route_length_m, sum_distances_m
 
 @dataclass(frozen=True)
 class CVRPState:
-    """逐客户构造所需的容量与路线状态。"""
+    """逐客户构造的最小状态；容量负载由 `current_route` 按需重算。"""
 
     current_node_id: str
-    remaining_capacity: float
     unserved_customer_ids: tuple[str, ...]
     current_route: tuple[str, ...]
     completed_routes: tuple[tuple[str, ...], ...]
@@ -44,23 +47,6 @@ class CVRPEvaluation:
     vehicle_count: int
 
 
-def _remaining_capacity_after(demand: float, available: float) -> float | None:
-    """若当前容量容得下需求，返回扣减后的剩余容量；否则返回 None。
-
-    constructor 不累加绝对 route demand：多个有限需求的和仍可能上溢为 `inf`。
-    比较只容忍 `contracts.numerics` 规定的少量 binary64 舍入步长，不使用固定绝对
-    容差；`available == 0` 时任何正需求都必须拒绝。
-    """
-    if not not_greater_than_with_roundoff(demand, available):
-        return None
-    remaining = available - demand
-    return 0.0 if remaining < 0.0 else remaining
-
-
-def _capacity_allows(demand: float, available: float) -> bool:
-    return _remaining_capacity_after(demand, available) is not None
-
-
 class CVRPConstructiveProblem:
     """把 `CVRPProblem` 适配为逐客户/回仓选择的 constructive problem。"""
 
@@ -79,7 +65,6 @@ class CVRPConstructiveProblem:
     def initial_state(self) -> CVRPState:
         return CVRPState(
             current_node_id=self.problem.depot.node_id,
-            remaining_capacity=self.problem.vehicle_capacity,
             unserved_customer_ids=tuple(sorted(self._customers)),
             current_route=(self.problem.depot.node_id,),
             completed_routes=(),
@@ -95,6 +80,33 @@ class CVRPConstructiveProblem:
         current_vehicle_number = len(state.completed_routes) + 1
         return current_vehicle_number < self.problem.max_vehicles
 
+    def _constructive_load_fraction(
+        self,
+        state: CVRPState,
+        extra_customer_id: str | None = None,
+    ) -> float:
+        """从当前路线身份重算容量占用，避免连续减法的累计舍入误差。"""
+        depot_id = self.problem.depot.node_id
+        customer_ids = tuple(
+            node_id for node_id in state.current_route if node_id != depot_id
+        )
+        if extra_customer_id is not None:
+            customer_ids += (extra_customer_id,)
+        try:
+            normalized = math.fsum(
+                self._customers[customer_id].demand / self.problem.vehicle_capacity
+                for customer_id in customer_ids
+            )
+        except OverflowError as error:
+            raise ConstructionError("CVRP 构造负载超出有限浮点表示范围") from error
+        if not math.isfinite(normalized):
+            raise ConstructionError("CVRP 构造负载不是有限数")
+        return normalized
+
+    def _customer_fits(self, state: CVRPState, customer_id: str) -> bool:
+        load_with_customer = self._constructive_load_fraction(state, customer_id)
+        return not_greater_than_with_roundoff(load_with_customer, 1.0)
+
     def feasible_actions(self, state: CVRPState) -> tuple[str, ...]:
         """枚举当前硬约束下可执行动作；不在 Problem 层嵌入 route-closure 策略。"""
         depot_id = self.problem.depot.node_id
@@ -104,10 +116,10 @@ class CVRPConstructiveProblem:
         feasible_customers = tuple(
             customer_id
             for customer_id in state.unserved_customer_ids
-            if _capacity_allows(self._customers[customer_id].demand, state.remaining_capacity)
+            if self._customer_fits(state, customer_id)
         )
         if state.current_node_id == depot_id:
-            # 仓库不能原地“回仓”形成空路线；schema 保证至少有一个客户可由满载车辆服务。
+            # 仓库不能原地“回仓”形成空路线；schema 保证至少有客户能由满载车辆服务。
             return feasible_customers
 
         # 客户动作保持 node_id 稳定顺序，回仓固定放最后。提前回仓是否值得由 heuristic
@@ -123,32 +135,18 @@ class CVRPConstructiveProblem:
 
         if action == depot_id:
             completed_routes = state.completed_routes + (state.current_route + (depot_id,),)
-            if state.unserved_customer_ids:
-                return CVRPState(
-                    current_node_id=depot_id,
-                    remaining_capacity=self.problem.vehicle_capacity,
-                    unserved_customer_ids=state.unserved_customer_ids,
-                    current_route=(depot_id,),
-                    completed_routes=completed_routes,
-                )
             return CVRPState(
                 current_node_id=depot_id,
-                remaining_capacity=self.problem.vehicle_capacity,
-                unserved_customer_ids=(),
+                unserved_customer_ids=state.unserved_customer_ids,
                 current_route=(depot_id,),
                 completed_routes=completed_routes,
             )
 
-        customer = self._customers[action]
-        remaining_capacity = _remaining_capacity_after(customer.demand, state.remaining_capacity)
-        if remaining_capacity is None:  # pragma: no cover -- feasible_actions 已做同一检查
-            raise ConstructionError(f"客户 {action!r} 超过当前剩余容量")
         remaining_customers = tuple(
             customer_id for customer_id in state.unserved_customer_ids if customer_id != action
         )
         return CVRPState(
             current_node_id=action,
-            remaining_capacity=remaining_capacity,
             unserved_customer_ids=remaining_customers,
             current_route=state.current_route + (action,),
             completed_routes=state.completed_routes,
@@ -171,7 +169,7 @@ def _normalized_route_demand(
             customers_by_id[customer_id].demand / problem.vehicle_capacity
             for customer_id in customer_ids
         )
-    except OverflowError as error:  # 极端有限输入仍不允许把 inf 送进硬约束判断
+    except OverflowError as error:
         raise ValueError("CVRP 路线归一化需求超出有限浮点表示范围") from error
     if not math.isfinite(normalized):
         raise ValueError("CVRP 路线归一化需求不是有限数")
@@ -199,7 +197,7 @@ def evaluate_cvrp_solution(problem: CVRPProblem, solution: CVRPSolution) -> CVRP
         if any(node_id not in customers_by_id for node_id in customer_ids):
             raise ValueError(f"CVRP 路线 {route_index} 含未知客户或中途仓库")
 
-        # evaluator 不复用 constructor 的逐项剩余容量状态机；它独立计算整条路线的
+        # evaluator 不复用 constructor 的候选负载函数；它独立计算整条路线的
         # 无量纲容量占用，只共享“最多容忍若干 ULP”的判定政策。
         normalized_demand = _normalized_route_demand(problem, customer_ids, customers_by_id)
         if not not_greater_than_with_roundoff(normalized_demand, 1.0):
