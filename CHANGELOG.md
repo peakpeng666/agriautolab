@@ -5,6 +5,22 @@
 
 ## [未发布]
 
+- **组合优化方法学验证层**：将 TSP/CVRP 作为农业 CPP 自动算法设计前的正式
+  reference problems 融入主包，而非旁路教程或第二研究主线；新增强类型
+  `TSPProblem` / `CVRPProblem`、通用 `ConstructiveProblem` /
+  `ConstructiveHeuristic` 协议、TSP 最近邻与 CVRP 最近可行客户人工基线，以及
+  独立 evaluator。硬约束由 Problem 掌管，heuristic 只在真实可行动作间决策；
+  CVRP 提前回仓从 Problem 内隐策略移回 heuristic，`max_vehicles` 在动作枚举阶段
+  即阻止必然开启第 K+1 辆车的伪可行动作。容量语义最终收敛为**严格 binary64
+  hard bound**：任何 `demand > capacity` 都不再通过 ULP/固定绝对容差放行；schema
+  的车队总运力用 `Fraction.from_float` 精确比较，constructor 将 capacity/demand
+  映射为共同二进制整数单位并累计整数负载，evaluator 则以独立 Fraction 路径整路线
+  复算。由此同时解决 `1e308` 聚合溢出、`1e-15` 固定容差误放、最小 subnormal
+  1 ULP 即 2× 容量以及连续减法漂移；十进制直觉不再覆盖已经进入契约的 binary64
+  输入事实。距离派生溢出继续 fail-closed。公共 engine 统一封装 heuristic 执行异常、
+  非数值/NaN/Inf 以及任意自定义 `float(score)` 转换异常，并保留异常链。同步校正
+  README/ARCHITECTURE/NAMING/包元数据的范围与术语，明确农业 CPP 是主研究对象；
+  Study-001 预注册、封存证据与历史 ledger 零改动。
 - **D7.1 post-seal integrity corrigendum**：原 H3 结果与 ledger index 0..6
   保持字节/链语义不回写，新增 index=7 修正件；披露 D7 两次“评估完成后、
   写盘前”身份守门中止意味着严格 one-shot 执行主张不成立；补齐所有

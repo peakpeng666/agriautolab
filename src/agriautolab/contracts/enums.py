@@ -16,9 +16,12 @@ class ScenarioDynamics(str, Enum):
 
 
 class ProblemKind(str, Enum):
+    """决定算法兼容性的具体问题族，而不是宽泛任务标签。"""
+
     GRID_P2P_2D = "grid_p2p_2d"
     POLYGON_COVERAGE_2D = "polygon_coverage_2d"
     EUCLIDEAN_TSP = "euclidean_tsp"
+    EUCLIDEAN_CVRP = "euclidean_cvrp"
 
 
 class RunStatus(str, Enum):
@@ -44,6 +47,8 @@ class PathSegmentKind(str, Enum):
 
 
 class CoverageStage(str, Enum):
+    """农业覆盖流水线的领域阶段；不得拿来给 TSP/CVRP 等通用算法强行分类。"""
+
     DECOMPOSITION = "decomposition"
     HEADLAND = "headland"
     SWATH = "swath"

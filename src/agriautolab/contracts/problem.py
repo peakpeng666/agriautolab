@@ -1,4 +1,8 @@
-"""在 schema 边界上让不兼容的规划问题无法混淆：覆盖问题塞 goal、点到点问题塞 field，都必须当场失败。"""
+"""规划问题的公共 schema 边界。
+
+不兼容字段必须在构造时失败：覆盖问题不能混入 point-to-point 字段，标准路由问题也
+不应借用农业 field/vehicle 语义。TSP/CVRP 的专有契约放在 `contracts.routing`。
+"""
 
 from typing import Literal
 
@@ -30,8 +34,8 @@ class CoverageProblem(BaseProblemSpec):
     row_structure: RowStructure | None = None
 
 
-# 保留点到点问题是为了给 schema 防火墙提供反例：只有存在第二种 ProblemKind，
-# "覆盖问题塞入 goal 字段会被拒绝" 这条断言才有对照组。它不参与覆盖规划流程。
+# 轻量 point-to-point 契约仍用于 schema 防火墙测试，但不参与农业覆盖流水线。
+# 标准多点路由问题单独放在 contracts.routing，避免把 depot/demand 等字段塞进这里。
 class GridPointToPointProblem(BaseProblemSpec):
     task_type: Literal[TaskType.POINT_TO_POINT] = TaskType.POINT_TO_POINT
     problem_kind: Literal[ProblemKind.GRID_P2P_2D] = ProblemKind.GRID_P2P_2D
