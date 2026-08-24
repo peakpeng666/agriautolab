@@ -15,7 +15,7 @@ from pathlib import Path
 
 from agriautolab.confirmatory.evidence import seal_confirmatory_result, sha256_file
 from agriautolab.confirmatory.h3 import analyze_h3
-from agriautolab.confirmatory.h3_preflight import verify_h3_preflight
+from agriautolab.confirmatory.h3_preflight import ensure_h3_holdout_unsealed, verify_h3_preflight
 from agriautolab.contracts.vehicle import VehicleSpec
 from agriautolab.evidence.hashing import content_hash
 from agriautolab.pipeline.config import PipelineConfig
@@ -99,10 +99,13 @@ def main() -> None:
     parser.add_argument("--fields", choices=("train", "holdout"), default="holdout")
     args = parser.parse_args()
 
+    # holdout 模式第一道动作只读取 ledger：一旦 H3 已封存，后续任何 H3 输入都不触碰。
+    if args.fields == "holdout":
+        ensure_h3_holdout_unsealed(args.ledger)
+
     if importlib.metadata.version("scikit-learn") != "1.7.2":
         raise ValueError("H3 执行环境必须 scikit-learn==1.7.2（与封存模型一致）")
 
-    # 先验硬门：必须在 joblib.load 和任何 holdout runs 读取之前完成。
     protocol_sources, protocol_bundle_hash = _verified_protocol_identity()
     code_files, analysis_code_hash = _code_identity()
     model_path = args.model_dir / "recommender.joblib"
