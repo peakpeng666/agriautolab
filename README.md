@@ -2,7 +2,6 @@
 
 [![CI](https://github.com/peakpeng666/agriautolab/actions/workflows/ci.yml/badge.svg)](https://github.com/peakpeng666/agriautolab/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
-[![tests](https://github.com/peakpeng666/agriautolab/actions/workflows/ci.yml/badge.svg)](https://github.com/peakpeng666/agriautolab/actions/workflows/ci.yml)
 
 农业覆盖路径规划（Coverage Path Planning）的**研究级基准与分析层**：
 把 13 个可组合规划配置在 235 块真实农田上全部跑通（61,100 次运行、
@@ -52,8 +51,8 @@ pytest -q          # 以 CI 徽章为准（计数随提交演进，不在文档�
     │   ├── pareto/                // 前沿、超体积、偏好标量化与冻结偏好网格
     │   ├── corpus/                // 语料运行器（断点续跑、清单、账本）
     │   ├── benchmark/             // corpus 的规范入口（薄转发）
-    │   ├── selection/             // Block D：冻结 CV 身份，后续承载推荐器
-    │   ├── confirmatory/          // D5/D6：田级 H1/H2 统计量与显式零值规则
+    │   ├── selection/             // 冻结 CV、偏好条件推荐器与评估
+    │   ├── confirmatory/          // H1/H2/H3 确证统计 + H3 preflight 守门
     │   ├── cross_validation/      // F2C 数值对账（f2c.py 字节冻结）
     │   ├── reconciliation/        // cross_validation 的规范名
     │   ├── aslib/                 // ASlib 格式导出（每目标一个 scenario）
@@ -61,13 +60,13 @@ pytest -q          # 以 CI 徽章为准（计数随提交演进，不在文档�
     ├── configs/corpus_13.json     // 13 配置池（哈希钉死 502b1e90…）
     ├── prereg/                    // 原预注册永不回改 + 修正案 01–05（05 为最终封口）
     ├── evidence/                  // v7 溯源、F2C 对账、Block D 分析链
-    ├── docs/                      // 架构、命名、转折章程、安装记录
-    ├── scripts/                   // 安装、语料运行、对账、D1 折表重放
+    ├── docs/                      // 架构、命名、转折章程、安装/发布记录
+    ├── scripts/                   // 安装、语料运行、对账、分析入口
     ├── tests/                     // 解析真值、不变量、确定性、证据重放、回归
     └── AUDIT_NOTE.md              // 全部迭代与整改的完整留痕（导师可查）
 ```
 
-## 核心数字（v7 终语料，提交 ed1bccb）
+## 核心数字（v7 / Study-001）
 
 | 量 | 值 |
 |---|---|
@@ -76,23 +75,31 @@ pytest -q          # 以 CI 徽章为准（计数随提交演进，不在文档�
 | ok / 不适用 / 出界 / 碰撞 | 31,168 / 10,040 / 12,718 / 7,174 |
 | 兜底桶 other / 崩溃 crash | **0 / 0**（分类完备性验收） |
 | 有效池 | ≥1 OK 实例口径中位 10/13；全实例另含 924 个零 OK 实例 |
-| Pareto 前沿 / H1 | 193 可分析田主口径中位 3.0；42/235 零-ok 田；单侧 p=2.3921e-30 |
-| Block D D1 | 165 training fields / 10 grouped folds；seed 20260822；17×5 + 16×5 |
-| Block D D4 | 训练侧 3,300 实例 / 165 田；10 折 CV + final fit；模型 308 MB 留数据目录 |
-| Block D D6 / H2 | 190 可分析田；n3/n4/n5=1/0/189；田内 rho 中位 0.3536；Pratt 单侧 p=1.2025e-12 |
+| H1 | 193 可分析田主口径中位 3.0；42/235 零-ok 田；单侧 p=2.3921e-30，支持 |
+| H2 | 190 可分析田；n3/n4/n5=1/0/189；田内 rho 中位 0.3536；Pratt 单侧 p=1.2025e-12，支持 |
+| H3 | 70 holdout / 58 可分析；mean_D=+0.0587175；sign-flip p=0.820818；**不支持** |
+| D7.1 | 撤回“严格一次性执行”主张；原 H3 主统计量、p 值、失效判据与 Holm 结论不变 |
 
-v7 溯源件在 [evidence/v7/](evidence/v7/)，Block D 分析哈希链从
-[evidence/block_d/](evidence/block_d/) 的 D1 genesis 开始。
+v7 溯源件在 [evidence/v7/](evidence/v7/)，Study-001 分析哈希链从
+[evidence/block_d/](evidence/block_d/) 的 D1 genesis 开始；D7.1 的
+post-seal corrigendum 也在同一目录按 append-only 方式进入 index=7。
 
 ## 研究纪律
 
 原预注册不回改；修正案 01–05 只追加，其中 05 已声明为最终 confirmatory
 执行规范封口。独立统计单位为 field；H1/H2 按修正案使用冻结全语料作田级
-前沿/受控处理检验，不消费模型或留出划分成员关系。留出集 70/235 地块在
-分析前密封，H3 只在最终模型评估阶段一次性打开并按 70/68 双轨报告。D1 训练折在任何推荐器训练
-之前落盘并进入独立 Block D 哈希链，后续训练不得重新 split。全部过程批判与
-整改见 [AUDIT_NOTE.md](AUDIT_NOTE.md)，命名与注释规则见
-[docs/NAMING.md](docs/NAMING.md)，转折与执行顺序见
+前沿/受控处理检验。70/235 地块 holdout 在分析前密封，D7 的 H3 主结果已于
+ledger index=6 封存。D7.1 进一步披露：D7 实际有两次执行在“评估完成后、
+写盘前”被身份守门中止，因此**严格 one-shot execution claim 已撤回**；没有
+把已知结果重新包装成新的 confirmatory run，原 `h3_result.json` 与 ledger
+index 0..6 均未回写。当前实现一旦发现 H3 已封存，会在读取其他 H3 输入前
+fail-closed 拒绝 holdout 重跑。完整说明见
+[evidence/block_d/h3_corrigendum.json](evidence/block_d/h3_corrigendum.json)。
+
+D1 训练折在任何推荐器训练之前落盘并进入独立 Block D 哈希链，后续训练不得
+重新 split。全部过程批判与整改见 [AUDIT_NOTE.md](AUDIT_NOTE.md)，命名与注释
+规则见 [docs/NAMING.md](docs/NAMING.md)，发布纪律见
+[docs/RELEASE.md](docs/RELEASE.md)，转折与执行顺序见
 [docs/TURNING_POINT.md](docs/TURNING_POINT.md)。
 
 ## 许可
