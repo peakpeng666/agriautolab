@@ -1,9 +1,10 @@
 """欧氏 CVRP 的构造状态机与独立评价器。
 
 容量、客户覆盖、回仓合法性与车队上限由问题状态机维护；heuristic 只在当前合法动作
-之间决定策略。离开仓库后，提前回仓本身是合法动作，不能被 Problem adapter 以
-“还有客户装得下”为由隐藏。最终 evaluator 重新检查客户覆盖、容量、车辆数与总距离，
-不采信构造器自报指标。
+之间决定策略。离开仓库后，提前回仓本身可以是合法动作，不能被 Problem adapter 以
+“还有客户装得下”为由隐藏；但若回仓必然要求超过 `max_vehicles` 的下一辆车，它就
+不是可行动作。最终 evaluator 重新检查客户覆盖、容量、车辆数与总距离，不采信构造器
+自报指标。
 """
 
 from __future__ import annotations
@@ -86,8 +87,15 @@ class CVRPConstructiveProblem:
     def is_complete(self, state: CVRPState) -> bool:
         return not state.unserved_customer_ids and state.current_node_id == self.problem.depot.node_id
 
+    def _can_open_following_route(self, state: CVRPState) -> bool:
+        """当前路线闭合后，是否还有车辆可继续服务未完成客户。"""
+        if self.problem.max_vehicles is None:
+            return True
+        current_vehicle_number = len(state.completed_routes) + 1
+        return current_vehicle_number < self.problem.max_vehicles
+
     def feasible_actions(self, state: CVRPState) -> tuple[str, ...]:
-        """枚举硬约束下真实可行动作；不在 Problem 层嵌入 route-closure 策略。"""
+        """枚举当前硬约束下可执行动作；不在 Problem 层嵌入 route-closure 策略。"""
         depot_id = self.problem.depot.node_id
         if not state.unserved_customer_ids:
             return () if state.current_node_id == depot_id else (depot_id,)
@@ -101,9 +109,11 @@ class CVRPConstructiveProblem:
             # 仓库不能原地“回仓”形成空路线；schema 保证至少有一个客户可由满载车辆服务。
             return feasible_customers
 
-        # 客户动作保持 node_id 稳定顺序，回仓固定放最后。提前回仓是合法策略选择，
-        # 是否采用由 heuristic 决定，而不是由 Problem 以 fill-until-stuck 方式写死。
-        return feasible_customers + (depot_id,)
+        # 客户动作保持 node_id 稳定顺序，回仓固定放最后。提前回仓是否值得由 heuristic
+        # 决定；若已没有下一辆车，则回仓会留下未服务客户，因此不属于当前可行动作。
+        if self._can_open_following_route(state):
+            return feasible_customers + (depot_id,)
+        return feasible_customers
 
     def apply_action(self, state: CVRPState, action: str) -> CVRPState:
         depot_id = self.problem.depot.node_id
@@ -111,18 +121,8 @@ class CVRPConstructiveProblem:
             raise ValueError(f"CVRP 动作当前不可行：{action!r}")
 
         if action == depot_id:
-            closed_route = state.current_route + (depot_id,)
-            completed_routes = state.completed_routes + (closed_route,)
+            completed_routes = state.completed_routes + (state.current_route + (depot_id,),)
             if state.unserved_customer_ids:
-                next_vehicle_number = len(completed_routes) + 1
-                if (
-                    self.problem.max_vehicles is not None
-                    and next_vehicle_number > self.problem.max_vehicles
-                ):
-                    raise ConstructionError(
-                        f"当前构造需要第 {next_vehicle_number} 辆车，"
-                        f"超过 max_vehicles={self.problem.max_vehicles}"
-                    )
                 return CVRPState(
                     current_node_id=depot_id,
                     remaining_capacity=self.problem.vehicle_capacity,
