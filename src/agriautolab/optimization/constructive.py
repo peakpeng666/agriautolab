@@ -10,7 +10,8 @@
 
 from __future__ import annotations
 
-from typing import Generic, Protocol, TypeVar
+import math
+from typing import Protocol, TypeVar
 
 StateT = TypeVar("StateT")
 ActionT = TypeVar("ActionT")
@@ -22,6 +23,9 @@ class ConstructiveProblem(Protocol[StateT, ActionT, SolutionT]):
 
     `feasible_actions` 是唯一可行动作来源；constructive engine 不接受启发式直接
     返回动作，因此容量、已访问集合等硬约束始终由问题契约掌控。
+
+    `feasible_actions` 还必须返回稳定顺序。公共内核用该顺序处理评分并列，避免要求
+    任意 `ActionT` 自身实现比较运算，也避免依赖 set/dict 的偶然遍历顺序。
     """
 
     def initial_state(self) -> StateT:
@@ -61,24 +65,26 @@ def construct_solution(
     problem: ConstructiveProblem[StateT, ActionT, SolutionT],
     heuristic: ConstructiveHeuristic[StateT, ActionT],
 ) -> SolutionT:
-    """按 `(score, action)` 的稳定顺序重复选择最优可行动作直到完成。
-
-    动作必须可排序，这使同分候选有确定性 tie-break。若某问题的动作天然不可排序，
-    应在领域层包装成带稳定身份的动作，而不是让公共内核偷偷依赖容器遍历顺序。
-    """
+    """反复选择最低分可行动作直到解完整；评分并列时保留动作枚举顺序。"""
     state = problem.initial_state()
     while not problem.is_complete(state):
         actions = problem.feasible_actions(state)
         if not actions:
             raise ConstructionError("问题尚未完成，但不存在可行动作")
-        scored = []
-        for action in actions:
+
+        best_index = -1
+        best_score = math.inf
+        for index, action in enumerate(actions):
             value = float(heuristic.score(state, action))
-            if value != value or value in (float("inf"), float("-inf")):
+            if not math.isfinite(value):
                 raise ConstructionError(
                     f"启发式 {heuristic.heuristic_id!r} 对动作 {action!r} 返回非有限分数 {value!r}"
                 )
-            scored.append((value, action))
-        _, selected = min(scored)
-        state = problem.apply_action(state, selected)
+            if value < best_score:
+                best_index = index
+                best_score = value
+
+        if best_index < 0:
+            raise ConstructionError("可行动作非空，但没有得到可选择动作")
+        state = problem.apply_action(state, actions[best_index])
     return problem.finalize(state)
