@@ -76,7 +76,7 @@ def _finite_score(
 
     try:
         value = float(raw_value)
-    except (TypeError, ValueError, OverflowError) as error:
+    except Exception as error:  # noqa: BLE001 -- 自定义 __float__ 同样属于插件边界
         raise ConstructionError(
             f"启发式 {heuristic.heuristic_id!r} 对动作 {action!r} 返回不可用评分"
         ) from error
