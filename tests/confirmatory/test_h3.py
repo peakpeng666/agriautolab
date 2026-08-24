@@ -2,25 +2,41 @@
 
 import math
 
-
 from agriautolab.confirmatory.h3 import (
-    PROBE_FIELDS, analyze_h3, permutation_sign_flip_test,
+    PROBE_FIELDS,
+    analyze_h3,
+    permutation_sign_flip_test,
 )
 from agriautolab.selection.evaluation import SelectionInstance
 
 
-def _instance(field: str, iid: str, *, regrets_a, regrets_b, ra, rn,
-              ok_b=True, features=(1.0, 2.0)):
+def _instance(
+    field: str,
+    iid: str,
+    *,
+    regrets_a,
+    regrets_b,
+    ra,
+    rn,
+    ok_b=True,
+    features=(1.0, 2.0),
+):
     nominal = frozenset({"a", "b"})
     regrets = (
         ("a", tuple(regrets_a)),
         ("b", tuple(regrets_b)),
     )
     return SelectionInstance(
-        field_id=field, instance_id=iid, vehicle_index=1,
-        features=features, nominal=nominal, applicable=nominal,
+        field_id=field,
+        instance_id=iid,
+        vehicle_index=1,
+        features=features,
+        nominal=nominal,
+        applicable=nominal,
         observed_ok=frozenset({"a", "b"} if ok_b else {"a"}),
-        regrets=regrets, random_applicable=tuple(ra), random_nominal=tuple(rn),
+        regrets=regrets,
+        random_applicable=tuple(ra),
+        random_nominal=tuple(rn),
     )
 
 
@@ -45,11 +61,16 @@ def _make(field_prefix, n_fields):
     for f in range(n_fields):
         field = f"{field_prefix}_{f}"
         for k in range(2):
-            out.append(_instance(
-                field, f"{field}:i{k}",
-                regrets_a=_zeros_22(0.0), regrets_b=_zeros_22(1.0),
-                ra=_zeros_22(0.4), rn=_zeros_22(0.6),
-            ))
+            out.append(
+                _instance(
+                    field,
+                    f"{field}:i{k}",
+                    regrets_a=_zeros_22(0.0),
+                    regrets_b=_zeros_22(1.0),
+                    ra=_zeros_22(0.4),
+                    rn=_zeros_22(0.6),
+                )
+            )
     return out
 
 
@@ -64,9 +85,14 @@ def test_permutation_deterministic_and_add_one():
 
 def test_analyze_h3_dual_track_and_math():
     holdout = _make("h", 6) + [
-        _instance("ee_field_37", "ee_field_37:i0",
-                  regrets_a=_zeros_22(0.0), regrets_b=_zeros_22(1.0),
-                  ra=_zeros_22(0.4), rn=_zeros_22(0.6)),
+        _instance(
+            "ee_field_37",
+            "ee_field_37:i0",
+            regrets_a=_zeros_22(0.0),
+            regrets_b=_zeros_22(1.0),
+            ra=_zeros_22(0.4),
+            rn=_zeros_22(0.6),
+        ),
     ]
     training = _make("t", 4)
     result = analyze_h3(_OracleRecommender(), training, holdout)
@@ -79,23 +105,56 @@ def test_analyze_h3_dual_track_and_math():
     assert result["preregistered_failure_checks"]["any_triggered"] is False
 
 
+def test_even_field_median_uses_conventional_definition():
+    training = _make("t", 3)
+    holdout = []
+    for index, random_loss in enumerate((0.2, 0.4, 0.6, 0.8)):
+        field = f"h_{index}"
+        holdout.append(
+            _instance(
+                field,
+                f"{field}:i0",
+                regrets_a=_zeros_22(0.0),
+                regrets_b=_zeros_22(1.0),
+                ra=_zeros_22(random_loss),
+                rn=_zeros_22(0.6),
+            )
+        )
+
+    result = analyze_h3(_OracleRecommender(), training, holdout)
+    # D = (-0.1, -0.2, -0.3, -0.4)，偶数样本中位数应取中间两项均值。
+    assert math.isclose(result["track_70"]["median_D"], -0.25, abs_tol=1e-12)
+
+
 def test_failure_criterion_triggers_when_recommender_bad():
     holdout = _make("h", 5)
     training = _make("t", 3)
     result = analyze_h3(_BadRecommender(), training, holdout)
     # 恒选 b（悔值 1）> 0.5*0.4=0.2 → D=+0.8 → 失效判据 1 触发
-    assert result["preregistered_failure_checks"]["criterion_1_mean_regret_not_below_half_random"]
+    assert result["preregistered_failure_checks"][
+        "criterion_1_mean_regret_not_below_half_random"
+    ]
     assert result["preregistered_failure_checks"]["any_triggered"] is True
 
 
 def test_zero_ok_instances_counted_not_consumed():
     zero = SelectionInstance(
-        field_id="z", instance_id="z:i0", vehicle_index=1, features=None,
-        nominal=frozenset({"a", "b"}), applicable=frozenset({"a", "b"}),
-        observed_ok=frozenset(), regrets=None,
-        random_applicable=None, random_nominal=None,
+        field_id="z",
+        instance_id="z:i0",
+        vehicle_index=1,
+        features=None,
+        nominal=frozenset({"a", "b"}),
+        applicable=frozenset({"a", "b"}),
+        observed_ok=frozenset(),
+        regrets=None,
+        random_applicable=None,
+        random_nominal=None,
     )
-    result = analyze_h3(_OracleRecommender(), _make("t", 3), _make("h", 4) + [zero])
+    result = analyze_h3(
+        _OracleRecommender(),
+        _make("t", 3),
+        _make("h", 4) + [zero],
+    )
     assert result["n_holdout_fields_total"] == 5
     assert result["n_analyzable_fields"] == 4
     assert result["n_zero_ok_only_fields"] == 1
@@ -103,7 +162,14 @@ def test_zero_ok_instances_counted_not_consumed():
 
 
 def test_random_infeasible_rate_reflects_applicable_gap():
-    gap = _instance("g", "g:i0", regrets_a=_zeros_22(0.0), regrets_b=_zeros_22(1.0),
-                    ra=_zeros_22(0.4), rn=_zeros_22(0.6), ok_b=False)
+    gap = _instance(
+        "g",
+        "g:i0",
+        regrets_a=_zeros_22(0.0),
+        regrets_b=_zeros_22(1.0),
+        ra=_zeros_22(0.4),
+        rn=_zeros_22(0.6),
+        ok_b=False,
+    )
     result = analyze_h3(_OracleRecommender(), _make("t", 3), [gap])
     assert math.isclose(result["random_applicable_infeasible_rate"], 0.5)  # 1/2 of A_x
