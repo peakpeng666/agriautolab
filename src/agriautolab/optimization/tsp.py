@@ -1,19 +1,21 @@
 """欧氏 TSP 的构造状态机与独立评价器。
 
-求解过程与评价过程分离：构造器只产生闭合 tour，`evaluate_tsp_tour` 再从问题几何
-独立复算总长度。这样后续无论启发式来自人工规则还是 LLM，都不能自报目标值。
+求解与评价严格分离：构造器只产生闭合 tour，`evaluate_tsp_tour` 再从问题几何
+独立复算总长度。无论启发式来自人工规则还是 LLM，都不能自报目标值。
 """
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 
 from agriautolab.contracts.routing import RoutingNode, TSPProblem
+from agriautolab.optimization.routing import route_length_m
 
 
 @dataclass(frozen=True)
 class TSPState:
+    """最近邻类构造器所需的最小状态。"""
+
     current_node_id: str
     unvisited_node_ids: tuple[str, ...]
     visit_order: tuple[str, ...]
@@ -28,11 +30,9 @@ class TSPTour:
 
 @dataclass(frozen=True)
 class TSPEvaluation:
-    tour_length: float
+    """由独立 evaluator 复算的 TSP 指标。"""
 
-
-def euclidean_distance(left: RoutingNode, right: RoutingNode) -> float:
-    return math.hypot(left.position.x - right.position.x, left.position.y - right.position.y)
+    tour_length_m: float
 
 
 class TSPConstructiveProblem:
@@ -46,7 +46,9 @@ class TSPConstructiveProblem:
         return self._nodes[node_id]
 
     def initial_state(self) -> TSPState:
-        unvisited = tuple(sorted(node_id for node_id in self._nodes if node_id != self.problem.start_node_id))
+        unvisited = tuple(sorted(
+            node_id for node_id in self._nodes if node_id != self.problem.start_node_id
+        ))
         return TSPState(
             current_node_id=self.problem.start_node_id,
             unvisited_node_ids=unvisited,
@@ -57,6 +59,7 @@ class TSPConstructiveProblem:
         return not state.unvisited_node_ids
 
     def feasible_actions(self, state: TSPState) -> tuple[str, ...]:
+        # `initial_state` 已按 node_id 排序；后续只做稳定过滤，因此平局顺序可复现。
         return state.unvisited_node_ids
 
     def apply_action(self, state: TSPState, action: str) -> TSPState:
@@ -76,18 +79,16 @@ class TSPConstructiveProblem:
 
 
 def evaluate_tsp_tour(problem: TSPProblem, tour: TSPTour) -> TSPEvaluation:
-    """校验 Hamiltonian cycle 后独立复算欧氏总长度。"""
-    expected = {node.node_id for node in problem.nodes}
+    """验证 Hamiltonian cycle 后独立复算欧氏总长度。"""
+    expected_node_ids = {node.node_id for node in problem.nodes}
     if len(tour.node_ids) != len(problem.nodes) + 1:
         raise ValueError("TSP 回路长度必须等于节点数 + 1（闭合起点）")
     if tour.node_ids[0] != problem.start_node_id or tour.node_ids[-1] != problem.start_node_id:
         raise ValueError("TSP 回路必须从 start_node_id 出发并回到该节点")
-    if set(tour.node_ids[:-1]) != expected or len(set(tour.node_ids[:-1])) != len(problem.nodes):
+
+    visited_once = tour.node_ids[:-1]
+    if set(visited_once) != expected_node_ids or len(set(visited_once)) != len(problem.nodes):
         raise ValueError("TSP 回路必须且只能访问每个节点一次")
 
-    nodes = {node.node_id: node for node in problem.nodes}
-    total = sum(
-        euclidean_distance(nodes[left], nodes[right])
-        for left, right in zip(tour.node_ids, tour.node_ids[1:])
-    )
-    return TSPEvaluation(tour_length=float(total))
+    nodes_by_id = {node.node_id: node for node in problem.nodes}
+    return TSPEvaluation(tour_length_m=route_length_m(nodes_by_id, tour.node_ids))
