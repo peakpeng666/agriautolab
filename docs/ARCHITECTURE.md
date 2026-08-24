@@ -131,12 +131,16 @@ TSPLIB/CVRPLIB 数据适配、EoH reproduction、真实模型 provenance 与自�
 
 1. 欧氏边长若因有限坐标差值溢出，evaluator 明确失败；
 2. 多段距离用 `math.fsum`，总量无法有限表示时明确失败；
-3. CVRP 不累加可能溢出的绝对 route demand，而逐客户验证剩余容量；
-4. fleet preflight 比较无量纲 `Σ(demand / capacity)` 与车辆数；
-5. 容量 roundoff 只允许少量相邻 binary64 表示步长；`upper_bound == 0` 时严格比较，
+3. CVRP constructor **不保存连续减法得到的剩余容量**；每个候选都从当前 route
+   客户身份重新计算 `fsum(demand / capacity)`，避免累计舍入误差改变可行域；
+4. CVRP evaluator 使用另一条整路线 `fsum(demand / capacity)` 复算函数验证容量，
+   与 constructor 共享 roundoff policy，但不共享其状态更新路径；
+5. fleet preflight 比较无量纲 `Σ(demand / capacity)` 与车辆数；
+6. 容量 roundoff 只允许少量相邻 binary64 表示步长；`upper_bound == 0` 时严格比较，
    禁止固定 `1e-12` 一类绝对容差给小尺度容量“白送空间”。
 
-这里的 roundoff policy 是数值表示纪律，不是业务可行性放宽。
+这里的 roundoff policy 是数值表示纪律，不是业务可行性放宽。若需要扩大容差，必须先给出
+量纲与误差来源，不能通过“多加几个 ULP”掩盖累计计算误差。
 
 ## 7. 范围边界
 
@@ -153,7 +157,8 @@ TSPLIB/CVRPLIB 数据适配、EoH reproduction、真实模型 provenance 与自�
 
 1. **强类型优先**：不要用 `dict[str, Any]` 抹平 TSP/CVRP/CPP 的真实差异。
 2. **硬约束属于问题**：heuristic 只排序可行动作，不能自行放宽约束。
-3. **独立复算**：规划器/heuristic 自报指标一律不采信。
+3. **独立复算**：规划器/heuristic 自报指标一律不采信；关键 hard constraint 应尽量
+   使用与 constructor 不同的复算路径，避免同一 helper 缺陷同时骗过生成与验证。
 4. **语义真值优先于测试计数**：必须有旧缺陷下会红的解析或手算断言。
 5. **稳定顺序显式化**：tie-break 不依赖 set/dict 偶然遍历，也不要求任意 Action
    类型实现比较运算。
@@ -162,7 +167,7 @@ TSPLIB/CVRPLIB 数据适配、EoH reproduction、真实模型 provenance 与自�
    审美重写；新 API 从第一天使用规范名和单位后缀。
 8. **几何纪律不旁路**：农业几何并集、分母、CRS 与离散化继续走既有守卫。
 9. **浮点容差必须有量纲依据**：硬约束禁止固定绝对 floor；允许的 roundoff 必须与
-   binary64 表示精度绑定并由语义测试钉死。
+   binary64 表示精度绑定并由语义测试钉死，不能补偿累计数值漂移。
 
 ## 9. 安装与测试
 
