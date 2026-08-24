@@ -11,7 +11,7 @@ from dataclasses import dataclass
 
 from agriautolab.contracts.routing import CVRPCustomer, CVRPProblem, RoutingNode
 from agriautolab.optimization.constructive import ConstructionError
-from agriautolab.optimization.routing import route_length_m
+from agriautolab.optimization.routing import route_length_m, sum_distances_m
 
 
 @dataclass(frozen=True)
@@ -166,7 +166,7 @@ def evaluate_cvrp_solution(problem: CVRPProblem, solution: CVRPSolution) -> CVRP
         raise ValueError("CVRP 解使用车辆数超过 max_vehicles")
 
     visited_customer_ids: list[str] = []
-    total_distance_m = 0.0
+    route_lengths_m: list[float] = []
     for route_index, route in enumerate(solution.routes):
         if len(route) < 3 or route[0] != depot_id or route[-1] != depot_id:
             raise ValueError(f"CVRP 路线 {route_index} 必须从仓库出发并回仓")
@@ -185,7 +185,7 @@ def evaluate_cvrp_solution(problem: CVRPProblem, solution: CVRPSolution) -> CVRP
             remaining_capacity = next_remaining
 
         visited_customer_ids.extend(customer_ids)
-        total_distance_m += route_length_m(nodes_by_id, route)
+        route_lengths_m.append(route_length_m(nodes_by_id, route))
 
     expected_customer_ids = {customer.node_id for customer in problem.customers}
     if (
@@ -195,6 +195,6 @@ def evaluate_cvrp_solution(problem: CVRPProblem, solution: CVRPSolution) -> CVRP
         raise ValueError("CVRP 解必须且只能服务每个客户一次")
 
     return CVRPEvaluation(
-        total_distance_m=float(total_distance_m),
+        total_distance_m=sum_distances_m(route_lengths_m),
         vehicle_count=len(solution.routes),
     )
