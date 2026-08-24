@@ -5,6 +5,15 @@
 
 ## [未发布]
 
+- **组合优化方法学地基**：将 TSP/CVRP 作为 AgriAutoLab 正式 reference problem
+  融入主包，而非旁路教程；新增强类型 `TSPProblem` / `CVRPProblem`、通用
+  `ConstructiveProblem` / `ConstructiveHeuristic` 协议、TSP 最近邻与 CVRP
+  最近可行客户人工基线，以及独立 evaluator。硬约束由 Problem 掌管，heuristic
+  只能给已可行动作评分；平局按稳定动作枚举顺序处理，不要求任意 Action 可比较。
+  新增手算语义真值、greedy 车队装箱反例、非有限评分与 1e308 级容量/距离溢出
+  回归；有限输入产生非有限派生量时 fail-closed。同步重写 README/ARCHITECTURE/
+  NAMING 的事实层，明确 14 个农业算法组件、13 个冻结 pipeline configuration 与
+  N 个生成候选不是同一计数。Study-001 预注册、封存证据与历史 ledger 零改动。
 - **D7.1 post-seal integrity corrigendum**：原 H3 结果与 ledger index 0..6
   保持字节/链语义不回写，新增 index=7 修正件；披露 D7 两次“评估完成后、
   写盘前”身份守门中止意味着严格 one-shot 执行主张不成立；补齐所有
