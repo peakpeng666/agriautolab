@@ -59,3 +59,19 @@ def test_constructive_engine_rejects_score_float_overflow() -> None:
 
     with pytest.raises(ConstructionError, match="返回不可用评分"):
         construct_solution(_OneStepProblem(), OverflowHeuristic())
+
+
+def test_constructive_engine_normalizes_arbitrary_float_conversion_failure() -> None:
+    class CrashingConversionScore:
+        def __float__(self):
+            raise RuntimeError("custom conversion bug")
+
+    class ConversionCrashHeuristic:
+        heuristic_id = "conversion-crash"
+
+        def score(self, state, action):
+            return CrashingConversionScore()
+
+    with pytest.raises(ConstructionError, match="返回不可用评分") as exc_info:
+        construct_solution(_OneStepProblem(), ConversionCrashHeuristic())
+    assert isinstance(exc_info.value.__cause__, RuntimeError)
