@@ -58,7 +58,26 @@ class ConstructiveHeuristic(Protocol[StateT, ActionT]):
 
 
 class ConstructionError(RuntimeError):
-    """构造过程与问题契约发生矛盾。"""
+    """构造过程或启发式输出违反公共契约。"""
+
+
+def _finite_score(
+    heuristic: ConstructiveHeuristic[StateT, ActionT],
+    state: StateT,
+    action: ActionT,
+) -> float:
+    """把启发式输出收敛为有限 float；类型/范围错误统一转成领域异常。"""
+    try:
+        value = float(heuristic.score(state, action))
+    except (TypeError, ValueError, OverflowError) as error:
+        raise ConstructionError(
+            f"启发式 {heuristic.heuristic_id!r} 对动作 {action!r} 返回不可用评分"
+        ) from error
+    if not math.isfinite(value):
+        raise ConstructionError(
+            f"启发式 {heuristic.heuristic_id!r} 对动作 {action!r} 返回非有限分数 {value!r}"
+        )
+    return value
 
 
 def construct_solution(
@@ -75,11 +94,7 @@ def construct_solution(
         best_index = -1
         best_score = math.inf
         for index, action in enumerate(actions):
-            value = float(heuristic.score(state, action))
-            if not math.isfinite(value):
-                raise ConstructionError(
-                    f"启发式 {heuristic.heuristic_id!r} 对动作 {action!r} 返回非有限分数 {value!r}"
-                )
+            value = _finite_score(heuristic, state, action)
             if value < best_score:
                 best_index = index
                 best_score = value
