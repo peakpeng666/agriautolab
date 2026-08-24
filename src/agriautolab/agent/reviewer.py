@@ -15,7 +15,6 @@ import math
 from dataclasses import dataclass
 from typing import Protocol
 
-import numpy as np
 
 from agriautolab.agent.gates import HeuristicFn
 from agriautolab.agent.proposer import ProposalCandidate
@@ -84,30 +83,12 @@ class DegenerateCaseReviewer:
         ))
 
 
-class InvarianceReviewer:
-    """维度三：不变性。特征是旋转不变的，候选输出必须同样不变。"""
-
-    def review(self, candidate: ProposalCandidate, function: HeuristicFn) -> ReviewVerdict:
-        rng = np.random.default_rng(20260821)
-        base = {"elongation": 2.3, "row_angle_vs_principal": 0.6, "turning_ratio": 0.31}
-        base_value = function(base)
-        for _ in range(32):
-            # 特征向量本身在旋转下不变：复核候选不偷看坐标、不依赖未声明的输入
-            probe = dict(base)
-            probe["area_m2"] = float(rng.uniform(1.0, 1e6))
-            probe["obstacle_count"] = float(rng.integers(0, 5))
-            value = function(probe)
-            if abs(float(value) - float(base_value)) > 1e-12:
-                return ReviewVerdict(True, (
-                    f"无关特征扰动（area_m2/obstacle_count）改变了输出：{value!r} vs {base_value!r}",
-                ))
-        return ReviewVerdict(False, ("32 组无关特征扰动下输出不变",))
-
-
+# 不变性复核不在此列：对 area_m2/obstacle_count 的扰动检查与 proposer prompt
+# （把这些特征列为可用输入）自相矛盾，会错杀合法的专家启发式；真正的问题对称性
+# （几何刚体变换下行为不变）由 gates.invariance_gate 承担。
 DEFAULT_REVIEWERS: tuple[AdversarialReviewer, ...] = (
     CorrectnessReviewer(),
     DegenerateCaseReviewer(),
-    InvarianceReviewer(),
 )
 
 
