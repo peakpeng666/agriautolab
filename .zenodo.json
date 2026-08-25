@@ -1,0 +1,19 @@
+{
+  "title": "AgriAutoLab",
+  "description": "Research-grade benchmark, analysis, and heuristic-design toolkit for agricultural coverage path planning.",
+  "creators": [
+    {
+      "name": "Peng, Peak"
+    }
+  ],
+  "upload_type": "software",
+  "version": "0.5.1.dev0",
+  "license": "Apache-2.0",
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/peakpeng666/agriautolab",
+      "relation": "isSupplementTo",
+      "resource_type": "software"
+    }
+  ]
+}

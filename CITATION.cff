@@ -1,0 +1,18 @@
+# 归档与引用元数据；与 .zenodo.json、pyproject.toml 的 [project] 同源维护。
+# 字段规范：Citation File Format 1.2.0（https://citation-file-format.github.io/）。
+cff-version: 1.2.0
+message: >-
+  If you use this software in your research, please cite it using the
+  metadata from this file.
+title: AgriAutoLab
+description: >-
+  Research-grade benchmark, analysis, and heuristic-design toolkit for
+  agricultural coverage path planning.
+authors:
+  - family-names: Peng
+    given-names: Peak
+    email: peakpeng666@users.noreply.github.com
+repository-code: https://github.com/peakpeng666/agriautolab
+version: 0.5.1.dev0
+license: Apache-2.0
+type: software
