@@ -75,6 +75,12 @@ legacy 关键字与属性。参数键 `path_sample_step_m` 优先，`dubins_samp
 `14 algorithm components`、`13 frozen pipeline configurations`、`N generated
 heuristic candidates` 是三种不同计数，文档与论文中不得简写成“13 个算法”。
 
+agent 层候选槽位抽象使用角色明确的规范名：`CandidateSlot`（协议）、
+`SwathAngleSlot`（swath 槽位实现）、`SLOTS`（注册表字典）与
+`DEFAULT_SLOT_ID`。槽位 id（当前仅 `swath_angle`）进入
+`ProposalContext.slot_id` 与 `EvolutionRecord.slot_id`，按总纲属于将来的
+证据身份：演化账本一旦开始落盘，已用的 slot id 即为 wire ID 永不改。
+
 ## 4. 包结构命名
 
 当前真实包名就是文档事实，不再维护“计划中的 canonical 幽灵目录”：
