@@ -106,6 +106,20 @@ SWATH_REVIEWERS 的 |v|≤π/2 假设）；4 个 mock 候选源码以 dict-get �
 有符号投影随之反号，因此不是不变量。契约只暴露到主轴的无符号距离。
 候选可见特征由 `CANDIDATE_FEATURE_KEYS` 定义，`candidate_features()` 负责在
 交给候选前剥掉 `swath_id`——那是上游按坐标分配的序号，用它排序可绕过全部不变性要求。
+LLM provenance（任务 4）：`agriautolab.agent.proposer.CompletionResult`
+（十一必填字段 + `to_dict()` JSON 序列化入口；以 `__setattr__` / `__delattr__`
+守卫做到构造后不可变——pydantic 的 `frozen=True` 只禁属性赋值、不阻止嵌套容器被改）、
+`agriautolab.agent.proposer.replay_candidate(round_index, result)`
+（离线重放入口，无网络、确定性，构造共享 `_candidate_from_completion`）。
+`ProposalCandidate.provenance: CompletionResult | None`（MockProposer 恒为 None）；
+`EvolutionRecord.provenance: ProvenanceRecord | None`——**深度不可变的强类型模型**，
+不是 `dict`：pydantic 的 `frozen=True` 只禁属性赋值，用 dict 时
+`record.provenance["prompt"] = ...` 会破坏已计入 entry hash 的内容，账本随后自发
+`verify()` 失败。入账前由 `evolve._provenance_record()` 校验
+`source_code == provenance.response`，不一致即 fail closed。**provenance 不进 `candidate_identity` 哈希**——
+identity 仍由三元组（algorithm_id/source_code/description）决定，provenance 仅
+作 evidence 链附加字段。`ModelClient` 协议改 `complete(prompt) -> CompletionResult`，
+本模块仍然零网络（注入由调用方接入）。
 
 ## 4. 包结构命名
 

@@ -81,6 +81,24 @@
   后访问序会变——这是正确行为，不是 bug；任务 2 文档 §3.3 已预料。
   任务 2 文档 HEADLAND_TURN_SLOT_DESIGN.md 建议砍出 headland_turn
   槽位被采纳（Study-002 yaml 已据此仅登记 swath_angle + route_order）。
+- **LLM provenance 入账与重放校验（M3 任务 4）**：`proposer.CompletionResult`
+  加十一必填字段（model_id / prompt / response / temperature / top_p / seed /
+  prompt_tokens / completion_tokens / cost / latency_ms / request_id），
+  构造期 fail-closed 校验（非空 / [0,1] / 有限 / 非负 int / 有限非负 float），
+  并以 `__setattr__` / `__delattr__` 守卫做到**构造后深度不可变**；
+  `ModelClient` 协议改 `complete(prompt) -> CompletionResult`；
+  `ProposalCandidate` 加 `provenance: CompletionResult | None = None`（旧构造
+  零破坏；MockProposer 不设置 → 恒为 None）；`LLMProposer.propose` 重构为
+  委托 `_candidate_from_completion(round_index, result)`，在线构造与
+  `replay_candidate` 共享同一函数 → identity 逐位一致有结构性保证；
+  `EvolutionRecord` 加 `provenance: dict | None = None`，evolve.append 写入
+  `candidate.provenance.to_dict()`；**identity 三元组（algorithm_id/
+  source_code/description）冻结不动**，provenance 不进 `candidate_identity` 哈希。
+  `tests/agent/test_provenance.py` 真值测试 6 个：CompletionResult fail-closed
+  三类（空 model_id / 负 cost / 超界 top_p）、LLMProposer 注入后 provenance
+  齐全 + source_code == response + replay identity 逐位相等、MockProposer 跑
+  evolve_pool 时 record.provenance 全 None、带 provenance 记录 ledger.verify
+  不抛。前置 cherry-pick：任务 1 commit acffd9c（anytime 性能轨迹）。
 
 ## [0.5.0] — 2026-08-24
 

@@ -21,8 +21,10 @@ import numpy as np
 from agriautolab.agent.gates import (
     GateOutcome, contract_gate, determinism_gate, invariance_gate, validation_gate,
 )
-from agriautolab.agent.ledger import EvolutionLedger, EvolutionRecord, GateRecord
-from agriautolab.agent.proposer import ProposalContext, ProposalCandidate
+from agriautolab.agent.ledger import (
+    EvolutionLedger, EvolutionRecord, GateRecord, ProvenanceRecord,
+)
+from agriautolab.agent.proposer import ProposalContext, ProposalCandidate, replay_candidate
 from agriautolab.agent.reviewer import AdversarialReviewer, final_refuted
 from agriautolab.agent.slots import DEFAULT_SLOT_ID, SLOTS, CandidateSlot
 from agriautolab.contracts.problem import CoverageProblem
@@ -76,6 +78,36 @@ def _pool_points(instances: Sequence[Instance], pool: Sequence[PipelineConfig],
                 points[result.config_id] = result.objectives
         outputs.append(points)
     return outputs
+
+
+def _provenance_record(candidate: ProposalCandidate, round_index: int) -> ProvenanceRecord | None:
+    """把候选的 provenance 投影成入账模型，并校验**重放身份**确实成立。
+
+    `LLMProposer` 自己会校验后端返回的 prompt，但 `HeuristicProposer` 是公开协议，
+    任何注入实现都能构造 `ProposalCandidate`。若不在入账处再校验一次，账本就会
+    为「一段重放不出该候选的 provenance」背书，而由那份 provenance 重放出的候选
+    与实际被评估的不是同一个——证据链断在最关键的一环。
+
+    校验口径是**完整 identity**，不是只比 `source_code`：`replay_candidate` 会把
+    `algorithm_id` 与 `description` 写死成它自己的取值，因此一个源码相同、但
+    `algorithm_id` 或 `description` 自定义的候选（公开协议允许）能通过单比源码的
+    检查，重放出的 `candidate_identity` 却与记录的 `proposal_hash` 不同。
+    直接比 identity 一次覆盖三元组全部字段。
+    """
+    if candidate.provenance is None:
+        return None
+
+    replayed = replay_candidate(round_index, candidate.provenance)
+    if candidate_identity(replayed) != candidate_identity(candidate):
+        raise ValueError(
+            "候选与其 provenance 的重放身份不一致："
+            f"request_id={candidate.provenance.request_id!r}，"
+            f"algorithm_id={candidate.algorithm_id!r} vs 重放 {replayed.algorithm_id!r}，"
+            f"source_code {len(candidate.source_code)} 字符 vs response "
+            f"{len(candidate.provenance.response)} 字符；"
+            "账本不能为一段重放不出该候选的 provenance 背书"
+        )
+    return ProvenanceRecord(**candidate.provenance.to_dict())
 
 
 def _candidate_points(function, instances: Sequence[Instance],
@@ -272,6 +304,7 @@ def evolve_pool(
             kept=was_kept,
             evaluations_used=counter["n"],
             cumulative_best_delta=best_delta,
+            provenance=_provenance_record(candidate, round_index),
         ))
     ledger.verify()
     return ledger, tuple(kept)
