@@ -95,7 +95,7 @@ MOCK_CANDIDATES_BY_SLOT: dict[str, tuple[ProposalCandidate, ...]] = {
         ProposalCandidate(
             algorithm_id="route_nearest_neighbor",
             source_code=(
-                "def next_turn_score(state, candidate):\n"
+                "def next_swath_score(state, candidate):\n"
                 "    return candidate.get('distance_norm', 0.0)\n"
             ),
             description="贪心最近邻：每次选出口到条带入口距离归一化最小的未访问条带",
@@ -103,7 +103,7 @@ MOCK_CANDIDATES_BY_SLOT: dict[str, tuple[ProposalCandidate, ...]] = {
         ProposalCandidate(
             algorithm_id="route_stable_id_order",
             source_code=(
-                "def next_turn_score(state, candidate):\n"
+                "def next_swath_score(state, candidate):\n"
                 "    return 0.0\n"
             ),
             description="恒取 0.0：等评分并列时由 feasible_actions 的 swath_id 稳定排序决胜",
@@ -111,7 +111,7 @@ MOCK_CANDIDATES_BY_SLOT: dict[str, tuple[ProposalCandidate, ...]] = {
         ProposalCandidate(
             algorithm_id="route_projection_order",
             source_code=(
-                "def next_turn_score(state, candidate):\n"
+                "def next_swath_score(state, candidate):\n"
                 "    return candidate.get('projection_norm', 0.0)\n"
             ),
             description="按条带中心主轴法向投影归一化排序——退化等价于 boustrophedon 的入口端约定版本",
@@ -119,7 +119,7 @@ MOCK_CANDIDATES_BY_SLOT: dict[str, tuple[ProposalCandidate, ...]] = {
         ProposalCandidate(
             algorithm_id="route_mixed",
             source_code=(
-                "def next_turn_score(state, candidate):\n"
+                "def next_swath_score(state, candidate):\n"
                 "    return 0.6 * candidate.get('distance_norm', 0.0) + 0.4 * candidate.get('projection_norm', 0.0)\n"
             ),
             description="距离与投影加权混合；权重 0.6/0.4 写死于源码（不来自 features）",
@@ -172,7 +172,7 @@ row_angle_vs_principal, turning_ratio, swath_count_at_minwidth。
 
 请只输出一个 Python 函数定义，不要任何解释：
 
-    def next_turn_score(state, candidate):
+    def next_swath_score(state, candidate):
         ...
 
 输入 state 与 candidate 都是 dict[str, float]；可用键（全部旋转不变、无量纲）：

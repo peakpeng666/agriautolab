@@ -183,7 +183,7 @@ class SwathAngleSlot:
 
 
 class RouteOrderSlot:
-    """route 阶段的条带访问序槽位：契约函数 next_turn_score(state, candidate) -> float。
+    """route 阶段的条带访问序槽位：契约函数 next_swath_score(state, candidate) -> float。
 
     与 SwathAngleSlot 的语义区别：
     - 契约函数是**双参** (state, candidate)，不是单参 (features)；
@@ -196,7 +196,7 @@ class RouteOrderSlot:
 
     slot_id: str = "route_order"
     stage: CoverageStage = CoverageStage.ROUTE
-    contract_function: str = "next_turn_score"
+    contract_function: str = "next_swath_score"
     reviewers: tuple[AdversarialReviewer, ...] = ROUTE_REVIEWERS
 
     # 试调用输入：作为槽位私有常量，compile 后立即用这对输入验签名
@@ -204,7 +204,7 @@ class RouteOrderSlot:
     _PROBE_CANDIDATE: dict[str, float] = {"distance_norm": 1.0, "projection_norm": 0.0}
 
     def compile(self, source: str) -> HeuristicFn:
-        """沙箱编译并提取契约函数 next_turn_score(state, candidate) -> float。
+        """沙箱编译并提取契约函数 next_swath_score(state, candidate) -> float。
 
         试调用：function(_PROBE_STATE, _PROBE_CANDIDATE) 捕 TypeError 报签名不符。
         """
@@ -239,10 +239,10 @@ class RouteOrderSlot:
         候选选择通过 params["rank:<swath_id>"] 烘焙；rank = 访问序号。
         """
         from agriautolab.algorithms.headland.uniform_headland import ConstantWidthHeadland
-        from agriautolab.algorithms.decomposition.boustrophedon_cells import BoustrophedonDecomposition
+        from agriautolab.coverage.stages.decomposition import NoDecomposition
         from agriautolab.algorithms.swath.principal_axis import PrincipalAxisSwathGenerator
         from agriautolab.algorithms.route.constructive_order import (
-            RouteOrderProblem,
+            RouteOrderProblem, endpoints_of, project_state,
         )
         from agriautolab.geometry.validate import polygon_from_spec
         from agriautolab.geometry.robust import robust_union
@@ -251,8 +251,13 @@ class RouteOrderSlot:
             construct_solution,
         )
 
-        # 上游分解（与 pipeline 同样的实操）
-        cells = BoustrophedonDecomposition().run(problem)
+        # 上游分解必须与返回的 PipelineConfig 声明的 decomposition 一致。
+        # 曾用 BoustrophedonDecomposition 烘焙 rank 却返回 no_decomposition：
+        # 有障碍的田上 BCD 会切出不同 cell 布局，重放时条带数量与序号 id 都变，
+        # 于是 RankedSwathOrderPlanner 要么报缺 rank 键，要么把 rank 套到
+        # 几何上毫不相干的条带上。真值测试 test_baked_ranks_match_replayed_swaths
+        # 在有障碍田上钉住这一点。
+        cells = NoDecomposition().run(problem)
         headland = ConstantWidthHeadland(8.0).run(cells)
         mains = tuple(part for cell in headland.cells for part in cell.main_field)
         swaths = PrincipalAxisSwathGenerator().run(
@@ -274,34 +279,16 @@ class RouteOrderSlot:
         cx = sum(p.x for p in ext) / len(ext)
         cy = sum(p.y for p in ext) / len(ext)
 
-        all_ids = tuple(s.swath_id for s in swaths.swaths)
+        # 几何由构造函数必填注入：端点原样进去，进入/离开哪一端由访问序奇偶在
+        # RouteOrderProblem 内部决定（REVERSE 从 points[0] 出，不是 points[-1]）。
         problem_obj = RouteOrderProblem(
-            all_ids,
+            {s.swath_id: endpoints_of(s) for s in swaths.swaths},
             min_turning_radius_m=vehicle.min_turning_radius_m,
             working_width_m=vehicle.working_width_m,
             field_centroid=(cx, cy),
             principal_normal=(-uy, ux),  # 旋转 90° 得法向
         )
-        # 注入出口位置（条带中心线终点）+ 入口位置（中心线起点），
-        # 让 feasible_actions 的 distance_norm 是真实几何距离
-        problem_obj._exit_positions = {
-            s.swath_id: (
-                float(s.centerline.points[-1].x),
-                float(s.centerline.points[-1].y),
-            ) for s in swaths.swaths
-        }
-        problem_obj._entry_positions = {
-            s.swath_id: (
-                float(s.centerline.points[0].x),
-                float(s.centerline.points[0].y),
-            ) for s in swaths.swaths
-        }
-        problem_obj._centers = {
-            s.swath_id: (
-                (float(s.centerline.points[0].x) + float(s.centerline.points[-1].x)) / 2.0,
-                (float(s.centerline.points[0].y) + float(s.centerline.points[-1].y)) / 2.0,
-            ) for s in swaths.swaths
-        }
+        total_swath_count = len(swaths.swaths)
 
         # 构造沙箱评分函数：state, candidate -> float，调用槽位的实际候选
         candidate_fn = function
@@ -310,8 +297,14 @@ class RouteOrderSlot:
             heuristic_id: str = "candidate"
 
             def score(self, state, action) -> float:
-                # 把沙箱函数的"两个 dict"形态桥到公共协议
-                return float(candidate_fn(state, action))
+                # state 必须先投影成 Mapping 再交给候选：construct_solution 传进来的是
+                # 原始 tuple[str, ...]，而契约与 prompt 模板向候选承诺的是
+                # {"visited_count", "remaining_count"}。不投影则任何用 state.get(...)
+                # 的候选都会在此抛异常 → ConstructionError → 被 validation 闸淘汰，
+                # 槽位静默退化成 action-only 启发式。
+                return float(candidate_fn(
+                    project_state(state, total_swath_count=total_swath_count), action,
+                ))
 
         visit_order = construct_solution(problem_obj, _SandboxHeuristic())
         # 烘焙 rank：访问序号 = rank（rank 升序访问；并列按 swath_id 决胜）
