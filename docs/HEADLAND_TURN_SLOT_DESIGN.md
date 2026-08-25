@@ -36,8 +36,9 @@ Study-002 用两个槽位（`swath_angle` + `route_order`），研究主张相�
 `pipeline/run.py` 的 `_PATHS` 注册表只暴露两个 wire ID：`dubins_transit` 与
 `reeds_shepp_transit`。两者都把**整条路线一次性**委托给运动学求解——前者转交
 `coverage.stages.path.DubinsPath.run(route, robot)`（Dubins 六字闭式解），后者由
-`kinematics/reeds_shepp.py` 的九组基础公式经对称变换展开（本文 §3.1 提到的 46 词）
-再正演采样。**两者都没有 per-turn 决策点外露给候选**。
+`kinematics/reeds_shepp.py` 的 **8** 组 `BASE_FORMULAS` 经对称变换展开为 **48** 个 RS 词，
+再正演采样。其 `_selection_candidates` 的候选集实际是 **RS 48 词 ∪ Dubins 前向 6 词**
+（逐词闭合后去重）。**两者都没有 per-turn 决策点外露给候选**。
 
 因此"让候选逐个地头转弯选策略"需要先让 path 阶段暴露选择点。这是架构改动，
 不是新增一个启发式函数。
@@ -97,7 +98,10 @@ traversal 按其 `direction` 的出口端点，终点 = 第 i+1 个的入口端�
 
 `PathArtifact` 只有 `segments: tuple[PathSegment, ...]`，每段是
 `line: LineStringSpec`（采样折线）加一个 `signed_curvature_m_inv` 标注。
-默认 `resample_step_m = 0.25`，弧被弦近似，**弦长与解析弧长的差远大于 1e-6**。
+弧被弦近似，步长来自 `PipelineConfig.params["path_sample_step_m"]`
+（legacy 键 `dubins_sample_step_m`），缺省 0.25 m——**注意不是**
+`BenchmarkProtocol.resample_step_m`：后者只是声明，path planner 并不读它，
+照它去调不会改变这里讨论的偏差。**弦长与解析弧长的差远大于 1e-6**。
 因此"解析长度 vs 产物长度，差异 > 1e-6 即抛"这类校验会把正确的曲线路径全部拒掉。
 独立验证要么携带精确的原语长度，要么改成"独立复现同样的采样过程再比"，
 并为此单独定义数值契约。**这一条实质抬高了独立 evaluator 的成本**。
@@ -146,8 +150,9 @@ evaluator 必须显式接收 `cell_of_work_index` 或能派生它的 `CellsArtif
 
 ### 3.1 支持进 Study-002
 
-- **几何空间真实存在**：Dubins 六字 + Reeds-Shepp 46 字确实提供多个解析解家族；
-  带障碍或 `allowed_region` 收窄时不同家族可达性不同，选哪个家族是真实决策点。
+- **几何空间真实存在**：`reeds_shepp_transit` 的选词候选集是 RS 48 词 ∪ Dubins 前向 6 词，
+  确实提供多个解析解家族；带障碍或可作业区收窄时不同家族可达性不同，
+  选哪个家族是真实决策点。
 - **互补性可能**：`swath_angle` 选长程方向、`route_order` 选访问序，
   `headland_turn` 决定端到端过渡，三槽位覆盖"长程几何 + 离散序贯 + 短程过渡"。
 - **可证伪**：阴性结果（"演化在转弯选择上无法超越解析最短词"）本身有信息量。
@@ -163,8 +168,13 @@ evaluator 必须显式接收 `cell_of_work_index` 或能派生它的 `CellsArtif
   计划，仓库里**没有分阶段耗时测量**；确定性闸对所有槽位都重跑整条流水线，
   因此也不能据它推断 path 阶段更贵。转移段数随条带数线性增长是结构事实，
   但每段成本未测。该量的实测已列入 §4 反弹条件，**在测出来之前不作为证据**。
-- **协议纠缠**：与 `ReverseCostSpec` 和 `allowed_region` 耦合，而 Study-002
-  尚未定这些参数。
+- **协议纠缠**：与 `ReverseCostSpec` 耦合，而 Study-002 尚未定该参数。
+
+  > 勘误：初稿把 `allowed_region` 也说成未定协议参数。实测 `run_pipeline`
+  > **无条件**由 `FieldGeometry.from_problem(problem, vehicle).raw_free` 派生它，
+  > 它由实现固定、不可经协议配置。因此本条只剩 `ReverseCostSpec` 一个真实耦合，
+  > 论据进一步减弱。若将来要让转弯选择受可作业区影响，需要**先定义**一份
+  > 可配置的 allowed-region 契约，那本身又是一项契约级改动。
 
   > 勘误：初稿曾写「`reverse_cost=0` 时所有解析解代价相等、极大时只能选直行」。
   > 两条都不成立——`reverse_length_multiplier` 的约束是 `ge=1.0`，取 0 在本仓库
@@ -196,7 +206,8 @@ evaluator 必须显式接收 `cell_of_work_index` 或能派生它的 `CellsArtif
 1. PR #28 合并后实测单次评估成本，确认 path 阶段增量在预算内
    （参考量级：Study-001 corpus 为 61,100 次运行）；
 2. §2.2 与 §2.6 两条契约级障碍有了不外溢的解法；
-3. Study-002 的协议参数（`ReverseCostSpec`、`allowed_region`）已冻结。
+3. Study-002 的协议参数 `ReverseCostSpec` 已冻结。
+   （`allowed_region` 不在此列：它由实现无条件派生，不是可冻结的协议参数。）
 
 ---
 
@@ -214,3 +225,13 @@ evaluator 必须显式接收 `cell_of_work_index` 或能派生它的 `CellsArtif
 已删除的内容：`kinematics.dubins.length_optimal`、`RouteArtifact.transfer_segments`
 （两者都不存在）、以及全部未经验证的函数签名与改动面清单。
 结论自始至终未变。
+
+**后续两轮又暴露了同一个失败模式**：断言了没有实测的数字与字段名。已逐条修正
+（Reeds-Shepp 是 8 组 `BASE_FORMULAS` 展开成 48 词而非「九组 / 46 词」；采样步长来自
+`params["path_sample_step_m"]` 而非 `BenchmarkProtocol.resample_step_m`；
+`allowed_region` 由实现无条件派生、不是可冻结的协议参数；「path 阶段最贵」没有
+分阶段耗时测量支撑，已降级为标注「未实测」的推测）。
+
+作为根因处置，本文**全部 21 条事实断言**（wire ID 集合、契约字段、函数签名、
+类型标注、数值约束、计数、上下游取值来源）已用一次性脚本逐条与代码核对，
+现全部通过。此后再修改本文的任何事实陈述，都应重跑同类核对而不是凭印象下笔。
