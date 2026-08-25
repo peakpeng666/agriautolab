@@ -5,6 +5,19 @@
 
 ## [未发布]
 
+- **agent 层候选槽位抽象（1→N，行为逐位不变）**：新增 `agent/slots.py`——
+  `CandidateSlot` 协议（slot_id / stage / 契约函数名 / 沙箱编译 / 探针值 /
+  评估配置构造 / 不变性检查 / 对抗复核器集）与 `SLOTS` 注册表
+  （`DEFAULT_SLOT_ID = "swath_angle"`）；`SwathAngleSlot` 的全部语义自
+  gates.py 逐字迁移（含 RNG 消耗顺序与错误消息）。四道闸与 `evolve_pool`
+  增加 keyword-only `slot` 参数（缺省解析默认槽位，旧调用点零改动），
+  `evolve_pool` 另增 `reviewers=None`（缺省用槽位自带复核器集，显式传参
+  可覆盖）；`ProposalContext` 与 `EvolutionRecord` 增 `slot_id` 字段（默认
+  `swath_angle`；演化账本从未落盘，无迁移）；`PROMPT_TEMPLATES` 按 slot_id
+  取模板（`PROMPT_TEMPLATE` 保留为兼容别名），`MockProposer` 按槽位分派
+  候选清单。RNG 消耗顺序（master 1 次 integers + 每轮 proposer 1 次
+  integers + invariance 8×3 uniform）与黄金 config_id 逐位不变，由
+  `tests/agent/test_slots.py` 的真值测试钉住；本次不新增槽位。
 - **组合优化方法学验证层**：将 TSP/CVRP 作为农业 CPP 自动算法设计前的正式
   reference problems 融入主包，而非旁路教程或第二研究主线；新增强类型
   `TSPProblem` / `CVRPProblem`、通用 `ConstructiveProblem` /
