@@ -117,12 +117,27 @@ hook 等，从现有 Dubins 六字与 Reeds-Shepp 46 字里挑出**正反向约�
 
 | 文件 | 变更 |
 |---|---|
-| `src/agriautolab/pipeline/run.py` | `_PATHS` 注册 `selective_turn_transit` |
-| `src/agriautolab/algorithms/path/selective_turn_transit.py`（新） | 段枚举 + 离散选择 + 解析闭式解调度 |
+| `src/agriautolab/pipeline/run.py` | `_PATHS` 注册 `selective_turn_transit`，**并加显式派发分支** |
+| `src/agriautolab/pipeline/run.py` | path 阶段**记忆化键**纳入被选中的 `turn_type:<i>` 取值 |
+| `src/agriautolab/algorithms/path/selective_turn_transit.py`（新） | 段派生 + 离散选择 + 解析闭式解调度 |
 | `src/agriautolab/agent/slots.py` | `HeadlandTurnSlot` 实现八成员协议 |
 | `src/agriautolab/agent/proposer.py` | `PROMPT_TEMPLATES` / `MOCK_CANDIDATES_BY_SLOT` 各加一项 |
 | `src/agriautolab/agent/reviewer.py` | `HEADLAND_TURN_REVIEWERS`（**不复用** swath 内嵌假设） |
 | `tests/agent/test_headland_turn.py`（新） | 真值测试（见 §3 / §4） |
+
+> **只注册 `_PATHS` 不够——必须补参数管线。** 实测 `run_pipeline` 的 path 阶段
+> 派发只给非 Reeds-Shepp planner 传采样步长，且只在 wire ID **恰为**
+> `reeds_shepp_transit` 时传 `allowed_region`。因此仅把新 ID 塞进 `_PATHS`，
+> `selective_turn_transit` **既拿不到 `turn_type:<i>` 选择，也拿不到
+> allowed_region**——不同候选会产出完全相同的路径，槽位形同虚设。
+>
+> 正确做法照抄 route 阶段的先例：`run.py` 里 `ranked_swath_order` 有一个显式
+> 分支从 `config.params` 抽出 `rank:<swath_id>` 再以关键字传给 planner。
+> path 阶段需要同构的分支抽 `turn_type:<i>`。
+>
+> 另外，path 阶段的**记忆化键必须纳入这些选择**。中间产物按内容哈希记忆化，
+> 若键里没有 turn_type，两个只在转弯选择上不同的候选会命中同一条缓存，
+> 第二个候选拿到第一个的路径——评估结果与候选无关，整个槽位的实验就是假的。
 
 ## 2. 候选函数签名应该是什么？能看到哪些特征？
 
@@ -179,14 +194,42 @@ def next_turn_score(state: Mapping[str, float], candidate: Mapping[str, float]) 
 
 ```
 对 8 组独立随机刚体变换（每组 3 次 uniform，顺序 theta/tx/ty，范围
-(-pi,pi) 与 (-100,100)×2；与 SwathAngleSlot.invariance_check 完全相同的
-消耗模式，slots.py:155-157）：
+(-pi,pi) 与 (-100,100)×2；与 SwathAngleSlot.invariance_check 相同的消耗模式）：
 
-  设 base_sequence = 候选在参考田上烘焙的逐段 turn_type 序列
-  设 rotated_sequence_i = 旋转变换 i 后重新烘焙的逐段 turn_type 序列
+  变换施加在【转移段几何】上，不施加在地块上；
+  基线取【未变换】几何，在循环之前算好。
 
-  闸门通过 iff 对所有 i：rotated_sequence_i 元素逐位 == base_sequence
+  设 base_scores[k]    = 候选在第 k 步对每个可选转弯类型给出的评分
+  设 moved_scores_i[k] = 变换 i 后同一步同一批选项的评分
+
+  闸门通过 iff 对所有 i、k、选项：|moved − base| <= 1e-9
 ```
+
+> **不要按「逐位比较 turn_type 序列」实现。** 初稿这么写，有两个独立的致命问题，
+> 都已在 PR #28 的 `route_order` 槽位上实测确认（那里踩过同样的坑）：
+>
+> **（a）PCA 半平面翻转破坏索引对应。** `principal_axis` 的特征向量要过
+> `_sweep.canonical_direction`，后者强制 `ux > 0`。当刚体旋转把特征向量带进左半
+> 平面，canonicalization 会**同时翻转主轴与法向**，`swaths_along_direction` 于是
+> 以相反顺序枚举同一批物理条带——旋转后序列的索引 k 对应的是**另一个**转移段，
+> 有符号的 `projection_norm` 也整体反号。几何上完全不变的启发式会给出一个
+> "相应反转"的序列而被判失败。
+>
+> 90×50 田实测：旋转 1.5857 rad 后把条带逆变换回原坐标，中心 y 从
+> `12.85 / 22.55 / 32.25 / 37.15` 变成 `12.85 / 17.75 / 27.45 / 37.15`
+> ——残余余量换到了另一端，两组根本不是同一批几何对象。
+>
+> **（b）评分并列在刚体变换下会任意翻转。** 贪心/逐段选择在并列时由稳定枚举序
+> 决胜，而刚体变换引入 ~1e-16 舍入；一旦某步并列翻转，后续序列整体发散。
+> 规则间距在 CPP 中极常见，因此这不是边角情况。
+>
+> **解法**：把判定量从「选择序列」换成「逐步逐选项的评分」。闸门要拒的是
+> **使用非不变特征的候选**，评分比较直接命中该性质，且对并列与索引重排都免疫
+> （并列翻转不改变任何选项的分数，只改变谁被选中）。
+>
+> **测试田必须非对称。** 矩形上「余量换端 + 反向枚举 + 法向翻转」构成镜像对称，
+> 不变键恰好抵消，错误实现照样能过——`route_order` 上实测矩形漂移仅 1.4e-14，
+> 梯形 3.10、L 形 27.3（且 24 次变换里 10 次条带集合都不同）、楔形 24.7。
 
 ### 3.2 与 swath_angle 的语义区别
 
