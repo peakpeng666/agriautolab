@@ -701,21 +701,30 @@ def test_tie_at_the_selected_minimum_is_rejected() -> None:
         Point(x=0.0, y=0.0), Point(x=120.0, y=0.0), Point(x=95.0, y=60.0),
         Point(x=10.0, y=60.0), Point(x=0.0, y=0.0),
     ))
+    # 关键锚点：**只在最优处并列、别处不并列**。量化距离制造这种形态——
+    # 旧的「全体同分才拒」检查会放行它，新的「最优分并列即拒」抓得住。
+    # 实测该候选在 90×50 / 120×80 / 梯形三块田上都是这个形态。
+    quantised = slot.compile(
+        "def next_swath_score(state, candidate):\n"
+        "    return float(int(candidate['distance_norm']))\n"
+    )
+    outcome = slot.invariance_check(quantised, trapezoid, VEHICLE, np.random.default_rng(0))
+    assert not outcome.passed
+    assert "最优分并列" in outcome.detail
+
+    # 恒定候选（全体同分）当然也要拒
     constant = slot.compile(
         "def next_swath_score(state, candidate):\n"
         "    return 0.0\n"
     )
-    outcome = slot.invariance_check(constant, trapezoid, VEHICLE, np.random.default_rng(0))
-    assert not outcome.passed
-    assert "最优分并列" in outcome.detail
+    assert not slot.invariance_check(constant, trapezoid, VEHICLE, np.random.default_rng(0)).passed
 
-    # 只在**非最优**处并列则不该被拒：候选仍然做出了确定的选择
-    partial = slot.compile(
+    # 分数各不相同的候选不受影响
+    distinct = slot.compile(
         "def next_swath_score(state, candidate):\n"
-        "    d = candidate['distance_norm']\n"
-        "    return d if d < 1e9 else 7.0\n"
+        "    return candidate['distance_norm']\n"
     )
-    outcome2 = slot.invariance_check(partial, trapezoid, VEHICLE, np.random.default_rng(0))
+    outcome2 = slot.invariance_check(distinct, trapezoid, VEHICLE, np.random.default_rng(0))
     assert outcome2.passed, outcome2.detail
 
 
