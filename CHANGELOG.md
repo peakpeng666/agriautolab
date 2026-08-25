@@ -56,6 +56,31 @@
   `tests/agent/test_anytime.py` 真值测试覆盖手算对账（I×P+3+候选评估）、
   best 单调不减、ledger.verify 与 anytime_curve 逐点对应；
   既有 bitwise 复现测试零改动通过。
+- **route_order 槽位（M3 任务 3 提交一+提交二）**：新增第二候选槽位
+  `route_order`（route 阶段条带访问序），与 `swath_angle` 并行登记在
+  `SLOTS` / `PROMPT_TEMPLATES` / `MOCK_CANDIDATES_BY_SLOT` 三表。
+  提交一将"槽位解析 fail-closed"收紧为硬契约（未知 id / 键与 slot_id
+  不一致 / 缺 proposer 表登记 / 协议缺成员四道防线），`DEFAULT_REVIEWERS`
+  重命名为 `SWATH_REVIEWERS` 并保留兼容别名，docstring 明言新槽位必须
+  自带 reviewer 集。
+  提交二新增 `RouteOrderSlot`（八成员协议实现，双参契约
+  `next_turn_score(state, candidate)`，invariance 闸断言离散访问序
+  逐元素相同）；`agriautolab.algorithms.route.constructive_order.RouteOrderProblem`
+  是公共 ConstructiveProblem 的领域 adapter（放农业侧以遵守
+  optimization/ 不得 import 农业的依赖纪律）；`RankedSwathOrderPlanner`
+  是新 path 阶段 planner id `ranked_swath_order`，按 `params["rank:<swath_id>"]`
+  升序访问、swath_id 决胜，缺键即 ValueError fail-closed；
+  `evaluate_route_order` 独立复算总转移距离（不构造过程累计值）；
+  4 个 mock 候选源码使用旋转不变键 `distance_norm` / `projection_norm`；
+  `ROUTE_REVIEWERS` 槽位专属复核集（不设 |v|≤π/2 界）。
+  13 个冻结配置不含 `ranked_swath_order` id，其 config_id 逐位不变。
+  真值测试：4 条带手算最近邻访问序、NaN 抛 ConstructionError、越界 apply
+  抛 ValueError、刚体变换后 stable_id_order rank 序不变、缺 rank 键
+  fail-closed、4 mock 候选过完整闸链。
+  【结构性发现】route_nearest_neighbor（按 distance_norm 评分）旋转
+  后访问序会变——这是正确行为，不是 bug；任务 2 文档 §3.3 已预料。
+  任务 2 文档 HEADLAND_TURN_SLOT_DESIGN.md 建议砍出 headland_turn
+  槽位被采纳（Study-002 yaml 已据此仅登记 swath_angle + route_order）。
 
 ## [0.5.0] — 2026-08-24
 

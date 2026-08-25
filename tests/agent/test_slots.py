@@ -45,8 +45,10 @@ GOLDEN_CONFIG_ID_OFFSET_PI_OVER_6 = "ee57b34caaafa4498cb89f687d25982955cbe29bb22
 
 def test_slots_registry_exposes_swath_angle_as_default() -> None:
     # 旧实现没有注册表：单槽位硬编码在 gates 里，无从谈起 SLOTS/DEFAULT_SLOT_ID。
+    # 多槽位时代收紧为「swath_angle 必须登记且作为默认槽位」；不再断言 SLOTS
+    # 只含 swath_angle（任务 3 提交二新增 route_order）。
     assert DEFAULT_SLOT_ID == "swath_angle"
-    assert set(SLOTS) == {"swath_angle"}
+    assert "swath_angle" in set(SLOTS)
     slot = SLOTS[DEFAULT_SLOT_ID]
     assert isinstance(slot, SwathAngleSlot)
     assert isinstance(slot, CandidateSlot)  # 协议结构检查（runtime_checkable）
@@ -157,7 +159,9 @@ def test_registry_key_must_match_slot_id() -> None:
 
 def test_proposer_dispatches_prompt_and_mocks_by_slot_id() -> None:
     # 提示词模板按槽位登记：单槽位时代的公开名 PROMPT_TEMPLATE 是其中一个值。
-    assert set(PROMPT_TEMPLATES) == {"swath_angle"}
+    # 多槽位时代改为 "swath_angle 必须存在"；不再断言严格唯一（任务 3 提交二
+    # 新增 route_order）。
+    assert "swath_angle" in set(PROMPT_TEMPLATES)
     assert PROMPT_TEMPLATE == PROMPT_TEMPLATES["swath_angle"]
 
     context = ProposalContext(stage=CoverageStage.SWATH, round_index=0, pool_config_ids=(),
@@ -228,3 +232,128 @@ def test_ledger_records_slot_id() -> None:
                              compiled=True, kept=False)
     assert record.slot_id == "swath_angle"  # 默认槽位身份（旧记录无此字段）
     assert record.model_dump()["slot_id"] == "swath_angle"
+
+
+# ---- 槽位解析三表齐全性 + 协议完整性 fail-closed 校验（任务 3 提交一） ----
+
+def test_evolve_pool_rejects_unknown_slot_id_at_three_table_validation() -> None:
+    """a. 未知槽位 id：保留现有 ValueError（已有行为，不变）。"""
+    instance = make_instance()
+    protocol = make_protocol(instance)
+    with pytest.raises(ValueError, match="未知候选槽位 id"):
+        evolve_pool(
+            base_pool(), (instance,), proposer=MockProposer(), protocol=protocol,
+            rng=np.random.default_rng(0), rounds=1, slot="does_not_exist",
+        )
+
+
+def test_evolve_pool_rejects_slot_id_mismatch() -> None:
+    """b. SLOTS[slot].slot_id != slot：保留现有 ValueError（已有行为，不变）。"""
+    instance = make_instance()
+    protocol = make_protocol(instance)
+
+    class _BadSlot:
+        # 显式让注册键与 slot_id 不一致
+        slot_id = "swath_angle"
+        # 其他成员给齐，但 compile 抛错——这是 fail-closed 之前的早期防线
+        stage = CoverageStage.SWATH
+        contract_function = "swath_angle_offset_rad"
+        reviewers = ()
+        def compile(self, source): return lambda f: 0.0
+        def probe_value(self, *a, **k): return 0.0
+        def build_config(self, *a, **k): return None
+        def invariance_check(self, *a, **k):
+            from agriautolab.agent.gates import GateOutcome, GATE_INVARIANCE
+            return GateOutcome(GATE_INVARIANCE, True, "stub")
+
+    from agriautolab.agent.slots import SLOTS as _SLOTS
+    original = _SLOTS.copy()
+    _SLOTS["__bad__"] = _BadSlot()  # type: ignore[assignment]
+    try:
+        with pytest.raises(ValueError, match="注册键"):
+            evolve_pool(
+                base_pool(), (instance,), proposer=MockProposer(), protocol=protocol,
+                rng=np.random.default_rng(0), rounds=1, slot="__bad__",
+            )
+    finally:
+        _SLOTS.clear()
+        _SLOTS.update(original)
+
+
+def test_evolve_pool_rejects_missing_proposer_template() -> None:
+    """c. 缺 PROMPT_TEMPLATES 登记：必须 ValueError（fail-closed），不静默。"""
+    instance = make_instance()
+    protocol = make_protocol(instance)
+    from agriautolab.agent.proposer import PROMPT_TEMPLATES as _PT
+    original_pt = _PT.copy()
+    _PT.pop("swath_angle", None)
+    try:
+        with pytest.raises(ValueError, match="PROMPT_TEMPLATES"):
+            evolve_pool(
+                base_pool(), (instance,), proposer=MockProposer(), protocol=protocol,
+                rng=np.random.default_rng(0), rounds=1,
+            )
+    finally:
+        _PT.clear()
+        _PT.update(original_pt)
+
+
+def test_evolve_pool_rejects_missing_proposer_mock_candidates() -> None:
+    """c'. 缺 MOCK_CANDIDATES_BY_SLOT 登记：必须 ValueError（fail-closed）。"""
+    instance = make_instance()
+    protocol = make_protocol(instance)
+    from agriautolab.agent.proposer import MOCK_CANDIDATES_BY_SLOT as _MCS
+    original_mcs = _MCS.copy()
+    _MCS.pop("swath_angle", None)
+    try:
+        with pytest.raises(ValueError, match="MOCK_CANDIDATES_BY_SLOT"):
+            evolve_pool(
+                base_pool(), (instance,), proposer=MockProposer(), protocol=protocol,
+                rng=np.random.default_rng(0), rounds=1,
+            )
+    finally:
+        _MCS.clear()
+        _MCS.update(original_mcs)
+
+
+def test_evolve_pool_rejects_slot_missing_protocol_member() -> None:
+    """d. 协议缺成员（缺 build_config）：必须 ValueError（防止闸门 except 静默吞）。"""
+    instance = make_instance()
+    protocol = make_protocol(instance)
+
+    class _IncompleteSlot:
+        slot_id = "__incomplete__"  # 与注册键一致，绕过"键与 slot_id 不一致"
+        stage = CoverageStage.SWATH
+        contract_function = "swath_angle_offset_rad"
+        reviewers = ()
+        def compile(self, source): return lambda f: 0.0
+        def probe_value(self, *a, **k): return 0.0
+        # 故意缺 build_config
+        def invariance_check(self, *a, **k):
+            from agriautolab.agent.gates import GateOutcome, GATE_INVARIANCE
+            return GateOutcome(GATE_INVARIANCE, True, "stub")
+
+    from agriautolab.agent.slots import SLOTS as _SLOTS
+    from agriautolab.agent.proposer import (
+        MOCK_CANDIDATES_BY_SLOT as _MCS, PROMPT_TEMPLATES as _PT,
+    )
+    original_slots = _SLOTS.copy()
+    original_pt = _PT.copy()
+    original_mcs = _MCS.copy()
+    _SLOTS["__incomplete__"] = _IncompleteSlot()  # type: ignore[assignment]
+    _PT["__incomplete__"] = "stub prompt"
+    _MCS["__incomplete__"] = ()  # type: ignore[assignment]
+    try:
+        with pytest.raises(ValueError, match="协议缺成员"):
+            evolve_pool(
+                base_pool(), (instance,), proposer=MockProposer(), protocol=protocol,
+                rng=np.random.default_rng(0), rounds=1, slot="__incomplete__",
+            )
+    finally:
+        _SLOTS.clear()
+        _SLOTS.update(original_slots)
+        _PT.clear()
+        _PT.update(original_pt)
+        _MCS.clear()
+        _MCS.update(original_mcs)
+
