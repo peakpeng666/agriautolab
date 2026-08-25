@@ -599,6 +599,70 @@ def test_gate_reproduces_canonical_axis_orientation() -> None:
     assert (-canonical[1], canonical[0]) == pytest.approx((naive[1], -naive[0]))
 
 
+def test_gate_uses_canonicalised_normal_for_boundary_crossing_rotations() -> None:
+    """闸门喂给候选的法向必须是**规范化后**的，与真实构建一致。
+
+    【证伪力】直接断言闸门内部实际使用的法向。修复前它是朴素旋转 R·n；
+    当旋转把主轴推过 canonical_direction 的 ux>0 边界时，真实构建拿到的是
+    −R·n。本测试用同一串 rng 复算两种期望值，断言：
+      (a) 闸门用的与**规范化**期望逐点相等；
+      (b) 八次里**至少有一次**两种期望不同——否则本测试没有区分力。
+
+    注意：现在暴露给候选的 axis_offset_norm 取了绝对值，符号翻转对候选评分
+    不可观测，因此不能靠「某候选被拒」来证伪。闸门保持忠实是为了将来任何
+    符号敏感的特征——这一条必须由本测试直接钉住。
+    """
+    from agriautolab.algorithms.swath._sweep import canonical_direction
+
+    slot = SLOTS["route_order"]
+    problem = _rect_problem("canonical-normal", (
+        Point(x=0.0, y=0.0), Point(x=90.0, y=0.0), Point(x=90.0, y=50.0),
+        Point(x=0.0, y=50.0), Point(x=0.0, y=0.0),
+    ))
+    function = slot.compile(
+        "def next_swath_score(state, candidate):\n"
+        "    return candidate['distance_norm']\n"
+    )
+    _endpoints, _centroid, base_axis = slot._geometry_for(problem, VEHICLE)
+
+    seen_normals = []
+    original = type(slot)._scores_along
+
+    def recording(self, fn, endpoints, order, *, vehicle, centroid, normal):
+        seen_normals.append(normal)
+        return original(self, fn, endpoints, order, vehicle=vehicle, centroid=centroid, normal=normal)
+
+    type(slot)._scores_along = recording
+    try:
+        slot.invariance_check(function, problem, VEHICLE, np.random.default_rng(11))
+    finally:
+        type(slot)._scores_along = original
+
+    # 用同一串 rng 复算八组变换的两种法向期望
+    rng = np.random.default_rng(11)
+    canonical_expected, naive_expected = [], []
+    for _ in range(8):
+        theta = float(rng.uniform(-math.pi, math.pi))
+        rng.uniform(-100.0, 100.0)
+        rng.uniform(-100.0, 100.0)
+        cos_t, sin_t = math.cos(theta), math.sin(theta)
+        rotated_axis = (cos_t * base_axis[0] - sin_t * base_axis[1],
+                        sin_t * base_axis[0] + cos_t * base_axis[1])
+        cx, cy = canonical_direction(*rotated_axis)
+        canonical_expected.append((-cy, cx))
+        naive_expected.append((-rotated_axis[1], rotated_axis[0]))
+
+    assert len(seen_normals) == 9, f"应为 1 次基线 + 8 次扰动，实测 {len(seen_normals)}"
+    for index, (got, want) in enumerate(zip(seen_normals[1:], canonical_expected)):
+        assert got == pytest.approx(want), f"第 {index} 次变换的法向未经规范化"
+
+    differing = sum(
+        1 for c, n in zip(canonical_expected, naive_expected)
+        if c != pytest.approx(n)
+    )
+    assert differing > 0, "本 seed 下没有任何旋转跨过半平面边界，测试失去区分力"
+
+
 def test_all_route_mock_candidates_pass_the_faithful_gate() -> None:
     """四个出货 mock 候选在**忠实**闸门下都必须过。
 
