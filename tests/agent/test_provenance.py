@@ -176,13 +176,39 @@ def test_ledger_verify_passes_with_provenance_records() -> None:
         prompt_tokens=1, completion_tokens=1,
         cost=0.0, latency_ms=0.0, request_id="req-1",
     )
-    ledger.append(_record_with_provenance(0, "x", result.to_dict()))
+    ledger.append(_record_with_provenance(0, "x", result))
     ledger.append(_record_with_provenance(1, "y", None))
     ledger.verify()  # 不抛即通过
 
 
-def _record_with_provenance(round_index, algorithm_id, provenance):
-    from agriautolab.agent.ledger import EvolutionRecord
+def test_ledger_provenance_cannot_be_mutated_through_records() -> None:
+    """账本里的 provenance 深度不可变——嵌套赋值不能悄悄破坏 entry hash。
+
+    【证伪力】修复前 provenance 是普通 dict，而 pydantic 的 frozen=True 只禁止
+    属性赋值、不阻止嵌套容器被改。调用方拿到 ledger.records 后写
+    record.provenance["prompt"] = ... 就能改掉已经参与 entry hash 计算的内容，
+    于是账本在寻常嵌套赋值之后**自发 verify() 失败**——与同一条记录里
+    tuple / 冻结模型字段的行为不一致。
+    """
+    ledger = EvolutionLedger()
+    result = _result_for("p")
+    ledger.append(_record_with_provenance(0, "x", result))
+    ledger.verify()
+
+    record = ledger.records[0]
+    with pytest.raises((TypeError, ValueError, AttributeError)):
+        record.provenance.prompt = "改写的 prompt"
+    with pytest.raises(TypeError):
+        record.provenance["prompt"] = "改写的 prompt"   # 不再是 dict
+
+    assert record.provenance.prompt == "p"
+    ledger.verify()   # 仍然自洽
+
+
+def _record_with_provenance(round_index, algorithm_id, result):
+    from agriautolab.agent.ledger import EvolutionRecord, ProvenanceRecord
+
+    provenance = ProvenanceRecord(**result.to_dict()) if result is not None else None
     return EvolutionRecord(
         round_index=round_index,
         algorithm_id=algorithm_id,

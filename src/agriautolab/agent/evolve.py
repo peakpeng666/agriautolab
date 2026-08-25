@@ -21,7 +21,9 @@ import numpy as np
 from agriautolab.agent.gates import (
     GateOutcome, contract_gate, determinism_gate, invariance_gate, validation_gate,
 )
-from agriautolab.agent.ledger import EvolutionLedger, EvolutionRecord, GateRecord
+from agriautolab.agent.ledger import (
+    EvolutionLedger, EvolutionRecord, GateRecord, ProvenanceRecord,
+)
 from agriautolab.agent.proposer import ProposalContext, ProposalCandidate
 from agriautolab.agent.reviewer import AdversarialReviewer, final_refuted
 from agriautolab.agent.slots import DEFAULT_SLOT_ID, SLOTS, CandidateSlot
@@ -224,7 +226,10 @@ def evolve_pool(
             kept=was_kept,
             evaluations_used=counter["n"],
             cumulative_best_delta=best_delta,
-            provenance=candidate.provenance.to_dict() if candidate.provenance is not None else None,
+            provenance=(
+                ProvenanceRecord(**candidate.provenance.to_dict())
+                if candidate.provenance is not None else None
+            ),
         ))
     ledger.verify()
     return ledger, tuple(kept)
