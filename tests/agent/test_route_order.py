@@ -346,41 +346,38 @@ def test_field_centroid_is_encoding_independent() -> None:
         Point(x=0.0, y=40.0), Point(x=0.0, y=20.0), Point(x=0.0, y=0.0),
     ))
     slot = SLOTS["route_order"]
-    function = slot.compile(
-        "def next_swath_score(state, candidate):\n"
-        "    return candidate['distance_norm'] + 0.5 * candidate['projection_norm']\n"
-    )
+    _e1, centroid_plain, _n1 = slot._geometry_for(plain, VEHICLE)
+    _e2, centroid_redundant, _n2 = slot._geometry_for(redundant, VEHICLE)
 
-    def ranks_of(problem):
-        config = slot.build_config(function, problem, VEHICLE)
-        return tuple(
-            k.removeprefix("rank:") for k, _ in sorted(
-                ((k, v) for k, v in config.params.items() if k.startswith("rank:")),
-                key=lambda kv: (kv[1], kv[0]),
-            )
-        )
-
-    assert ranks_of(plain) == ranks_of(redundant)
+    # 真质心：60×40 矩形是 (30, 20)。顶点算术平均给 (24, 16)（5 点编码）
+    # 或 (26.67, 17.78)（9 点编码）——两者都错，且互不相等。
+    assert centroid_plain == pytest.approx((30.0, 20.0))
+    assert centroid_redundant == pytest.approx((30.0, 20.0))
+    assert centroid_plain == pytest.approx(centroid_redundant)
 
 
-def test_invariance_gate_accepts_geometry_equivariant_candidate() -> None:
-    """最近邻候选是几何等变的，不变性闸必须放行。
+def test_invariance_gate_accepts_geometry_equivariant_candidate_on_asymmetric_field() -> None:
+    """最近邻候选是几何等变的，不变性闸必须在**非对称**田上也放行。
 
-    【证伪力】修复前闸门比较**重新生成的 swath id**：旋转把 PCA 方向推过
-    canonical_direction 的半平面边界时，_sweep.py 从地块另一侧开始分配顺序 id，
-    同一条物理路线因此得到不同 id 排列，闸门把合法候选判为失败。
-    现在改为把访问序映射成条带中心点、逆刚体变换回原坐标后逐点比较。
+    【证伪力】闸门若把刚体变换施加在**地块**上再重跑上游，测的就是
+    PrincipalAxisSwathGenerator 的等变性而不是候选的不变性。实测该生成器不等变
+    （见 test_swath_generator_is_not_rigid_equivariant_when_field_rotates）。
+
+    田形必须非对称才有证伪力：90×50 矩形上，"余量换端 + id 从另一侧编号 +
+    法向翻转"构成镜像对称，逐 id 的不变键恰好抵消，漂移只有 ~1e-14，
+    地块口径也能蒙混过关。改用梯形后实测地块口径漂移 3.1（容差 1e-9）。
+    L 形更极端：24 次随机变换里有 10 次连条带集合都不同。
     """
     slot = SLOTS["route_order"]
     function = slot.compile(
         "def next_swath_score(state, candidate):\n"
         "    return candidate['distance_norm']\n"
     )
-    problem = _rect_problem("invariance-ref", (
-        Point(x=0.0, y=0.0), Point(x=90.0, y=0.0), Point(x=90.0, y=50.0),
-        Point(x=0.0, y=50.0), Point(x=0.0, y=0.0),
+    trapezoid = _rect_problem("invariance-trapezoid", (
+        Point(x=0.0, y=0.0), Point(x=120.0, y=0.0), Point(x=95.0, y=60.0),
+        Point(x=10.0, y=60.0), Point(x=0.0, y=0.0),
     ))
-    outcome = slot.invariance_check(function, problem, VEHICLE, np.random.default_rng(20260825))
+    outcome = slot.invariance_check(function, trapezoid, VEHICLE, np.random.default_rng(7))
     assert outcome.passed, outcome.detail
 
 
