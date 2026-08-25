@@ -113,20 +113,34 @@ class RouteOrderCorrectnessReviewer:
     )
 
     def review(self, candidate: ProposalCandidate, function: HeuristicFn) -> ReviewVerdict:
-        for index, (state, action) in enumerate(self.PROBES):
+        """逐探针调用一次并**记住返回值**，成功理由由记下的值拼装。
+
+        两处纪律：
+
+        1. 每个探针传**新副本**——沙箱不禁止候选改写入参，共用常量会让先跑的候选
+           把后面的探针掏空，「候选能否通过」于是取决于提议顺序。
+        2. 成功理由**不再二次调用候选**。此前 return 里又跑了一遍：一个在第一遍
+           成功、第二遍抛 KeyError（例如自己 pop 掉某键）的候选，会在这个
+           **无保护**的格式化调用里把异常抛出复核器之外，穿透 evolve_pool
+           并在写账本记录之前终止实验。
+        """
+        values: list[float] = []
+        for index, (state_template, action_template) in enumerate(self.PROBES):
+            state, action = dict(state_template), dict(action_template)
             try:
                 value = function(state, action)
+                coerced = float(value)
             except Exception as error:  # noqa: BLE001 -- 探针失败是反例本身
                 return ReviewVerdict(
                     True, (f"探针 {index} 抛出 {type(error).__name__}: {error}",), hard=True,
                 )
-            if not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+            if not isinstance(value, (int, float)) or not math.isfinite(coerced):
                 return ReviewVerdict(
                     True, (f"探针 {index} 返回非有限数：{value!r}",), hard=True,
                 )
+            values.append(coerced)
         return ReviewVerdict(False, tuple(
-            f"探针 {index} 通过（返回 {function(state, action)!r}）"
-            for index, (state, action) in enumerate(self.PROBES)
+            f"探针 {index} 通过（返回 {value!r}）" for index, value in enumerate(values)
         ))
 
 

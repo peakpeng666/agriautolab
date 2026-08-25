@@ -728,6 +728,81 @@ def test_tie_at_the_selected_minimum_is_rejected() -> None:
     assert outcome2.passed, outcome2.detail
 
 
+def test_scored_state_is_recreated_for_every_action() -> None:
+    """闸门取分时每个动作都要拿新的投影状态，与真实构造路径一致。
+
+    【证伪力】此前 `_scores_along` 每步只造一次投影 dict 并在该步所有动作间共用，
+    而真实构造路径逐次调用 `project_state`。于是一个自增 `state["visited_count"]`
+    并返回它的候选，在真实路径上产生全并列、在闸门里却产生递增分数——它因此
+    绕过并列拒绝、通过不变性比较，而实际部署的路线仍完全由 swath_id 决定。
+    """
+    slot = SLOTS["route_order"]
+    trapezoid = _rect_problem("fresh-state", (
+        Point(x=0.0, y=0.0), Point(x=120.0, y=0.0), Point(x=95.0, y=60.0),
+        Point(x=10.0, y=60.0), Point(x=0.0, y=0.0),
+    ))
+    mutating = slot.compile(
+        "def next_swath_score(state, candidate):\n"
+        "    state['visited_count'] = state['visited_count'] + 1.0\n"
+        "    return state['visited_count']\n"
+    )
+    endpoints, centroid, axis = slot._geometry_for(trapezoid, VEHICLE)
+    normal = slot._normal_of(axis)
+    order = slot._order_for(mutating, endpoints, vehicle=VEHICLE, centroid=centroid, normal=normal)
+    scores = slot._scores_along(mutating, endpoints, order,
+                                vehicle=VEHICLE, centroid=centroid, normal=normal)
+    first = scores[0]
+    assert len(first) > 1
+    assert len(set(first.values())) == 1, (
+        f"共用投影 dict 会让分数递增；实测 {first}"
+    )
+    # 因此该候选应当被并列拒绝抓到，而不是蒙混过关
+    outcome = slot.invariance_check(mutating, trapezoid, VEHICLE, np.random.default_rng(0))
+    assert not outcome.passed
+    assert "最优分并列" in outcome.detail
+
+
+def test_reviewer_does_not_invoke_the_candidate_twice() -> None:
+    """复核器拼装成功理由时不得二次调用候选。
+
+    【证伪力】此前成功分支在 return 里又跑了一遍探针。一个第一遍成功、第二遍抛
+    KeyError 的候选（例如自己 pop 掉某键）会在那个**无保护**的格式化调用里把异常
+    抛出复核器之外，穿透 evolve_pool 并在写账本记录之前终止实验。
+    """
+    from agriautolab.agent.proposer import ProposalCandidate
+    from agriautolab.agent.reviewer import ROUTE_REVIEWERS
+
+    calls = {"n": 0}
+
+    def flaky(state, candidate):
+        calls["n"] += 1
+        if calls["n"] > 3:                    # 前三次（三个探针）成功，之后炸
+            raise KeyError("distance_norm")
+        return candidate["distance_norm"]
+
+    verdict = ROUTE_REVIEWERS[0].review(
+        ProposalCandidate(algorithm_id="flaky", source_code="", description=""), flaky,
+    )
+    assert not verdict.refuted, verdict.reasons
+    assert calls["n"] == 3, f"候选应恰好被调用 3 次（每探针一次），实测 {calls['n']}"
+
+
+def test_reviewer_probes_are_fresh_per_call() -> None:
+    """复核器的探针也必须传副本，否则先跑的候选会污染后面的。"""
+    from agriautolab.agent.proposer import ProposalCandidate
+    from agriautolab.agent.reviewer import ROUTE_REVIEWERS, RouteOrderCorrectnessReviewer
+
+    def poisoner(state, candidate):
+        candidate.pop("distance_norm", None)
+        return 0.0
+
+    ROUTE_REVIEWERS[0].review(
+        ProposalCandidate(algorithm_id="p", source_code="", description=""), poisoner,
+    )
+    for _state, action in RouteOrderCorrectnessReviewer.PROBES:
+        assert "distance_norm" in action, "复核器探针常量被候选改写了"
+
+
 def test_probe_inputs_are_fresh_per_call() -> None:
     """候选改写入参不能污染后续候选。
 

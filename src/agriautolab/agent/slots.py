@@ -400,9 +400,16 @@ class RouteOrderSlot:
         out: list[dict[str, float]] = []
         for k in range(len(order)):
             state = tuple(order[:k])
-            projected = project_state(state, total_swath_count=total)
+            # 每个动作都现造一份投影状态，与真实构造路径逐调用重算一致。
+            # 复用同一个 dict 会让改写 state 的候选在闸门里与在 build_config 里
+            # 表现不同——例如自增 visited_count 的候选在真实路径上产生全并列、
+            # 在闸门里却产生递增分数，于是绕过并列拒绝、通过不变性比较，
+            # 而实际部署的路线仍完全由 swath_id 决定。
             out.append({
-                action["swath_id"]: float(function(projected, candidate_features(action)))
+                action["swath_id"]: float(function(
+                    project_state(state, total_swath_count=total),
+                    candidate_features(action),
+                ))
                 for action in problem_obj.feasible_actions(state)
             })
         return out
