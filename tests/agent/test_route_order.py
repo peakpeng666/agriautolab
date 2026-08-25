@@ -688,15 +688,16 @@ def test_all_route_mock_candidates_pass_the_faithful_gate() -> None:
             assert outcome.passed, f"{candidate.algorithm_id} seed={seed}: {outcome.detail}"
 
 
-def test_degenerate_all_tie_candidate_is_rejected() -> None:
-    """把所有动作评成同分的候选必须被拒——它把选择委托给了 swath_id 枚举序。
+def test_tie_at_the_selected_minimum_is_rejected() -> None:
+    """最优分并列即拒——真正被 swath_id 决定的是**选中哪一条**，不是全体是否同分。
 
-    【证伪力】剥掉 swath_id 只堵住「读」的通道；恒返回同一分数仍能让访问序完全由
-    上游按坐标分配的序号决定。更糟的是条带 id 在扫掠方向翻转时反转空间对应，
-    这类候选可能表现出纯由坐标 artifact 造成的「互补性」，污染 ΔHV 归因。
+    【证伪力】此前的检查只拒「每一步所有动作都同分」。但 `axis_offset_norm` 取绝对
+    值后，关于主轴对称的两条条带**系统性同分**，而其余条带分数不同——这类候选能过
+    旧检查，可实际选中哪一条仍由 `feasible_actions` 的 swath_id 枚举序决定，
+    且该序在扫掠方向翻转时反转空间对应。判定必须落在**被选中的那一步的最小值**上。
     """
     slot = SLOTS["route_order"]
-    trapezoid = _rect_problem("degenerate", (
+    trapezoid = _rect_problem("tie-at-min", (
         Point(x=0.0, y=0.0), Point(x=120.0, y=0.0), Point(x=95.0, y=60.0),
         Point(x=10.0, y=60.0), Point(x=0.0, y=0.0),
     ))
@@ -706,7 +707,65 @@ def test_degenerate_all_tie_candidate_is_rejected() -> None:
     )
     outcome = slot.invariance_check(constant, trapezoid, VEHICLE, np.random.default_rng(0))
     assert not outcome.passed
-    assert "退化候选" in outcome.detail
+    assert "最优分并列" in outcome.detail
+
+    # 只在**非最优**处并列则不该被拒：候选仍然做出了确定的选择
+    partial = slot.compile(
+        "def next_swath_score(state, candidate):\n"
+        "    d = candidate['distance_norm']\n"
+        "    return d if d < 1e9 else 7.0\n"
+    )
+    outcome2 = slot.invariance_check(partial, trapezoid, VEHICLE, np.random.default_rng(0))
+    assert outcome2.passed, outcome2.detail
+
+
+def test_probe_inputs_are_fresh_per_call() -> None:
+    """候选改写入参不能污染后续候选。
+
+    【证伪力】沙箱不禁止候选改写 dict 入参。此前探针直接传类级常量，
+    `candidate.pop("distance_norm")` 会永久掏空它，之后所有正常使用该键的候选都
+    在探针上抛 KeyError 被拒——「候选能否通过」取决于它在提议序列里排第几。
+    """
+    slot = SLOTS["route_order"]
+    poisoner = slot.compile(
+        "def next_swath_score(state, candidate):\n"
+        "    candidate.pop('distance_norm', None)\n"
+        "    state.pop('remaining_count', None)\n"
+        "    return 0.0\n"
+    )
+    slot.probe_value(poisoner, _rect_problem("poison", (
+        Point(x=0.0, y=0.0), Point(x=60.0, y=0.0), Point(x=60.0, y=40.0),
+        Point(x=0.0, y=40.0), Point(x=0.0, y=0.0),
+    )), VEHICLE)
+
+    # 模板未被改写：正常候选照常拿到两个键
+    normal = slot.compile(
+        "def next_swath_score(state, candidate):\n"
+        "    return candidate['distance_norm'] + state['remaining_count']\n"
+    )
+    state, candidate = type(slot)._probe_inputs()
+    assert set(candidate) == {"distance_norm", "axis_offset_norm"}
+    assert "remaining_count" in state
+    assert math.isfinite(normal(state, candidate))
+
+
+def test_overflow_during_score_coercion_is_a_rejection() -> None:
+    """float(score) 溢出必须转成拒绝，而不是穿透闸门终止实验。
+
+    【证伪力】此前 `float(value)` 在保护块之外：候选返回 `10 ** 10000` 时两次函数
+    调用都成功，却在转换处抛 OverflowError；而 contract_gate 只捕
+    SandboxViolation / ValueError / TypeError，异常仍会终止 evolve_pool。
+    """
+    slot = SLOTS["route_order"]
+    huge = slot.compile(
+        "def next_swath_score(state, candidate):\n"
+        "    return 10 ** 10000\n"
+    )
+    with pytest.raises(ValueError, match="OverflowError"):
+        slot.probe_value(huge, _rect_problem("overflow", (
+            Point(x=0.0, y=0.0), Point(x=60.0, y=0.0), Point(x=60.0, y=40.0),
+            Point(x=0.0, y=40.0), Point(x=0.0, y=0.0),
+        )), VEHICLE)
 
 
 def test_per_instance_failure_does_not_abort_the_run() -> None:

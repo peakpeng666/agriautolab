@@ -199,9 +199,17 @@ class RouteOrderSlot:
     contract_function: str = "next_swath_score"
     reviewers: tuple[AdversarialReviewer, ...] = ROUTE_REVIEWERS
 
-    # 试调用输入：作为槽位私有常量，compile 后立即用这对输入验签名
-    _PROBE_STATE: dict[str, float] = {"visited_count": 1.0, "remaining_count": 3.0}
-    _PROBE_CANDIDATE: dict[str, float] = {"distance_norm": 1.0, "axis_offset_norm": 0.0}
+    # 试调用输入的**模板**。每次调用都必须传新副本（见 _probe_inputs）：
+    # 沙箱不禁止候选改写入参，`candidate.pop("distance_norm")` 会永久污染类级常量，
+    # 之后所有候选都收到被掏空的映射——于是「候选能否通过」取决于它在提议序列里
+    # 排第几，而不是它自己写得对不对。
+    _PROBE_STATE_TEMPLATE: dict[str, float] = {"visited_count": 1.0, "remaining_count": 3.0}
+    _PROBE_CANDIDATE_TEMPLATE: dict[str, float] = {"distance_norm": 1.0, "axis_offset_norm": 0.0}
+
+    @classmethod
+    def _probe_inputs(cls) -> tuple[dict[str, float], dict[str, float]]:
+        """每次探针调用取一对全新字典，候选改写不了模板。"""
+        return dict(cls._PROBE_STATE_TEMPLATE), dict(cls._PROBE_CANDIDATE_TEMPLATE)
 
     def compile(self, source: str) -> HeuristicFn:
         """沙箱编译并提取契约函数 next_swath_score(state, candidate) -> float。
@@ -218,8 +226,9 @@ class RouteOrderSlot:
         function = namespace.get(self.contract_function)
         if not callable(function):
             raise SandboxViolation(f"候选代码必须定义顶层函数 {self.contract_function}(state, candidate)")
+        state, candidate = self._probe_inputs()
         try:
-            function(self._PROBE_STATE, self._PROBE_CANDIDATE)
+            function(state, candidate)
         except TypeError as error:
             raise SandboxViolation(
                 f"契约函数签名不符（应接受两个 dict 形参）：{error}"
@@ -232,14 +241,22 @@ class RouteOrderSlot:
 
     def probe_value(self, function: HeuristicFn, problem: CoverageProblem,
                     vehicle: VehicleSpec) -> float:
-        """route 槽位不暴露单一标量探针；返回 0.0（无 π/2 界，参考田上跑一次）。"""
+        """在参考输入上取一次分数并收敛为有限 float。
+
+        **求值与 float 转换必须在同一个保护块里。** 此前 `float(value)` 在 try 之外，
+        于是候选返回 `10 ** 10000` 时两次函数调用都成功，却在转换处抛 OverflowError；
+        而 `contract_gate` 只捕 SandboxViolation / ValueError / TypeError，
+        该异常仍会穿透 `evolve_pool` 并在写账本记录之前终止实验。
+        """
+        state, candidate = self._probe_inputs()
         try:
-            value = function(self._PROBE_STATE, self._PROBE_CANDIDATE)
+            value = function(state, candidate)
+            coerced = float(value)
         except Exception as error:  # noqa: BLE001 -- 同 compile：候选失败=淘汰，不是崩实验
             raise ValueError(f"候选探针失败：{type(error).__name__}: {error}") from error
-        if not math.isfinite(float(value)):
+        if not math.isfinite(coerced):
             raise ValueError(f"候选返回非有限分数：{value!r}")
-        return float(value)
+        return coerced
 
     def _geometry_for(self, problem: CoverageProblem, vehicle: VehicleSpec):
         """跑上游三阶段，返回 (swath_id -> 端点, 地块质心, 主轴法向)。
@@ -447,13 +464,18 @@ class RouteOrderSlot:
         # 序号。剥掉 swath_id 只堵住了「读」的通道，同分仍能把选择**委托**给它。
         # 更糟的是：条带 id 在扫掠方向翻转时会反转空间对应，于是这种候选可能
         # 表现出纯粹由坐标 artifact 造成的「互补性」，污染 ΔHV 归因。
-        multi = [step for step in base_scores if len(step) > 1]
-        if multi and not any(len(set(step.values())) > 1 for step in multi):
-            return GateOutcome(
-                GATE_INVARIANCE, False,
-                "退化候选：所有决策步的可行动作同分，访问序完全由上游 swath_id "
-                "枚举序决定——这是坐标 artifact，不是启发式决策",
-            )
+        for step_index, step in enumerate(base_scores):
+            if len(step) < 2:
+                continue
+            best = min(step.values())
+            tied = [swath_id for swath_id, value in step.items() if value == best]
+            if len(tied) > 1:
+                return GateOutcome(
+                    GATE_INVARIANCE, False,
+                    f"第 {step_index} 步的最优分并列于 {sorted(tied)!r}：实际选中哪一条"
+                    "由 feasible_actions 的 swath_id 枚举序决定，而那是上游按坐标分配的"
+                    "序号——候选在这一步没有做出不变量意义上的决策",
+                )
 
         for _ in range(8):
             theta = float(rng.uniform(-math.pi, math.pi))
