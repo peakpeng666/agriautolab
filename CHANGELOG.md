@@ -44,6 +44,18 @@
   GitHub Actions 固定到完整 SHA，runner 固定 Ubuntu 24.04，测试工具版本固定，
   增加 `pip check` / package metadata / `compileall` 守门；Dependabot 仅维护
   GitHub Actions 供应链；README 撤回旧的严格 one-shot 表述并链接 D7.1。
+- **anytime 性能轨迹（M3 任务 1）**：`EvolutionRecord` 加 `evaluations_used`
+  与 `cumulative_best_delta` 两字段（带默认值，旧记录零破坏）；
+  `gates.validation_gate` / `gates.determinism_gate` 与
+  `evolve._pool_points` / `evolve._candidate_points` 加 keyword-only
+  `run` 参数（默认 `run_pipeline`，旧调用零改动）；
+  `evolve_pool` 构造 `counted_run` 注入**全部**真实评估点
+  （轮前基线池 + 三道闸门 + 候选逐实例评估），按全程累计真实调用数记录；
+  新增模块级 `agriautolab.agent.ledger.anytime_curve(records) -> tuple[tuple[int, float | None], ...]`
+  返回 COCO/IOHprofiler 式"评估次数 → 当前最优 ΔHV"采样点；
+  `tests/agent/test_anytime.py` 真值测试覆盖手算对账（I×P+3+候选评估）、
+  best 单调不减、ledger.verify 与 anytime_curve 逐点对应；
+  既有 bitwise 复现测试零改动通过。
 
 ## [0.5.0] — 2026-08-24
 

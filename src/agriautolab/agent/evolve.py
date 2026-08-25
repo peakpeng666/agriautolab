@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Mapping, Sequence
+from typing import Callable, Mapping, Sequence
 
 import numpy as np
 
@@ -65,12 +65,13 @@ def candidate_identity(candidate: ProposalCandidate) -> str:
 
 
 def _pool_points(instances: Sequence[Instance], pool: Sequence[PipelineConfig],
-                 protocol: BenchmarkProtocol, memo: StageMemo) -> list[dict[str, ObjectiveVector]]:
+                 protocol: BenchmarkProtocol, memo: StageMemo,
+                 *, run: Callable = run_pipeline) -> list[dict[str, ObjectiveVector]]:
     outputs = []
     for instance in instances:
         points: dict[str, ObjectiveVector] = {}
         for config in pool:
-            result = run_pipeline(instance.problem, instance.vehicle, config, protocol, memo=memo)
+            result = run(instance.problem, instance.vehicle, config, protocol, memo=memo)
             if result.objectives is not None:
                 points[result.config_id] = result.objectives
         outputs.append(points)
@@ -78,11 +79,12 @@ def _pool_points(instances: Sequence[Instance], pool: Sequence[PipelineConfig],
 
 
 def _candidate_points(function, instances: Sequence[Instance],
-                      protocol: BenchmarkProtocol, slot: CandidateSlot) -> list[ObjectiveVector | None]:
+                      protocol: BenchmarkProtocol, slot: CandidateSlot,
+                      *, run: Callable = run_pipeline) -> list[ObjectiveVector | None]:
     return [
-        run_pipeline(instance.problem, instance.vehicle,
-                     slot.build_config(function, instance.problem, instance.vehicle),
-                     protocol).objectives
+        run(instance.problem, instance.vehicle,
+            slot.build_config(function, instance.problem, instance.vehicle),
+            protocol).objectives
         for instance in instances
     ]
 
@@ -138,13 +140,25 @@ def evolve_pool(
     active_reviewers = candidate_slot.reviewers if reviewers is None else reviewers
     ledger = EvolutionLedger()
     memo = StageMemo()
-    pool_points = _pool_points(instances, base_pool, protocol, memo)
+    # 评估计数器：所有 run_pipeline 调用经 counted_run 转发，含基线池一次性消耗、
+    # 三道闸门（contract 闸不计入）与候选逐实例评估。计数器是「真实评估次数」的唯一
+    # 来源，禁止用 round_index 或任何公式近似。
+    counter = {"n": 0}
+
+    def counted_run(*args, **kwargs):
+        counter["n"] += 1
+        return run_pipeline(*args, **kwargs)
+
+    pool_points = _pool_points(instances, base_pool, protocol, memo, run=counted_run)
     # RNG 流按（主种子, 轮, 组件）派生：修改验证/复核的随机消耗不再移动提议流，
     # 否则只是加强检查就会改变整条搜索轨迹。
     master_seed = int(rng.integers(0, 2**63))
     # 已保留候选的逐实例目标向量并入池（后续候选的增量相对「基础池 + 已保留」计算）
     kept_extra: dict[str, list[ObjectiveVector | None]] = {}
     kept: list[KeptCandidate] = []
+    # running best：迄今各轮 hypervolume_delta 非 None 值的 max，单调不减；
+    # 唯一值是 -inf 时保持 -inf，单调性仍成立。
+    best_delta: float | None = None
 
     for round_index in range(rounds):
         context = ProposalContext(
@@ -165,8 +179,8 @@ def evolve_pool(
         if function is not None:
             # 探针按 problem_id 稳定选取：候选晋升不得依赖实例的输入顺序
             probe = min(instances, key=lambda item: item.problem.problem_id)
-            gates.append(validation_gate(function, probe.problem, probe.vehicle, protocol, slot=candidate_slot))
-            gates.append(determinism_gate(function, probe.problem, probe.vehicle, protocol, slot=candidate_slot))
+            gates.append(validation_gate(function, probe.problem, probe.vehicle, protocol, slot=candidate_slot, run=counted_run))
+            gates.append(determinism_gate(function, probe.problem, probe.vehicle, protocol, slot=candidate_slot, run=counted_run))
             gates.append(invariance_gate(function, probe.problem, probe.vehicle, protocol, gate_rng, slot=candidate_slot))
         all_passed = all(outcome.passed for outcome in gates)
 
@@ -179,7 +193,7 @@ def evolve_pool(
             review_refuted = final_refuted(verdicts)
             review_reasons = tuple(reason for verdict in verdicts for reason in verdict.reasons)
             if not review_refuted and identity not in kept_extra:
-                objectives = _candidate_points(function, instances, protocol, candidate_slot)
+                objectives = _candidate_points(function, instances, protocol, candidate_slot, run=counted_run)
                 # 基线 = 基础池 + 已保留候选（不含本候选）：ΔHV 度量「加入本候选」
                 # 的真实增量。曾把已含本候选的合并池当基线传入，导致恒为 0、
                 # 候选永不可能晋升——真值测试已钉住。
@@ -194,6 +208,9 @@ def evolve_pool(
                     kept.append(KeptCandidate(candidate=candidate, identity=identity,
                                               objectives=tuple(objectives)))
 
+        if delta is not None:
+            best_delta = delta if best_delta is None else max(best_delta, delta)
+
         ledger.append(EvolutionRecord(
             round_index=round_index,
             algorithm_id=candidate.algorithm_id,
@@ -205,6 +222,8 @@ def evolve_pool(
             review_reasons=review_reasons,
             hypervolume_delta=delta,
             kept=was_kept,
+            evaluations_used=counter["n"],
+            cumulative_best_delta=best_delta,
         ))
     ledger.verify()
     return ledger, tuple(kept)

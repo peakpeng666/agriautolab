@@ -77,11 +77,16 @@ def contract_gate(source_code: str, *, slot: CandidateSlot | None = None) -> tup
 
 
 def validation_gate(function: HeuristicFn, problem: CoverageProblem, vehicle: VehicleSpec,
-                    protocol: BenchmarkProtocol, *, slot: CandidateSlot | None = None) -> GateOutcome:
-    """第二道：产出路径必须过独立 PathValidator。不通过即淘汰，不做就地修补。"""
+                    protocol: BenchmarkProtocol, *, slot: CandidateSlot | None = None,
+                    run: Callable = run_pipeline) -> GateOutcome:
+    """第二道：产出路径必须过独立 PathValidator。不通过即淘汰，不做就地修补。
+
+    run 是 keyword-only 的运行函数（默认 run_pipeline），用于在评估计数场景下
+    注入打点过的执行器；旧调用不传 run 时行为逐位不变。
+    """
     try:
         config = _default_slot(slot).build_config(function, problem, vehicle)
-        result = run_pipeline(problem, vehicle, config, protocol)
+        result = run(problem, vehicle, config, protocol)
     except Exception as error:  # noqa: BLE001 -- 闸门把一切失败转为淘汰记录（保留原因），不让循环崩溃
         return GateOutcome(GATE_VALIDATION, False, f"{type(error).__name__}: {error}")
     if result.objectives is None:
@@ -90,12 +95,17 @@ def validation_gate(function: HeuristicFn, problem: CoverageProblem, vehicle: Ve
 
 
 def determinism_gate(function: HeuristicFn, problem: CoverageProblem, vehicle: VehicleSpec,
-                     protocol: BenchmarkProtocol, *, slot: CandidateSlot | None = None) -> GateOutcome:
-    """第三道：同一输入跑两次，目标向量与路径序列化逐位相同。"""
+                     protocol: BenchmarkProtocol, *, slot: CandidateSlot | None = None,
+                     run: Callable = run_pipeline) -> GateOutcome:
+    """第三道：同一输入跑两次，目标向量与路径序列化逐位相同。
+
+    run 是 keyword-only 的运行函数（默认 run_pipeline），用于在评估计数场景下
+    注入打点过的执行器；旧调用不传 run 时行为逐位不变。
+    """
     try:
         config = _default_slot(slot).build_config(function, problem, vehicle)
-        first = run_pipeline(problem, vehicle, config, protocol)
-        second = run_pipeline(problem, vehicle, config, protocol)
+        first = run(problem, vehicle, config, protocol)
+        second = run(problem, vehicle, config, protocol)
     except Exception as error:  # noqa: BLE001 -- 同上
         return GateOutcome(GATE_DETERMINISM, False, f"{type(error).__name__}: {error}")
     if first.objectives is None or second.objectives is None:

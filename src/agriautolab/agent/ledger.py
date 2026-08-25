@@ -9,6 +9,8 @@ evidence 层的 EvidenceLedger 与 EvidenceRecord 强类型绑定（运行证据
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from agriautolab.contracts.errors import EvidenceChainError
@@ -40,6 +42,13 @@ class EvolutionRecord(BaseModel):
     review_reasons: tuple[str, ...] = ()
     hypervolume_delta: float | None = None
     kept: bool
+    # 记录 append 时刻的全程累计真实 run_pipeline 调用数（含轮前基线池 I×P、
+    # 闸门 1+2+0、候选逐实例评估）。这是 Study-002 预算口径的唯一来源。
+    evaluations_used: int = 0
+    # 迄今各轮 hypervolume_delta 非 None 值的 running max，单调不减；
+    # 任何 delta 仍为 None 时也保持上轮值。口径是 COCO/IOHprofiler 式的
+    # "评估次数 → 当前最优"轨迹。
+    cumulative_best_delta: float | None = None
 
 
 class EvolutionLedger:
@@ -71,3 +80,12 @@ class EvolutionLedger:
             if entry_hash != expected:
                 raise EvidenceChainError(f"演化账本在 {record.algorithm_id}（round {record.round_index}）处断链")
             previous_hash = entry_hash
+
+
+def anytime_curve(records: Sequence[EvolutionRecord]) -> tuple[tuple[int, float | None], ...]:
+    """COCO/IOHprofiler 式 anytime 轨迹：逐轮返回 (evaluations_used, cumulative_best_delta)。
+
+    口径与 EvolutionRecord 的两个新字段严格一致——评估次数（含基线池与闸门）作为
+    横轴，当前最优 ΔHV（running max，单调不减）作为纵轴。O(n)。
+    """
+    return tuple((record.evaluations_used, record.cumulative_best_delta) for record in records)
