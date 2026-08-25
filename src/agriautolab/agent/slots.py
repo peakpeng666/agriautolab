@@ -247,7 +247,7 @@ class RouteOrderSlot:
         关键纪律：禁止调用 run_pipeline——会污染 anytime 评估计数。
         """
         from agriautolab.algorithms.headland.uniform_headland import ConstantWidthHeadland
-        from agriautolab.coverage.stages.decomposition import NoDecomposition
+        from agriautolab.algorithms.decomposition.boustrophedon_cells import BoustrophedonDecomposition
         from agriautolab.algorithms.swath.principal_axis import PrincipalAxisSwathGenerator
         from agriautolab.algorithms.route.constructive_order import endpoints_of
         from agriautolab.geometry.validate import polygon_from_spec
@@ -260,7 +260,7 @@ class RouteOrderSlot:
         # 于是 RankedSwathOrderPlanner 要么报缺 rank 键，要么把 rank 套到
         # 几何上毫不相干的条带上。真值测试 test_baked_ranks_match_replayed_swaths
         # 在有障碍田上钉住这一点。
-        cells = NoDecomposition().run(problem)
+        cells = BoustrophedonDecomposition().run(problem)
         headland = ConstantWidthHeadland(8.0).run(cells)
         mains = tuple(part for cell in headland.cells for part in cell.main_field)
         swaths = PrincipalAxisSwathGenerator().run(
@@ -351,7 +351,7 @@ class RouteOrderSlot:
         }
         params = {"headland_width_m": 8.0, **rank_params}
         return PipelineConfig(
-            decomposition="no_decomposition", headland="uniform_headland",
+            decomposition="boustrophedon_cells", headland="uniform_headland",
             swath="principal_axis", route="ranked_swath_order", path="dubins_transit",
             params=params,
         )
@@ -441,6 +441,19 @@ class RouteOrderSlot:
                                              vehicle=vehicle, centroid=centroid, normal=normal)
         except Exception as error:  # noqa: BLE001 -- 闸门把一切失败转为淘汰记录
             return GateOutcome(GATE_INVARIANCE, False, f"基线构造失败：{type(error).__name__}: {error}")
+
+        # 退化候选：每一步都把所有可行动作评成同分，等于完全不做决策——访问序
+        # 由 feasible_actions 的 swath_id 稳定枚举序决定，而那是上游按坐标分配的
+        # 序号。剥掉 swath_id 只堵住了「读」的通道，同分仍能把选择**委托**给它。
+        # 更糟的是：条带 id 在扫掠方向翻转时会反转空间对应，于是这种候选可能
+        # 表现出纯粹由坐标 artifact 造成的「互补性」，污染 ΔHV 归因。
+        multi = [step for step in base_scores if len(step) > 1]
+        if multi and not any(len(set(step.values())) > 1 for step in multi):
+            return GateOutcome(
+                GATE_INVARIANCE, False,
+                "退化候选：所有决策步的可行动作同分，访问序完全由上游 swath_id "
+                "枚举序决定——这是坐标 artifact，不是启发式决策",
+            )
 
         for _ in range(8):
             theta = float(rng.uniform(-math.pi, math.pi))

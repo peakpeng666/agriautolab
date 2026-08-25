@@ -101,12 +101,12 @@ MOCK_CANDIDATES_BY_SLOT: dict[str, tuple[ProposalCandidate, ...]] = {
             description="贪心最近邻：每次选出口到条带入口距离归一化最小的未访问条带",
         ),
         ProposalCandidate(
-            algorithm_id="route_stable_id_order",
+            algorithm_id="route_outward_axis_order",
             source_code=(
                 "def next_swath_score(state, candidate):\n"
-                "    return 0.0\n"
+                "    return -candidate.get('axis_offset_norm', 0.0)\n"
             ),
-            description="恒取 0.0：等评分并列时由 feasible_actions 的 swath_id 稳定排序决胜",
+            description="由外向内：先访问离主轴最远的条带（axis_offset_norm 的反序）",
         ),
         ProposalCandidate(
             algorithm_id="route_axis_offset_order",
@@ -114,7 +114,7 @@ MOCK_CANDIDATES_BY_SLOT: dict[str, tuple[ProposalCandidate, ...]] = {
                 "def next_swath_score(state, candidate):\n"
                 "    return candidate.get('axis_offset_norm', 0.0)\n"
             ),
-            description="按条带中心主轴法向投影归一化排序——退化等价于 boustrophedon 的入口端约定版本",
+            description="由内向外：先访问离主轴最近的条带（axis_offset_norm 升序）",
         ),
         ProposalCandidate(
             algorithm_id="route_mixed",

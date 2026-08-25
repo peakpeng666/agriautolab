@@ -188,7 +188,7 @@ def test_baked_ranks_match_replayed_swaths_on_obstacle_field() -> None:
     """
     from agriautolab.algorithms.swath.principal_axis import PrincipalAxisSwathGenerator
     from agriautolab.algorithms.headland.uniform_headland import ConstantWidthHeadland
-    from agriautolab.coverage.stages.decomposition import NoDecomposition
+    from agriautolab.algorithms.decomposition.boustrophedon_cells import BoustrophedonDecomposition
 
     problem = CoverageProblem(
         problem_id="obstacle-field",
@@ -211,9 +211,11 @@ def test_baked_ranks_match_replayed_swaths_on_obstacle_field() -> None:
     config = slot.build_config(function, problem, VEHICLE)
     baked_ids = {k.removeprefix("rank:") for k in config.params if k.startswith("rank:")}
 
-    # 按 config 自己声明的 decomposition 重放上游，取真实条带 id
-    assert config.decomposition == "no_decomposition"
-    cells = NoDecomposition().run(problem)
+    # 按 config 自己声明的 decomposition 重放上游，取真实条带 id。
+    # 必须是**障碍感知**的分解：no_decomposition 只转发 problem.field、
+    # 不带任何 interior，条带因此会横穿障碍（实测 interiors=0）。
+    assert config.decomposition == "boustrophedon_cells"
+    cells = BoustrophedonDecomposition().run(problem)
     headland = ConstantWidthHeadland(config.params["headland_width_m"]).run(cells)
     mains = tuple(part for cell in headland.cells for part in cell.main_field)
     replayed = PrincipalAxisSwathGenerator().run(
@@ -684,6 +686,53 @@ def test_all_route_mock_candidates_pass_the_faithful_gate() -> None:
         for seed in (0, 7, 20260825):
             outcome = slot.invariance_check(function, trapezoid, VEHICLE, np.random.default_rng(seed))
             assert outcome.passed, f"{candidate.algorithm_id} seed={seed}: {outcome.detail}"
+
+
+def test_degenerate_all_tie_candidate_is_rejected() -> None:
+    """把所有动作评成同分的候选必须被拒——它把选择委托给了 swath_id 枚举序。
+
+    【证伪力】剥掉 swath_id 只堵住「读」的通道；恒返回同一分数仍能让访问序完全由
+    上游按坐标分配的序号决定。更糟的是条带 id 在扫掠方向翻转时反转空间对应，
+    这类候选可能表现出纯由坐标 artifact 造成的「互补性」，污染 ΔHV 归因。
+    """
+    slot = SLOTS["route_order"]
+    trapezoid = _rect_problem("degenerate", (
+        Point(x=0.0, y=0.0), Point(x=120.0, y=0.0), Point(x=95.0, y=60.0),
+        Point(x=10.0, y=60.0), Point(x=0.0, y=0.0),
+    ))
+    constant = slot.compile(
+        "def next_swath_score(state, candidate):\n"
+        "    return 0.0\n"
+    )
+    outcome = slot.invariance_check(constant, trapezoid, VEHICLE, np.random.default_rng(0))
+    assert not outcome.passed
+    assert "退化候选" in outcome.detail
+
+
+def test_per_instance_failure_does_not_abort_the_run() -> None:
+    """候选在探针实例外的某个实例上抛异常 → 该实例记 None，账本照记，实验不崩。
+
+    【证伪力】四道闸只跑单个探针实例；此前 _candidate_points 是无保护列表推导，
+    后续实例的异常会穿过 evolve_pool 并在写账本记录**之前**终止整个实验。
+    """
+    from agriautolab.agent.evolve import _candidate_points
+
+    slot = SLOTS["route_order"]
+    function = slot.compile(
+        "def next_swath_score(state, candidate):\n"
+        "    return candidate['distance_norm']\n"
+    )
+    instance = make_instance()
+    protocol = make_protocol(instance)
+    calls = {"n": 0}
+
+    def exploding_run(*args, **kwargs):
+        calls["n"] += 1
+        raise RuntimeError("第二个实例上炸了")
+
+    points = _candidate_points(function, (instance,), protocol, slot, run=exploding_run)
+    assert points == [None], "失败实例应记 None 而不是抛出"
+    assert calls["n"] == 1
 
 
 # ---------- 协议契约 ----------

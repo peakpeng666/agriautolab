@@ -81,12 +81,24 @@ def _pool_points(instances: Sequence[Instance], pool: Sequence[PipelineConfig],
 def _candidate_points(function, instances: Sequence[Instance],
                       protocol: BenchmarkProtocol, slot: CandidateSlot,
                       *, run: Callable = run_pipeline) -> list[ObjectiveVector | None]:
-    return [
-        run(instance.problem, instance.vehicle,
-            slot.build_config(function, instance.problem, instance.vehicle),
-            protocol).objectives
-        for instance in instances
-    ]
+    """逐实例评估候选；**任一实例失败记 None，不抛出**。
+
+    四道闸只在单个探针实例上跑（按 problem_id 稳定选取），因此候选完全可能在探针
+    上成功、在后面某个实例上抛异常——例如某个与距离相关的分母恰好为 0，或该实例
+    的几何让 build_config 走进 ConstructionError。此前这里是无保护的列表推导，
+    异常会穿过 evolve_pool 并**在写账本记录之前终止整个实验**。
+
+    记 None 即可：hypervolume_delta 对任一 None 返回 -inf，候选因此不晋升，
+    而账本仍如实记下这一轮——「被淘汰」是结果，不是崩溃。
+    """
+    points: list[ObjectiveVector | None] = []
+    for instance in instances:
+        try:
+            config = slot.build_config(function, instance.problem, instance.vehicle)
+            points.append(run(instance.problem, instance.vehicle, config, protocol).objectives)
+        except Exception:  # noqa: BLE001 -- 插件边界：候选在某实例上的失败=该实例无目标
+            points.append(None)
+    return points
 
 
 def hypervolume_delta(objectives_per_instance: Sequence[ObjectiveVector | None],
