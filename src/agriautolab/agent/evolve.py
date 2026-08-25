@@ -130,6 +130,11 @@ def evolve_pool(
     if slot not in SLOTS:
         raise ValueError(f"未知候选槽位 id：{slot!r}（已登记：{tuple(sorted(SLOTS))}）")
     candidate_slot = SLOTS[slot]
+    if candidate_slot.slot_id != slot:
+        raise ValueError(
+            f"槽位注册键 {slot!r} 与 slot_id {candidate_slot.slot_id!r} 不一致："
+            "注册键即 wire ID，两者必须相同，否则实验归因错位"
+        )
     active_reviewers = candidate_slot.reviewers if reviewers is None else reviewers
     ledger = EvolutionLedger()
     memo = StageMemo()

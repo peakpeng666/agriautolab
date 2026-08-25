@@ -133,6 +133,28 @@ def test_evolve_pool_rejects_unknown_slot_id() -> None:
         )
 
 
+def test_registry_key_must_match_slot_id() -> None:
+    # 杀伤力论证：无一致性校验时，注册在错误键下的槽位（SLOTS["swath"] =
+    # SwathAngleSlot()）会在解析点被静默接受——闸门按该对象的语义执行，而
+    # ProposalContext/EvolutionRecord 记录的是注册键 "swath"，实验被归因到
+    # 与实现声明的 slot_id 不同的 wire ID。本测试钉住的是「解析点 fail-closed」：
+    # 无校验时这里不会在解析点抛 ValueError（会进入循环后在别处 KeyError
+    # 失败或静默跑完全程）。
+    instance = make_instance()
+    protocol = make_protocol(instance)
+    original = dict(SLOTS)
+    try:
+        SLOTS["swath"] = SLOTS["swath_angle"]
+        with pytest.raises(ValueError, match="不一致"):
+            evolve_pool(
+                base_pool(), (instance,), proposer=MockProposer(), protocol=protocol,
+                rng=np.random.default_rng(0), rounds=1, slot="swath",
+            )
+    finally:
+        SLOTS.clear()
+        SLOTS.update(original)
+
+
 def test_proposer_dispatches_prompt_and_mocks_by_slot_id() -> None:
     # 提示词模板按槽位登记：单槽位时代的公开名 PROMPT_TEMPLATE 是其中一个值。
     assert set(PROMPT_TEMPLATES) == {"swath_angle"}
