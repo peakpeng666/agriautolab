@@ -205,6 +205,36 @@ def test_ledger_provenance_cannot_be_mutated_through_records() -> None:
     ledger.verify()   # 仍然自洽
 
 
+def test_provenance_must_match_the_candidate_source() -> None:
+    """入账前必须校验 provenance.response 与候选源码一致。
+
+    【证伪力】`HeuristicProposer` 是公开协议，任何注入实现都能构造
+    `ProposalCandidate`。此前 `evolve.py` 直接把 provenance 投影入账、不校验关系，
+    于是账本会为「一段没有产生该候选的模型响应」背书，而 `replay_candidate`
+    由那份 response 重建出的 proposal hash 与实际被评估的候选不一致。
+    """
+    from agriautolab.agent.evolve import _provenance_record
+    from agriautolab.agent.proposer import ProposalCandidate
+
+    good = ProposalCandidate(
+        algorithm_id="a", source_code=SOURCE, description="d",
+        provenance=_result_for("p", response=SOURCE),
+    )
+    assert _provenance_record(good) is not None
+
+    mismatched = ProposalCandidate(
+        algorithm_id="a", source_code=SOURCE, description="d",
+        provenance=_result_for("p", response="def swath_angle_offset_rad(f):\n    return 1.0\n"),
+    )
+    with pytest.raises(ValueError, match="与 provenance.response 不一致"):
+        _provenance_record(mismatched)
+
+    # MockProposer 路径：无 provenance 不受影响
+    assert _provenance_record(
+        ProposalCandidate(algorithm_id="a", source_code=SOURCE, description="d")
+    ) is None
+
+
 def _record_with_provenance(round_index, algorithm_id, result):
     from agriautolab.agent.ledger import EvolutionRecord, ProvenanceRecord
 

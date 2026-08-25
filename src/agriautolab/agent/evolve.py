@@ -80,6 +80,29 @@ def _pool_points(instances: Sequence[Instance], pool: Sequence[PipelineConfig],
     return outputs
 
 
+def _provenance_record(candidate: ProposalCandidate) -> ProvenanceRecord | None:
+    """把候选的 provenance 投影成入账模型，并校验它确实对应这份候选源码。
+
+    `LLMProposer` 自己会校验后端返回的 prompt，但 `HeuristicProposer` 是公开协议，
+    任何注入实现都能构造 `ProposalCandidate`。若不在入账处再校验一次，账本就会
+    为「一段没有产生该候选的模型响应」背书，而 `replay_candidate` 由那份 response
+    重建出的 proposal hash 与实际被评估的候选不一致——证据链断在最关键的一环。
+
+    因此 fail closed：`source_code` 必须与 `provenance.response` 逐字相等。
+    """
+    if candidate.provenance is None:
+        return None
+    if candidate.source_code != candidate.provenance.response:
+        raise ValueError(
+            "候选源码与 provenance.response 不一致："
+            f"request_id={candidate.provenance.request_id!r}，"
+            f"source_code {len(candidate.source_code)} 字符、"
+            f"response {len(candidate.provenance.response)} 字符；"
+            "账本不能为一段没有产生该候选的模型响应背书"
+        )
+    return ProvenanceRecord(**candidate.provenance.to_dict())
+
+
 def _candidate_points(function, instances: Sequence[Instance],
                       protocol: BenchmarkProtocol, slot: CandidateSlot,
                       *, run: Callable = run_pipeline) -> list[ObjectiveVector | None]:
@@ -226,10 +249,7 @@ def evolve_pool(
             kept=was_kept,
             evaluations_used=counter["n"],
             cumulative_best_delta=best_delta,
-            provenance=(
-                ProvenanceRecord(**candidate.provenance.to_dict())
-                if candidate.provenance is not None else None
-            ),
+            provenance=_provenance_record(candidate),
         ))
     ledger.verify()
     return ledger, tuple(kept)
