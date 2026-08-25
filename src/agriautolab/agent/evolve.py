@@ -224,6 +224,7 @@ def evolve_pool(
             kept=was_kept,
             evaluations_used=counter["n"],
             cumulative_best_delta=best_delta,
+            provenance=candidate.provenance.to_dict() if candidate.provenance is not None else None,
         ))
     ledger.verify()
     return ledger, tuple(kept)

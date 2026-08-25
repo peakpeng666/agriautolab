@@ -49,6 +49,11 @@ class EvolutionRecord(BaseModel):
     # 任何 delta 仍为 None 时也保持上轮值。口径是 COCO/IOHprofiler 式的
     # "评估次数 → 当前最优"轨迹。
     cumulative_best_delta: float | None = None
+    # LLM 调用的 provenance（任务 4）：candidate.provenance.to_dict() 或 None。
+    # MockProposer 不设置 → 恒为 None。provenance 不进 candidate_identity：
+    # identity 仍由三元组（algorithm_id/source_code/description）决定，
+    # provenance 仅作 evidence 链附加字段，replay 重建后逐位相同。
+    provenance: dict[str, float | int | str | None] | None = None
 
 
 class EvolutionLedger:

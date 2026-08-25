@@ -89,6 +89,17 @@ agent 层候选槽位抽象使用角色明确的规范名：`CandidateSlot`（�
 "评估次数 → 当前最优"采样点，O(n)。口径与 `evaluations_used` 字段 docstring
 一致，是 Study-002 预算公式的唯一来源。
 
+LLM provenance（任务 4）：`agriautolab.agent.proposer.CompletionResult`
+（frozen dataclass，十一必填字段 + `to_dict()` JSON 序列化入口）、
+`agriautolab.agent.proposer.replay_candidate(round_index, result)`
+（离线重放入口，无网络、确定性，构造共享 `_candidate_from_completion`）。
+`ProposalCandidate.provenance: CompletionResult | None`（MockProposer 恒为 None）；
+`EvolutionRecord.provenance: dict | None` 由 `evolve.append` 写入
+`candidate.provenance.to_dict()`。**provenance 不进 `candidate_identity` 哈希**——
+identity 仍由三元组（algorithm_id/source_code/description）决定，provenance 仅
+作 evidence 链附加字段。`ModelClient` 协议改 `complete(prompt) -> CompletionResult`，
+本模块仍然零网络（注入由调用方接入）。
+
 ## 4. 包结构命名
 
 当前真实包名就是文档事实，不再维护“计划中的 canonical 幽灵目录”：

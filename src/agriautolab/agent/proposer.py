@@ -18,7 +18,7 @@ PROMPT_TEMPLATES（LLM 提示词）与 MOCK_CANDIDATES_BY_SLOT（确定性 mock 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Any, Protocol
 
 import numpy as np
 
@@ -40,6 +40,10 @@ class ProposalCandidate:
     algorithm_id: str
     source_code: str
     description: str
+    # LLM 调用 provenance（任务 4）：MockProposer 不设置，恒为 None。
+    # identity 三元组（algorithm_id/source_code/description）不含 provenance，
+    # 因此 provenance 不进 candidate_identity 哈希。
+    provenance: CompletionResult | None = None
 
 
 class HeuristicProposer(Protocol):
@@ -103,8 +107,95 @@ class MockProposer:
         return candidates[index]
 
 
+class CompletionResult:
+    """模型后端单次调用的完整结果（含 provenance 十一字段）。
+
+    字段全部必填；__post_init__ 做 fail-closed 校验（model_id/request_id 非空、
+    temperature/top_p 有限且在 [0,1]、tokens 为 int >= 0、cost/latency_ms 有限
+    且 >= 0）。这是 evidence 链的入口——任何字段缺失都视同未做 provenance。
+
+    to_dict 返回 JSON 可序列化 dict；replay_candidate 用其离线重建 ProposalCandidate。
+    """
+
+    __slots__ = (
+        "model_id", "prompt", "response", "temperature", "top_p", "seed",
+        "prompt_tokens", "completion_tokens", "cost", "latency_ms", "request_id",
+    )
+
+    def __init__(
+        self,
+        *,
+        model_id: str,
+        prompt: str,
+        response: str,
+        temperature: float,
+        top_p: float,
+        seed: int,
+        prompt_tokens: int,
+        completion_tokens: int,
+        cost: float,
+        latency_ms: float,
+        request_id: str,
+    ) -> None:
+        if not model_id:
+            raise ValueError("CompletionResult.model_id 不能为空")
+        if not request_id:
+            raise ValueError("CompletionResult.request_id 不能为空")
+        for name, value in (("temperature", temperature), ("top_p", top_p)):
+            try:
+                f = float(value)
+            except (TypeError, ValueError) as error:
+                raise ValueError(f"CompletionResult.{name} 必须是有限浮点：{value!r}") from error
+            if not (0.0 <= f <= 1.0) or not _isfinite(f):
+                raise ValueError(f"CompletionResult.{name} 必须在 [0,1] 且有限：{f!r}")
+        for name, value in (("prompt_tokens", prompt_tokens), ("completion_tokens", completion_tokens)):
+            if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+                raise ValueError(f"CompletionResult.{name} 必须为 int >= 0：{value!r}")
+        for name, value in (("cost", cost), ("latency_ms", latency_ms)):
+            try:
+                f = float(value)
+            except (TypeError, ValueError) as error:
+                raise ValueError(f"CompletionResult.{name} 必须是有限浮点：{value!r}") from error
+            if not _isfinite(f) or f < 0.0:
+                raise ValueError(f"CompletionResult.{name} 必须 >= 0 且有限：{f!r}")
+        if not isinstance(seed, int) or isinstance(seed, bool):
+            raise ValueError(f"CompletionResult.seed 必须为 int：{seed!r}")
+        self.model_id = str(model_id)
+        self.prompt = str(prompt)
+        self.response = str(response)
+        self.temperature = float(temperature)
+        self.top_p = float(top_p)
+        self.seed = int(seed)
+        self.prompt_tokens = int(prompt_tokens)
+        self.completion_tokens = int(completion_tokens)
+        self.cost = float(cost)
+        self.latency_ms = float(latency_ms)
+        self.request_id = str(request_id)
+
+    def to_dict(self) -> dict[str, Any]:
+        """JSON 可序列化 dict；入账 / replay 唯一入口。"""
+        return {
+            "model_id": self.model_id,
+            "prompt": self.prompt,
+            "response": self.response,
+            "temperature": self.temperature,
+            "top_p": self.top_p,
+            "seed": self.seed,
+            "prompt_tokens": self.prompt_tokens,
+            "completion_tokens": self.completion_tokens,
+            "cost": self.cost,
+            "latency_ms": self.latency_ms,
+            "request_id": self.request_id,
+        }
+
+
+def _isfinite(value: float) -> bool:
+    import math
+    return math.isfinite(value)
+
+
 class ModelClient(Protocol):
-    def complete(self, prompt: str) -> str:
+    def complete(self, prompt: str) -> CompletionResult:
         ...
 
 
@@ -159,9 +250,29 @@ class LLMProposer:
                 "LLMProposer 没有注入模型客户端：本模块不携带网络后端；"
                 "测试请用 MockProposer"
             )
-        source = self._client.complete(self.build_prompt(stage=stage, context=context))
-        return ProposalCandidate(
-            algorithm_id=f"evolved_llm_{context.round_index:03d}",
-            source_code=source,
-            description="LLM 提议（注入真实后端后产生）",
-        )
+        prompt = self.build_prompt(stage=stage, context=context)
+        result = self._client.complete(prompt)
+        return _candidate_from_completion(context.round_index, result)
+
+
+def _candidate_from_completion(round_index: int, result: CompletionResult) -> ProposalCandidate:
+    """从 CompletionResult 构造 ProposalCandidate，provenance 字段携带原 result。
+
+    在线构造与 replay_candidate 共享此函数 → identity 逐位一致有结构性保证。
+    """
+    return ProposalCandidate(
+        algorithm_id=f"evolved_llm_{round_index:03d}",
+        source_code=result.response,
+        description="LLM 提议（注入真实后端后产生）",
+        provenance=result,
+    )
+
+
+def replay_candidate(round_index: int, result: CompletionResult) -> ProposalCandidate:
+    """离线重放：直接委托 _candidate_from_completion，docstring 明言无网络、确定性。
+
+    重放时 result.response 与 result.prompt 必须与在线调用逐位相同；replay 与
+    在线产生的 ProposalCandidate 在 identity（三元组 algorithm_id/source_code/
+    description）上逐位相等。
+    """
+    return _candidate_from_completion(round_index, result)
