@@ -109,10 +109,10 @@ MOCK_CANDIDATES_BY_SLOT: dict[str, tuple[ProposalCandidate, ...]] = {
             description="恒取 0.0：等评分并列时由 feasible_actions 的 swath_id 稳定排序决胜",
         ),
         ProposalCandidate(
-            algorithm_id="route_projection_order",
+            algorithm_id="route_axis_offset_order",
             source_code=(
                 "def next_swath_score(state, candidate):\n"
-                "    return candidate.get('projection_norm', 0.0)\n"
+                "    return candidate.get('axis_offset_norm', 0.0)\n"
             ),
             description="按条带中心主轴法向投影归一化排序——退化等价于 boustrophedon 的入口端约定版本",
         ),
@@ -120,7 +120,7 @@ MOCK_CANDIDATES_BY_SLOT: dict[str, tuple[ProposalCandidate, ...]] = {
             algorithm_id="route_mixed",
             source_code=(
                 "def next_swath_score(state, candidate):\n"
-                "    return 0.6 * candidate.get('distance_norm', 0.0) + 0.4 * candidate.get('projection_norm', 0.0)\n"
+                "    return 0.6 * candidate.get('distance_norm', 0.0) + 0.4 * candidate.get('axis_offset_norm', 0.0)\n"
             ),
             description="距离与投影加权混合；权重 0.6/0.4 写死于源码（不来自 features）",
         ),
@@ -178,7 +178,7 @@ row_angle_vs_principal, turning_ratio, swath_count_at_minwidth。
 输入 state 与 candidate 都是 dict[str, float]；可用键（全部旋转不变、无量纲）：
   state: visited_count, remaining_count
   candidate: distance_norm（出口到条带入口欧氏距离 / min_turning_radius）、
-             projection_norm（条带中心在主轴法向的投影 / working_width）
+             axis_offset_norm（条带中心在主轴法向的投影 / working_width）
 
 返回值：浮点分数，越小优先级越高；必须有限。
 可用内建：math, len, range, min, max, abs, sum, enumerate, sorted, tuple, list, float, int。

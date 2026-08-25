@@ -201,12 +201,18 @@ class RouteOrderSlot:
 
     # 试调用输入：作为槽位私有常量，compile 后立即用这对输入验签名
     _PROBE_STATE: dict[str, float] = {"visited_count": 1.0, "remaining_count": 3.0}
-    _PROBE_CANDIDATE: dict[str, float] = {"distance_norm": 1.0, "projection_norm": 0.0}
+    _PROBE_CANDIDATE: dict[str, float] = {"distance_norm": 1.0, "axis_offset_norm": 0.0}
 
     def compile(self, source: str) -> HeuristicFn:
         """沙箱编译并提取契约函数 next_swath_score(state, candidate) -> float。
 
-        试调用：function(_PROBE_STATE, _PROBE_CANDIDATE) 捕 TypeError 报签名不符。
+        试调用：`function(_PROBE_STATE, _PROBE_CANDIDATE)`。
+
+        **任何**异常都转成 SandboxViolation，不只是 TypeError。此前只捕 TypeError，
+        于是候选跑出别的异常时会穿透 compile 与 contract_gate，**在写任何账本记录
+        之前终止整个 evolve_pool**。最小复现：探针的 `axis_offset_norm` 恰为 0.0，
+        候选写 `1.0 / candidate["axis_offset_norm"]` 就抛 ZeroDivisionError。
+        候选的运行期失败必须是"这个候选被淘汰"，不能是"实验崩了"。
         """
         namespace = run_sandboxed(source)
         function = namespace.get(self.contract_function)
@@ -218,6 +224,10 @@ class RouteOrderSlot:
             raise SandboxViolation(
                 f"契约函数签名不符（应接受两个 dict 形参）：{error}"
             ) from error
+        except Exception as error:  # noqa: BLE001 -- 插件边界；原异常经 chaining 保留
+            raise SandboxViolation(
+                f"候选在契约探针上抛出 {type(error).__name__}：{error}"
+            ) from error
         return function
 
     def probe_value(self, function: HeuristicFn, problem: CoverageProblem,
@@ -225,7 +235,7 @@ class RouteOrderSlot:
         """route 槽位不暴露单一标量探针；返回 0.0（无 π/2 界，参考田上跑一次）。"""
         try:
             value = function(self._PROBE_STATE, self._PROBE_CANDIDATE)
-        except (TypeError, ValueError) as error:
+        except Exception as error:  # noqa: BLE001 -- 同 compile：候选失败=淘汰，不是崩实验
             raise ValueError(f"候选探针失败：{type(error).__name__}: {error}") from error
         if not math.isfinite(float(value)):
             raise ValueError(f"候选返回非有限分数：{value!r}")
@@ -271,22 +281,30 @@ class RouteOrderSlot:
         # 质心用真正的多边形质心，与主轴取自同一 free 几何。
         # 曾用外环顶点算术平均：闭合点被重复计数，且插入共线冗余顶点就会改变结果
         # ——60×40 矩形写成 (0,0)…(0,0) 时得 (24,16) 而非 (30,20)。该值同时是
-        # distance_norm 的初始出口与 projection_norm 的原点，因此等价的多边形
+        # distance_norm 的初始出口与 axis_offset_norm 的原点，因此等价的多边形
         # 编码会烘焙出不同的 rank。test_field_centroid_is_encoding_independent 钉住。
         centroid_point = free.centroid
         cx, cy = float(centroid_point.x), float(centroid_point.y)
 
         # 端点原样返回：进入/离开哪一端由访问序奇偶在 RouteOrderProblem 内部决定
         # （REVERSE 从 points[0] 出，不是 points[-1]）。
+        # 返回**主轴**而非法向：法向由主轴派生，而主轴的符号规范化
+        # （canonical_direction，principal_axis 内部已做）是 invariance_check
+        # 必须复现的语义，把它留在调用方才能忠实模拟真实构建路径。
         endpoints = {s.swath_id: endpoints_of(s) for s in swaths.swaths}
-        return endpoints, (cx, cy), (-uy, ux)   # 主轴旋转 90° 得法向
+        return endpoints, (cx, cy), (ux, uy)
+
+    @staticmethod
+    def _normal_of(axis: tuple[float, float]) -> tuple[float, float]:
+        """主轴旋转 90° 得法向。"""
+        return (-axis[1], axis[0])
 
     def _plan(self, function: HeuristicFn, problem: CoverageProblem,
               vehicle: VehicleSpec) -> tuple[str, ...]:
         """上游几何 + 候选决策 → 访问序。"""
-        endpoints, centroid, normal = self._geometry_for(problem, vehicle)
+        endpoints, centroid, axis = self._geometry_for(problem, vehicle)
         return self._order_for(function, endpoints, vehicle=vehicle,
-                               centroid=centroid, normal=normal)
+                               centroid=centroid, normal=self._normal_of(axis))
 
     @staticmethod
     def _order_for(function: HeuristicFn, endpoints, *, vehicle: VehicleSpec,
@@ -297,7 +315,7 @@ class RouteOrderSlot:
         理由见该方法的 docstring。
         """
         from agriautolab.algorithms.route.constructive_order import (
-            RouteOrderProblem, project_state,
+            RouteOrderProblem, candidate_features, project_state,
         )
         from agriautolab.optimization.constructive import construct_solution
 
@@ -314,7 +332,12 @@ class RouteOrderSlot:
             heuristic_id: str = "candidate"
 
             def score(self, state, action) -> float:
-                return float(function(project_state(state, total_swath_count=total), action))
+                # 动作过 candidate_features 剥掉 swath_id：那是上游按坐标分配的序号，
+                # 用它排序等于用坐标 artifact 排序，能绕过全部不变性要求。
+                return float(function(
+                    project_state(state, total_swath_count=total),
+                    candidate_features(action),
+                ))
 
         return construct_solution(problem_obj, _H())
 
@@ -333,9 +356,11 @@ class RouteOrderSlot:
             params=params,
         )
 
-    # 分数比较容差：投影键都是无量纲量，旋转+平移的浮点残差在 1e-13 量级，
-    # 取 1e-9 与 SwathAngleSlot 的偏移容差同级。
-    _SCORE_TOLERANCE = 1e-9
+    # 分数比较容差：绝对项对付接近 0 的分数，相对项对付候选自带的任意量纲。
+    # 候选契约**不限定分数量级**，`1e9 * distance_norm` 与 `distance_norm` 是同一个
+    # 构造决策（正数缩放不改变 argmin），但纯绝对容差会把前者的 ~1e-5 残差判为漂移。
+    _SCORE_ATOL = 1e-9
+    _SCORE_RTOL = 1e-9
 
     def _scores_along(self, function: HeuristicFn, endpoints, order, *, vehicle,
                       centroid, normal) -> list[dict[str, float]]:
@@ -344,7 +369,7 @@ class RouteOrderSlot:
         返回 [ {swath_id: score} ]，第 k 项对应状态 order[:k]。
         """
         from agriautolab.algorithms.route.constructive_order import (
-            RouteOrderProblem, project_state,
+            RouteOrderProblem, candidate_features, project_state,
         )
 
         problem_obj = RouteOrderProblem(
@@ -360,7 +385,7 @@ class RouteOrderSlot:
             state = tuple(order[:k])
             projected = project_state(state, total_swath_count=total)
             out.append({
-                action["swath_id"]: float(function(projected, action))
+                action["swath_id"]: float(function(projected, candidate_features(action)))
                 for action in problem_obj.feasible_actions(state)
             })
         return out
@@ -405,8 +430,11 @@ class RouteOrderSlot:
         那类候选的评分本身就会随变换改变，因此逐动作比较评分既直接命中该性质，
         又对并列免疫。并列翻转不改变任何一个动作的分数，只改变谁被选中。
         """
+        from agriautolab.algorithms.swath._sweep import canonical_direction
+
         try:
-            endpoints, centroid, normal = self._geometry_for(problem, vehicle)
+            endpoints, centroid, axis = self._geometry_for(problem, vehicle)
+            normal = self._normal_of(axis)
             base_order = self._order_for(function, endpoints, vehicle=vehicle,
                                          centroid=centroid, normal=normal)
             base_scores = self._scores_along(function, endpoints, base_order,
@@ -426,10 +454,20 @@ class RouteOrderSlot:
             moved_endpoints = {
                 swath_id: (move(start), move(end)) for swath_id, (start, end) in endpoints.items()
             }
-            # 质心随几何平移+旋转；法向只旋转（方向量不平移）
+            # 质心随几何平移+旋转；法向只旋转（方向量不平移）。
+            #
+            # 法向必须再过一次 canonical_direction，复现真实构建路径：
+            # _geometry_for 的法向来自 principal_axis，而后者 return 的就是
+            # canonical_direction(...)——方向被强制进右半平面（ux>0）。当旋转把主轴
+            # 带过该边界，真实构建拿到的是 -R·axis 因而是 -R·normal，而不是 R·normal。
+            # 只旋转不规范化的话，闸门永远不会走到符号翻转那一支，于是**有符号的**
+            # 有符号投影在闸门里看着不变、在真实构建里却整体反号，
+            # 依赖它的候选优先方向被悄悄反转却照样过闸。
             moved_centroid = move(centroid)
-            moved_normal = (cos_t * normal[0] - sin_t * normal[1],
-                            sin_t * normal[0] + cos_t * normal[1])
+            rotated_axis = (cos_t * axis[0] - sin_t * axis[1],
+                            sin_t * axis[0] + cos_t * axis[1])
+            canonical_ux, canonical_uy = canonical_direction(*rotated_axis)
+            moved_normal = (-canonical_uy, canonical_ux)
             try:
                 # 沿**同一条基线访问序**取分：比较的是同状态同动作下的评分，
                 # 与变换后候选自己会不会选同一条路线无关。
@@ -447,13 +485,16 @@ class RouteOrderSlot:
                         f"刚体变换（theta={theta:.4f} rad）后第 {step} 步可行动作集合变化",
                     )
                 for swath_id, base_value in base_step.items():
-                    drift = abs(moved_step[swath_id] - base_value)
-                    if not math.isfinite(drift) or drift > self._SCORE_TOLERANCE:
+                    moved_value = moved_step[swath_id]
+                    drift = abs(moved_value - base_value)
+                    allowed = self._SCORE_ATOL + self._SCORE_RTOL * max(
+                        abs(base_value), abs(moved_value),
+                    )
+                    if not math.isfinite(drift) or drift > allowed:
                         return GateOutcome(
                             GATE_INVARIANCE, False,
                             f"刚体变换（theta={theta:.4f} rad）后第 {step} 步对 "
-                            f"{swath_id!r} 的评分漂移 {drift:.3e}"
-                            f"（容差 {self._SCORE_TOLERANCE:g}）",
+                            f"{swath_id!r} 的评分漂移 {drift:.3e}（容许 {allowed:.3e}）",
                         )
         return GateOutcome(
             GATE_INVARIANCE, True,

@@ -99,7 +99,13 @@ planner id `ranked_swath_order`（`RankedSwathOrderPlanner`，按 rank 升序、
 决胜，第 i 个访问偶数 FORWARD / 奇数 REVERSE）。13 个冻结配置不含该 id，
 其 config_id 逐位不变。槽位专属 reviewer 集 `ROUTE_REVIEWERS`（route 槽位不复用
 SWATH_REVIEWERS 的 |v|≤π/2 假设）；4 个 mock 候选源码以 dict-get 形式使用
-`distance_norm` / `projection_norm`（旋转不变键）。
+`distance_norm` / `axis_offset_norm`（刚体不变键）。
+
+`axis_offset_norm` 取**绝对值**是刻意的：主轴法向的符号由 `canonical_direction`
+（强制 ux>0）这一**坐标约定**决定，不是几何量；刚体旋转跨过该边界时法向整体反号，
+有符号投影随之反号，因此不是不变量。契约只暴露到主轴的无符号距离。
+候选可见特征由 `CANDIDATE_FEATURE_KEYS` 定义，`candidate_features()` 负责在
+交给候选前剥掉 `swath_id`——那是上游按坐标分配的序号，用它排序可绕过全部不变性要求。
 
 ## 4. 包结构命名
 

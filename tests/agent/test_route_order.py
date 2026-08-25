@@ -230,9 +230,9 @@ def test_baked_ranks_match_replayed_swaths_on_obstacle_field() -> None:
 # ---------- 缺陷 4：投影必须减质心（平移不变） ----------
 
 def test_projection_is_translation_invariant() -> None:
-    """整体平移后 projection_norm 逐条带不变（质心随之平移）。
+    """整体平移后 axis_offset_norm 逐条带不变（质心随之平移）。
 
-    【证伪力】修复前 projection_norm 用绝对坐标投影，平移 (dx,dy) 会给所有条带
+    【证伪力】修复前 axis_offset_norm 用绝对坐标投影，平移 (dx,dy) 会给所有条带
     加同一常数。纯按 projection 排序看不出来（同序），但与 distance_norm 混合
     加权的候选（route_mixed）次序会变——本测试同时钉住数值与混合候选次序。
     """
@@ -241,12 +241,12 @@ def test_projection_is_translation_invariant() -> None:
     p_base = _problem_for(base, centroid=(5.0, 1.5), normal=(0.0, 1.0))
     p_moved = _problem_for(moved, centroid=(5.0 + 37.0, 1.5 - 19.0), normal=(0.0, 1.0))
 
-    proj_base = {a["swath_id"]: a["projection_norm"] for a in p_base.feasible_actions(())}
-    proj_moved = {a["swath_id"]: a["projection_norm"] for a in p_moved.feasible_actions(())}
+    proj_base = {a["swath_id"]: a["axis_offset_norm"] for a in p_base.feasible_actions(())}
+    proj_moved = {a["swath_id"]: a["axis_offset_norm"] for a in p_moved.feasible_actions(())}
     for swath_id, value in proj_base.items():
         assert proj_moved[swath_id] == pytest.approx(value), f"{swath_id} 投影随平移漂移"
 
-    mixed = lambda state, cand: 0.6 * cand["distance_norm"] + 0.4 * cand["projection_norm"]
+    mixed = lambda state, cand: 0.6 * cand["distance_norm"] + 0.4 * cand["axis_offset_norm"]
     assert _run(p_base, mixed) == _run(p_moved, mixed)
 
 
@@ -331,7 +331,7 @@ def test_field_centroid_is_encoding_independent() -> None:
     """同一矩形的两种等价编码必须烘焙出相同访问序。
 
     【证伪力】修复前用外环顶点算术平均当质心：闭合点被重复计数，插入共线冗余
-    顶点又会再次改变结果。质心同时是 distance_norm 的初始出口与 projection_norm
+    顶点又会再次改变结果。质心同时是 distance_norm 的初始出口与 axis_offset_norm
     的原点，因此等价编码会得到不同 rank。60×40 矩形写成 (0,0)…(0,0) 时
     顶点平均给 (24,16)，真质心是 (30,20)。
     """
@@ -421,7 +421,7 @@ def test_invariance_gate_baseline_is_the_untransformed_geometry() -> None:
 def test_invariance_gate_rejects_non_invariant_candidate() -> None:
     """使用绝对坐标的候选必须被不变性闸拒绝。
 
-    候选通过 projection_norm 间接读到几何，但真正的非不变量要靠"闸门能否分辨"
+    候选通过 axis_offset_norm 间接读到几何，但真正的非不变量要靠"闸门能否分辨"
     来验证。这里用一个**故意不减质心**的等效构造：候选把 distance_norm 与
     一个随平移改变的量混合——通过 state 无法做到，因此改用可行动作集合之外的
     路径：直接断言闸门对"评分随变换漂移"的响应。
@@ -502,6 +502,124 @@ def test_swath_generator_is_not_rigid_equivariant_when_field_rotates() -> None:
         "上游若已变为刚体等变，不变性闸可以简化为直接旋转地块；"
         f"实测 base={base_ys} moved={moved_ys}"
     )
+
+
+# ---------- 复核第三轮：闸门忠实度与候选可见面 ----------
+
+def test_candidate_runtime_failure_is_a_rejection_not_a_crash() -> None:
+    """候选在契约探针上抛任意异常 → SandboxViolation，而不是掀翻整个实验。
+
+    【证伪力】修复前 compile 只捕 TypeError，别的异常会穿透 compile 与
+    contract_gate，**在写任何账本记录之前终止 evolve_pool**。探针的
+    axis_offset_norm 恰为 0.0，所以 1.0 / candidate[...] 抛 ZeroDivisionError。
+    """
+    from agriautolab.agent.sandbox import SandboxViolation
+
+    slot = SLOTS["route_order"]
+    with pytest.raises(SandboxViolation, match="ZeroDivisionError"):
+        slot.compile(
+            "def next_swath_score(state, candidate):\n"
+            "    return 1.0 / candidate['axis_offset_norm']\n"
+        )
+
+
+def test_candidate_cannot_see_swath_id() -> None:
+    """候选只能看到契约承诺的两个键；swath_id 必须被剥掉。
+
+    【证伪力】修复前评分包装器把完整动作字典（含 swath_id）交给候选，
+    于是 `float(candidate['swath_id'][-1])` 能过掉不带该键的探针、也能过
+    不变性闸（合成变换刻意保留 id），却完全按上游生成器的坐标序号排序。
+    """
+    from agriautolab.algorithms.route.constructive_order import (
+        CANDIDATE_FEATURE_KEYS, candidate_features,
+    )
+
+    action = {"swath_id": "swath-0007", "distance_norm": 1.5, "axis_offset_norm": 0.25}
+    features = candidate_features(action)
+    assert set(features) == set(CANDIDATE_FEATURE_KEYS)
+    assert "swath_id" not in features
+
+    # 端到端：按 swath_id 排序的候选在**契约探针**上就拿不到该键 → KeyError，
+    # 经修复后的 compile 统一转成 SandboxViolation，候选在第一道闸即被淘汰。
+    from agriautolab.agent.sandbox import SandboxViolation
+
+    slot = SLOTS["route_order"]
+    with pytest.raises(SandboxViolation, match="KeyError"):
+        slot.compile(
+            "def next_swath_score(state, candidate):\n"
+            "    return float(candidate['swath_id'][-1])\n"
+        )
+
+
+def test_invariance_tolerance_scales_with_score_magnitude() -> None:
+    """量级放大 1e9 的等价候选仍须过闸（正数缩放不改变 argmin）。
+
+    【证伪力】修复前用绝对容差 1e-9，`1e9 * distance_norm` 的 ~1e-14 刚体残差
+    被放大到 ~1e-5，数学上完全不变的启发式被误拒。
+    """
+    slot = SLOTS["route_order"]
+    trapezoid = _rect_problem("tolerance-scale", (
+        Point(x=0.0, y=0.0), Point(x=120.0, y=0.0), Point(x=95.0, y=60.0),
+        Point(x=10.0, y=60.0), Point(x=0.0, y=0.0),
+    ))
+    scaled = slot.compile(
+        "def next_swath_score(state, candidate):\n"
+        "    return 1e9 * candidate['distance_norm']\n"
+    )
+    outcome = slot.invariance_check(scaled, trapezoid, VEHICLE, np.random.default_rng(7))
+    assert outcome.passed, outcome.detail
+
+
+def test_gate_reproduces_canonical_axis_orientation() -> None:
+    """闸门必须复现 canonical_direction 的符号规范化，否则有符号特征会漏网。
+
+    【证伪力】真实构建的法向来自 principal_axis，而后者 return 的就是
+    canonical_direction(...)（强制 ux>0）。闸门若只把基线法向旋转（R·n）而不
+    重新规范化，就永远走不到符号翻转那一支——一个依赖有符号投影的候选在闸门里
+    看着不变，在真实构建里优先方向却整体反转。
+
+    本测试直接断言：对同一批条带，把主轴旋转过半平面边界后，
+    _geometry_for 给出的法向与朴素旋转的结果**方向相反**。
+    """
+    from agriautolab.algorithms.swath._sweep import canonical_direction
+
+    # 单位主轴接近 +x；旋转 ~180° 会把它推过 ux>0 边界
+    norm = math.hypot(1.0, 0.05)
+    axis = (1.0 / norm, 0.05 / norm)
+    theta = math.pi * 0.98
+    cos_t, sin_t = math.cos(theta), math.sin(theta)
+    naive = (cos_t * axis[0] - sin_t * axis[1], sin_t * axis[0] + cos_t * axis[1])
+    canonical = canonical_direction(*naive)
+    # 朴素旋转落在左半平面，规范化把它翻回右半平面 → 两者反号
+    assert naive[0] < 0.0
+    assert canonical[0] > 0.0
+    assert canonical[0] == pytest.approx(-naive[0])
+    assert canonical[1] == pytest.approx(-naive[1])
+    # 由此导出的法向也整体反号——正是有符号投影不成立的原因
+    assert (-canonical[1], canonical[0]) == pytest.approx((naive[1], -naive[0]))
+
+
+def test_all_route_mock_candidates_pass_the_faithful_gate() -> None:
+    """四个出货 mock 候选在**忠实**闸门下都必须过。
+
+    加入 canonical_direction 后，原先用**有符号** projection_norm 的两个候选
+    （route_projection_order / route_mixed）立刻在梯形与矩形田上双双失败，
+    漂移达 2.5–3.6（容许 ~1e-9）——这证明有符号投影根本不是不变量。
+    修法是让特征本身变成不变量（axis_offset_norm 取绝对值），
+    而不是放松闸门。本测试钉住修法之后四个候选全部通过。
+    """
+    from agriautolab.agent.proposer import MOCK_CANDIDATES_BY_SLOT
+
+    slot = SLOTS["route_order"]
+    trapezoid = _rect_problem("mock-gate", (
+        Point(x=0.0, y=0.0), Point(x=120.0, y=0.0), Point(x=95.0, y=60.0),
+        Point(x=10.0, y=60.0), Point(x=0.0, y=0.0),
+    ))
+    for candidate in MOCK_CANDIDATES_BY_SLOT["route_order"]:
+        function = slot.compile(candidate.source_code)
+        for seed in (0, 7, 20260825):
+            outcome = slot.invariance_check(function, trapezoid, VEHICLE, np.random.default_rng(seed))
+            assert outcome.passed, f"{candidate.algorithm_id} seed={seed}: {outcome.detail}"
 
 
 # ---------- 协议契约 ----------

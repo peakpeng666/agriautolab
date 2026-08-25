@@ -20,7 +20,7 @@
 
 投影键（都必须旋转+平移不变）：
   distance_norm   = 上一条带出口 → 本条带入口 的欧氏距离 / min_turning_radius_m
-  projection_norm = （条带中心 − 地块质心）在主轴法向上的投影 / working_width_m
+  axis_offset_norm = |（条带中心 − 地块质心）在主轴法向上的投影| / working_width_m
                     减去质心是平移不变的前提：不减则整体平移会给所有投影加同一常数，
                     纯排序看似不变，但与 distance_norm 混合加权的候选会改变次序。
 """
@@ -79,6 +79,22 @@ def project_state(state: tuple[str, ...], *, total_swath_count: int) -> dict[str
     }
 
 
+#: 契约向候选承诺的键。`swath_id` **不在其中**——它是上游生成器按坐标顺序分配的
+#: 序号，随刚体变换重排，用它排序等于用坐标 artifact 排序。动作字典要带 swath_id
+#: 供 problem 做身份判定，但交给候选之前必须过 `candidate_features` 剥掉。
+CANDIDATE_FEATURE_KEYS = ("distance_norm", "axis_offset_norm")
+
+
+def candidate_features(action: Mapping[str, object]) -> dict[str, float]:
+    """把动作字典裁成契约承诺的特征子集。
+
+    不裁的话，候选可以写 `float(candidate["swath_id"][-1])` 之类按上游序号排序的
+    评分：它能过掉不带该键的探针，也能过不变性闸（合成变换刻意保留 id 不变），
+    却完全不依赖任何已声明的不变特征。
+    """
+    return {key: float(action[key]) for key in CANDIDATE_FEATURE_KEYS}
+
+
 def project_candidate(
     *,
     candidate_swath_id: str,
@@ -90,7 +106,7 @@ def project_candidate(
     working_width_m: float,
     principal_normal: tuple[float, float],
 ) -> dict[str, float]:
-    """候选投影：swath_id + distance_norm + projection_norm（后两者刚体变换不变）。"""
+    """候选投影：swath_id + distance_norm + axis_offset_norm（后两者刚体变换不变）。"""
     dx = swath_entry_position[0] - exit_position[0]
     dy = swath_entry_position[1] - exit_position[1]
     distance = math.hypot(dx, dy)
@@ -101,7 +117,13 @@ def project_candidate(
     return {
         "swath_id": candidate_swath_id,
         "distance_norm": distance / min_turning_radius_m,
-        "projection_norm": (cx * nx + cy * ny) / working_width_m,
+        # 取绝对值：主轴法向的**符号不是几何量**。principal_axis 返回的方向经
+        # canonical_direction 强制进右半平面（ux>0），这是坐标约定不是几何性质；
+        # 刚体旋转跨过该边界时法向整体反号，有符号投影随之反号，依赖它的候选
+        # 优先方向被悄悄反转。因此契约只暴露**到主轴的无符号距离**——这是真正的
+        # 刚体不变量。想表达"从一端扫到另一端"的候选应当用 distance_norm
+        # （相对当前出口的距离）自然产生蛇形，而不是依赖坐标系的朝向。
+        "axis_offset_norm": abs(cx * nx + cy * ny) / working_width_m,
     }
 
 

@@ -107,9 +107,9 @@ class RouteOrderCorrectnessReviewer:
     """
 
     PROBES: tuple[tuple[dict[str, float], dict[str, float]], ...] = (
-        ({"visited_count": 0.0, "remaining_count": 4.0}, {"distance_norm": 1.0, "projection_norm": 0.5}),
-        ({"visited_count": 1.0, "remaining_count": 3.0}, {"distance_norm": 0.0, "projection_norm": 0.0}),
-        ({"visited_count": 3.0, "remaining_count": 1.0}, {"distance_norm": 2.5, "projection_norm": -0.3}),
+        ({"visited_count": 0.0, "remaining_count": 4.0}, {"distance_norm": 1.0, "axis_offset_norm": 0.5}),
+        ({"visited_count": 1.0, "remaining_count": 3.0}, {"distance_norm": 0.0, "axis_offset_norm": 0.0}),
+        ({"visited_count": 3.0, "remaining_count": 1.0}, {"distance_norm": 2.5, "axis_offset_norm": 0.3}),
     )
 
     def review(self, candidate: ProposalCandidate, function: HeuristicFn) -> ReviewVerdict:
