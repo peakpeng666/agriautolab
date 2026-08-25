@@ -173,8 +173,14 @@ evaluator 必须显式接收 `cell_of_work_index` 或能派生它的 `CellsArtif
   > 勘误：初稿把 `allowed_region` 也说成未定协议参数。实测 `run_pipeline`
   > **无条件**由 `FieldGeometry.from_problem(problem, vehicle).raw_free` 派生它，
   > 它由实现固定、不可经协议配置。因此本条只剩 `ReverseCostSpec` 一个真实耦合，
-  > 论据进一步减弱。若将来要让转弯选择受可作业区影响，需要**先定义**一份
-  > 可配置的 allowed-region 契约，那本身又是一项契约级改动。
+  > 论据进一步减弱。
+  >
+  > 二次勘误：上一版接着写「若将来要让转弯选择受可作业区影响，需先定义可配置的
+  > allowed-region 契约」——**这也不对，是修过头了**。实测 `run_pipeline` 已经把
+  > 派生出的 `raw_free` 传给 `ReedsSheppPathPlanner.run`，后者转交
+  > `_contained_word` 用于挑选被包含的词族。未来的转弯选择器**直接复用这块固定
+  > 且随几何协变的区域即可**，可配置性不是前提。真正需要补的只有 §2.3 的
+  > 派发管线（把它传给新 wire ID），不是一项新的契约级改动。
 
   > 勘误：初稿曾写「`reverse_cost=0` 时所有解析解代价相等、极大时只能选直行」。
   > 两条都不成立——`reverse_length_multiplier` 的约束是 `ge=1.0`，取 0 在本仓库
