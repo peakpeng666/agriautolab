@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -33,32 +34,38 @@ def _ledger_entries() -> list[dict]:
 
 
 def _run_anchor_script(*args: str) -> subprocess.CompletedProcess[str]:
+    # 脚本错误消息含中文：强制子进程 UTF-8 I/O，避免非 UTF-8 locale
+    # （如 Windows GBK 裸机）下父进程严格 UTF-8 解码出现假失败。
     return subprocess.run(
         [sys.executable, str(SCRIPT_PATH), *args],
         capture_output=True,
         text=True,
         encoding="utf-8",
+        env={**os.environ, "PYTHONIOENCODING": "utf-8"},
         cwd=ROOT,
         check=False,
     )
 
 
-def test_ledger_has_exactly_eight_contiguous_entries() -> None:
+def test_ledger_has_at_least_eight_contiguous_entries() -> None:
+    # 账本追加第 9 条（封存性 corrigendum）是计划内工作流：结构测试只钉住
+    # 「index 从 0 连续 + genesis 链接」；条数与链尾时效由 golden tail 哨兵测试
+    # （test_anchor_script_reports_eight_entries_and_golden_tail）单独把守。
     entries = _ledger_entries()
-    assert len(entries) == 8
-    assert [entry["index"] for entry in entries] == list(range(8))
+    assert len(entries) >= 8
+    assert [entry["index"] for entry in entries] == list(range(len(entries)))
     assert entries[0]["previous_hash"] == GENESIS_PREVIOUS_HASH
 
 
 def test_full_chain_recomputation_is_self_consistent() -> None:
-    # 独立复算全链：index、previous_hash 链接、payload、entry_hash 四字段逐条对账。
-    # 改任何一条 payload 的一个字节，下方断言即失败（错误实现下复算失效才会漏过）。
+    # 用与 verify_artifact_chain 相同的权威规则逐条对账；
+    # 规则本身的回归由 hashing/ledger 的单元测试负责。
     previous = GENESIS_PREVIOUS_HASH
     for index, entry in enumerate(_ledger_entries()):
         expected = artifact_chain_entry(index, previous, entry["payload"])
         assert entry == expected
         previous = entry["entry_hash"]
-    verify_artifact_chain(tuple(_ledger_entries()))  # 包内 verify 走同一规则，双保险
+    verify_artifact_chain(tuple(_ledger_entries()))  # 包内 verify 再跑一遍同一规则，交叉核对
 
 
 def test_tampered_payload_breaks_chain_recomputation() -> None:
@@ -103,4 +110,20 @@ def test_anchor_script_fails_closed_on_broken_chain(tmp_path: Path) -> None:
     result = _run_anchor_script("--ledger", str(broken))
     assert result.returncode != 0
     assert "fail-closed" in result.stderr
+    assert "chain_verified" not in result.stdout
+
+
+def test_anchor_script_fails_closed_on_missing_required_key(tmp_path: Path) -> None:
+    # 缺键的合法 JSON 行（无 payload）必须走统一 fail-closed 报告（带行号），
+    # 而不是 KeyError 裸栈。
+    broken = tmp_path / "missing_key.jsonl"
+    broken.write_text(
+        '{"index": 0, "previous_hash": "0000", "entry_hash": "aaaa"}\n',
+        encoding="utf-8",
+    )
+    result = _run_anchor_script("--ledger", str(broken))
+    assert result.returncode != 0
+    assert "fail-closed" in result.stderr
+    assert "缺少必需字段" in result.stderr
+    assert "payload" in result.stderr
     assert "chain_verified" not in result.stdout

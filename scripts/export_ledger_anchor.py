@@ -4,8 +4,8 @@
 读取 ``evidence/block_d/ledger.jsonl``，逐条复算哈希链自洽性（复用
 ``agriautolab.evidence.ledger.verify_artifact_chain`` 的同一规则），向 stdout
 打印每条 ``index -> entry_hash`` 对照表、链尾（最后一条）``entry_hash`` 与
-记录总数。链在任何一处不一致（index 断档、previous_hash 断链、entry_hash
-复算不符）都以非零退出码失败（fail-closed），绝不输出半份锚定材料。
+记录总数。链在任何一处不一致（缺必需字段、index 断档、previous_hash 断链、
+entry_hash 复算不符）都以非零退出码失败（fail-closed），绝不输出半份锚定材料。
 
 本脚本不包含任何写文件调用：``evidence/`` 绝不写回，落盘需求由调用方的
 shell 重定向满足，例如::
@@ -34,10 +34,11 @@ from agriautolab.contracts.errors import EvidenceChainError  # noqa: E402
 from agriautolab.evidence.ledger import verify_artifact_chain  # noqa: E402
 
 DEFAULT_LEDGER = REPO_ROOT / "evidence" / "block_d" / "ledger.jsonl"
+REQUIRED_KEYS = ("index", "previous_hash", "payload", "entry_hash")
 
 
 def load_entries(ledger_path: Path) -> tuple[dict, ...]:
-    """只读解析 JSONL；空行忽略，结构合法性交给 verify_artifact_chain 判定。"""
+    """只读解析 JSONL；空行忽略，缺必需字段的行就地拒绝，链规则交给 verify 判定。"""
     entries: list[dict] = []
     with ledger_path.open("r", encoding="utf-8") as handle:  # 唯一的文件访问，只读
         for line_number, line in enumerate(handle, start=1):
@@ -49,6 +50,9 @@ def load_entries(ledger_path: Path) -> tuple[dict, ...]:
                 raise ValueError(f"{ledger_path}:{line_number}: 非法 JSON 行：{error}") from error
             if not isinstance(entry, dict):
                 raise ValueError(f"{ledger_path}:{line_number}: 条目必须是 JSON 对象")
+            missing = [key for key in REQUIRED_KEYS if key not in entry]
+            if missing:
+                raise ValueError(f"{ledger_path}:{line_number}: 缺少必需字段：{', '.join(missing)}")
             entries.append(entry)
     if not entries:
         raise ValueError(f"{ledger_path}: 空账本，没有可锚定的链尾")
