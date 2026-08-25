@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/peakpeng666/agriautolab/actions/workflows/ci.yml/badge.svg)](https://github.com/peakpeng666/agriautolab/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
+<!-- DOI badge placeholder: replace after Zenodo archival release -->
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.XXXXXXX-lightgrey)](https://doi.org/10.5281/zenodo.XXXXXXX)
 
 面向农业覆盖路径规划（Coverage Path Planning, CPP）的**研究级基准、分析与算法设计实验框架**。
 当前农业主线以 13 个冻结 pipeline configuration 在 235 块真实农田上完成
@@ -108,6 +110,11 @@ D1 训练折在任何推荐器训练之前落盘并进入独立 Block D 哈希�
 
 ## 许可
 
-代码与派生数据的许可声明待数据集上游（Zenodo 记录内 LICENSE 文件与
-元数据不一致）裁定后挂牌，裁定前按更严一方（CC BY-SA）行事：
+本仓库代码以 Apache License 2.0 发布：[LICENSE](LICENSE)；引用与归档元数据见
+[CITATION.cff](CITATION.cff) 与 [.zenodo.json](.zenodo.json)，证据链外部锚定见
+[docs/EVIDENCE_CHAIN.md](docs/EVIDENCE_CHAIN.md)。
+
+上游数据集（Fields2Benchmark）的许可状态仍待裁定（Zenodo 记录内 LICENSE
+文件与元数据不一致）：数据集派生物在裁定前继续按更严一方（CC BY-SA）行事，
+裁定依据与原文摘录见
 [docs/refs/licenses/fields2benchmark.md](docs/refs/licenses/fields2benchmark.md)。
