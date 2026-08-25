@@ -19,13 +19,12 @@ from typing import Mapping, Sequence
 import numpy as np
 
 from agriautolab.agent.gates import (
-    GateOutcome, _candidate_angle, candidate_config, contract_gate, determinism_gate,
-    invariance_gate, validation_gate,
+    GateOutcome, contract_gate, determinism_gate, invariance_gate, validation_gate,
 )
 from agriautolab.agent.ledger import EvolutionLedger, EvolutionRecord, GateRecord
 from agriautolab.agent.proposer import ProposalContext, ProposalCandidate
-from agriautolab.agent.reviewer import DEFAULT_REVIEWERS, AdversarialReviewer, final_refuted
-from agriautolab.contracts.enums import CoverageStage
+from agriautolab.agent.reviewer import AdversarialReviewer, final_refuted
+from agriautolab.agent.slots import SLOTS, CandidateSlot
 from agriautolab.contracts.problem import CoverageProblem
 from agriautolab.contracts.protocol import BenchmarkProtocol
 from agriautolab.contracts.vehicle import VehicleSpec
@@ -79,10 +78,10 @@ def _pool_points(instances: Sequence[Instance], pool: Sequence[PipelineConfig],
 
 
 def _candidate_points(function, instances: Sequence[Instance],
-                      protocol: BenchmarkProtocol) -> list[ObjectiveVector | None]:
+                      protocol: BenchmarkProtocol, slot: CandidateSlot) -> list[ObjectiveVector | None]:
     return [
         run_pipeline(instance.problem, instance.vehicle,
-                     candidate_config(_candidate_angle(function, instance.problem, instance.vehicle)),
+                     slot.build_config(function, instance.problem, instance.vehicle),
                      protocol).objectives
         for instance in instances
     ]
@@ -115,13 +114,23 @@ def evolve_pool(
     rng: np.random.Generator,
     rounds: int,
     keep_rule: KeepRule = KeepRule.HYPERVOLUME_DELTA,
-    reviewers: tuple[AdversarialReviewer, ...] = DEFAULT_REVIEWERS,
+    slot: str = "swath_angle",
+    reviewers: tuple[AdversarialReviewer, ...] | None = None,
 ) -> tuple[EvolutionLedger, tuple[KeptCandidate, ...]]:
-    """演化循环主体。返回（账本, 保留候选）。失败候选照记账——只记成功就是发表偏倚。"""
+    """演化循环主体。返回（账本, 保留候选）。失败候选照记账——只记成功就是发表偏倚。
+
+    slot 是槽位 id（SLOTS 注册表的键）：闸门语义、复核器集与提示词模板都按它
+    分派；未登记的 id 当场 ValueError（fail-closed），不静默回退默认槽位。
+    reviewers 缺省用槽位自带的复核器集，显式传参可覆盖。
+    """
     if rounds <= 0:
         raise ValueError("rounds 必须为正")
     if not instances:
         raise ValueError("instances 不能为空")
+    if slot not in SLOTS:
+        raise ValueError(f"未知候选槽位 id：{slot!r}（已登记：{tuple(sorted(SLOTS))}）")
+    candidate_slot = SLOTS[slot]
+    active_reviewers = candidate_slot.reviewers if reviewers is None else reviewers
     ledger = EvolutionLedger()
     memo = StageMemo()
     pool_points = _pool_points(instances, base_pool, protocol, memo)
@@ -134,25 +143,26 @@ def evolve_pool(
 
     for round_index in range(rounds):
         context = ProposalContext(
-            stage=CoverageStage.SWATH,
+            stage=candidate_slot.stage,
             round_index=round_index,
             pool_config_ids=tuple(sorted(
                 [config.config_id() for config in base_pool] + list(kept_extra.keys())
             )),
+            slot_id=slot,
         )
         proposer_rng = np.random.default_rng([master_seed, round_index, 0])
         gate_rng = np.random.default_rng([master_seed, round_index, 1])
-        candidate: ProposalCandidate = proposer.propose(stage=CoverageStage.SWATH, context=context, rng=proposer_rng)
+        candidate: ProposalCandidate = proposer.propose(stage=candidate_slot.stage, context=context, rng=proposer_rng)
         identity = candidate_identity(candidate)
 
-        function, contract_outcome = contract_gate(candidate.source_code)
+        function, contract_outcome = contract_gate(candidate.source_code, slot=candidate_slot)
         gates: list[GateOutcome] = [contract_outcome]
         if function is not None:
             # 探针按 problem_id 稳定选取：候选晋升不得依赖实例的输入顺序
             probe = min(instances, key=lambda item: item.problem.problem_id)
-            gates.append(validation_gate(function, probe.problem, probe.vehicle, protocol))
-            gates.append(determinism_gate(function, probe.problem, probe.vehicle, protocol))
-            gates.append(invariance_gate(function, probe.problem, probe.vehicle, protocol, gate_rng))
+            gates.append(validation_gate(function, probe.problem, probe.vehicle, protocol, slot=candidate_slot))
+            gates.append(determinism_gate(function, probe.problem, probe.vehicle, protocol, slot=candidate_slot))
+            gates.append(invariance_gate(function, probe.problem, probe.vehicle, protocol, gate_rng, slot=candidate_slot))
         all_passed = all(outcome.passed for outcome in gates)
 
         review_refuted: bool | None = None
@@ -160,11 +170,11 @@ def evolve_pool(
         delta: float | None = None
         was_kept = False
         if all_passed and function is not None:
-            verdicts = tuple(reviewer.review(candidate, function) for reviewer in reviewers)
+            verdicts = tuple(reviewer.review(candidate, function) for reviewer in active_reviewers)
             review_refuted = final_refuted(verdicts)
             review_reasons = tuple(reason for verdict in verdicts for reason in verdict.reasons)
             if not review_refuted and identity not in kept_extra:
-                objectives = _candidate_points(function, instances, protocol)
+                objectives = _candidate_points(function, instances, protocol, candidate_slot)
                 # 基线 = 基础池 + 已保留候选（不含本候选）：ΔHV 度量「加入本候选」
                 # 的真实增量。曾把已含本候选的合并池当基线传入，导致恒为 0、
                 # 候选永不可能晋升——真值测试已钉住。
@@ -183,6 +193,7 @@ def evolve_pool(
             round_index=round_index,
             algorithm_id=candidate.algorithm_id,
             proposal_hash=identity,
+            slot_id=slot,
             compiled=function is not None,
             gates=tuple(GateRecord(gate=o.gate, passed=o.passed, detail=o.detail) for o in gates),
             review_refuted=review_refuted,

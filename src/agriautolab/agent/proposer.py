@@ -7,6 +7,9 @@
 返回相对地块 PCA 主轴的扫掠角偏移。特征是旋转不变的（features/invariance.py），
 偏移量因此按构造旋转不变——这不变性由第四道闸（invariance gate）强制兑现，
 不靠候选代码自觉。
+
+槽位注册表（agent/slots.py）把每个槽位的契约函数名、提示词模板与 mock 候选
+清单绑定在同一个 slot_id 下；本模块按 ProposalContext.slot_id 分派。
 """
 
 from __future__ import annotations
@@ -24,6 +27,7 @@ class ProposalContext:
     stage: CoverageStage
     round_index: int
     pool_config_ids: tuple[str, ...]
+    slot_id: str = "swath_angle"
 
 
 @dataclass(frozen=True)
@@ -78,13 +82,20 @@ MOCK_CANDIDATES: tuple[ProposalCandidate, ...] = (
     ),
 )
 
+# 每个槽位一份确定性候选清单：MockProposer 按 ProposalContext.slot_id 分派。
+# 未知 slot_id 直接 KeyError（fail-closed），不静默回退。
+MOCK_CANDIDATES_BY_SLOT: dict[str, tuple[ProposalCandidate, ...]] = {
+    "swath_angle": MOCK_CANDIDATES,
+}
+
 
 class MockProposer:
     """确定性 mock：从写死清单里按注入的 rng 取，序列可复现。"""
 
     def propose(self, *, stage: CoverageStage, context: ProposalContext, rng: np.random.Generator) -> ProposalCandidate:
-        index = int(rng.integers(0, len(MOCK_CANDIDATES)))
-        return MOCK_CANDIDATES[index]
+        candidates = MOCK_CANDIDATES_BY_SLOT[context.slot_id]
+        index = int(rng.integers(0, len(candidates)))
+        return candidates[index]
 
 
 class ModelClient(Protocol):
@@ -92,7 +103,8 @@ class ModelClient(Protocol):
         ...
 
 
-PROMPT_TEMPLATE = """你在一个农业覆盖路径规划的算法演化循环里担任启发式提议者。
+PROMPT_TEMPLATES: dict[str, str] = {
+    "swath_angle": """你在一个农业覆盖路径规划的算法演化循环里担任启发式提议者。
 
 阶段：{stage}
 当前池子的配置：{pool}
@@ -112,7 +124,11 @@ row_angle_vs_principal, turning_ratio, swath_count_at_minwidth。
 可用内建：math, len, range, min, max, abs, sum, enumerate, sorted, tuple, list, float, int。
 禁止 import、open、eval、exec、双下划线属性。代码会在受限沙箱里执行并过四道闸。
 目标：让 Pareto 前沿的超体积增大（造互补性，不是造单项冠军）。
-"""
+""",
+}
+
+# 单槽位时代的公开名：swath 槽位提示词模板的兼容别名（PROMPT_TEMPLATES 的值本体）。
+PROMPT_TEMPLATE = PROMPT_TEMPLATES["swath_angle"]
 
 
 class LLMProposer:
@@ -126,7 +142,7 @@ class LLMProposer:
         self._client = client
 
     def build_prompt(self, *, stage: CoverageStage, context: ProposalContext) -> str:
-        return PROMPT_TEMPLATE.format(
+        return PROMPT_TEMPLATES[context.slot_id].format(
             stage=stage.value,
             pool=", ".join(context.pool_config_ids),
             round_index=context.round_index,
