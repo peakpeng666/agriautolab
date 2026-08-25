@@ -1,0 +1,310 @@
+# AGRIPLAN-AHD-002 预注册（Study-002：自动启发式设计的 confirmatory 实验）
+# ================================================================================
+#
+# 草案（DRAFT）。本文件**不封存**——必须经过人类评审后由所有者执行
+# `scripts/seal_preregistration.py` 才会生成 seal.json。在评审完成前
+# 本文件不构成研究承诺；任何"按 AGRIPLAN-AHD-002 跑出来的"中间结果都
+# 不得用于论文主张。
+#
+# 起草日期：2026-08-25
+# 起草者：M3 任务 5（worktree docs/study-002-prereg-draft）
+# 起草时实测：base_commit = d41aa152d62cba8afcd896434bd7861bfab4a7d4
+#              (origin/main @ peakpeng666/agriautolab)
+#
+# 关联文档（仅引用，不修改）：
+# - prereg/AGRIPLAN-PARETO-001.yaml                 骨架与封口纪律参考
+# - prereg/AGRIPLAN-PARETO-001.amendment-05.md      偏好网格、H2/H3 纪律
+# - docs/TURNING_POINT.md                           研究序列与 EoH-S 引用
+# - docs/HEADLAND_TURN_SLOT_DESIGN.md               headland_turn 不进
+#                                                   Study-002 的判据来源
+# - evidence/v7/cv_assignment.json                  训练/留出划分起点
+# - evidence/v7/holdout_seal.json                   Study-001 留出集（已消费）
+# - src/agriautolab/agent/ledger.py                evaluations_used 字段契约
+#                                                   （任务 1 提交 acffd9c，
+#                                                   base_commit 中尚未含）
+#
+# ================================================================================
+
+study_id: AGRIPLAN-AHD-002
+registered_before_analysis: true
+base_commit: d41aa152d62cba8afcd896434bd7861bfab4a7d4   # 起草时实测的 origin/main
+
+# ----------------------------------------------------------------------------
+# design
+# ----------------------------------------------------------------------------
+design:
+  claim: 在冻结的三目标 Pareto 基准上，**演化发现的启发式**（LLM 臂或
+    非 LLM 演化臂）在**同等 pipeline 评估预算**下，把训练折前沿的 ΔHV
+    推得比"随机启发式采样"与"冻结自然基线"更高。可证伪：四臂同预算下，
+    任何一对排序若 LLM 臂**不**优于 random 臂，宣称即失败。
+  arms:
+    confirmatory_family:   # Holm-Bonferroni 校正同族（4 选 3 = 3 对比较）
+      - id: LLM_guided
+        description: LLM 后端生成候选（model_id / temperature / top_p / seed
+          全入 evidence；replay_candidate 离线重放验证）
+        backends: 任务 4 的 LLMProposer + CompletionResult 入账
+      - id: non_llm_evolution
+        description: 同一候选空间与四闸，提议算子**非 LLM**（随机扰动 / 局部
+          搜索）；用于把"LLM 本身的语义先验"与"演化循环本身的搜索力"分开
+      - id: random_search
+        description: 同一候选空间**均匀采样**（每步从槽位的合法源码模板
+          池中按 RNG 取；不用 LLM、也不用局部搜索）
+      - id: frozen_natural_baseline
+        description: configs/corpus_13.json 的 13 个冻结配置—— Study-001
+          已封存的研究对象，不参与演化
+    reference_layer:        # 单独报告，不进 Holm 家族
+      - id: EoH_S
+        description: EoH-S（AAAI 2026，arXiv 2508.03082），TURNING_POINT
+          §三第 6 步点名要作直接基线；不同实现栈与候选空间，混入 Holm
+          家族会使多重比较校正失去意义。**reference 层单独报告即是
+          "EoH-S 必须作直接基线" 的兑现方式**。
+  budget:
+    # 唯一口径：pipeline 评估次数。引用 ledger.py 的 evaluations_used
+    # 字段 docstring 原文："记录 append 时刻的全程累计真实 run_pipeline
+    # 调用数（含轮前基线池 I×P、闸门 1+2+0、候选逐实例评估）"。
+    formula: 每臂预算 = I×P + Σ_round( 3 + [I if evaluated] )
+      # 3 = validation(1) + determinism(2)，0 = invariance(0) + contract(0)
+      # [I if evaluated] = 候选通过全部闸门与复核时按实例逐次评估
+    instance_count_I: 165
+      # 来源：evidence/v7/cv_assignment.json（assignment_hash=bcf237a782e9…，
+      # 235 总数 - 70 留出 = 165 训练；与 D1 spec 一致）
+    pool_config_count_P: 13
+      # 来源：configs/corpus_13.json；13 个冻结 pipeline 配置
+    rounds_R: 30
+      # 与任务 1 anytim_curve 在 corpus 65 105 实例级别跑出过的可观测
+      # ΔHV 拐点对齐；30 轮后 running best ΔHV 经验上已饱和（待
+      # D-Replication 阶段跑任务 1 baseline 跑出硬数字后回到此处
+      # 校对；任何校对偏离此处 30% 以上 → 升 V2 预注册）
+    baseline_pool_evaluations: 165 * 13 = 2145
+      # I×P：每臂一次性消耗，与轮循环前
+    per_round_min: 3   # 闸门最少 3 次（candidate 拒时仅 0）
+    per_round_max: 3 + 165 = 168   # 闸门 + 候选逐实例评估
+    per_arm_total_min: 2145 + 30*3 = 2235   # 全 candidate 拒的退化下界
+    per_arm_total_max: 2145 + 30*168 = 7185  # 全 keep 的退化上界
+    per_arm_total_expected: 2145 + 30*(3 + 165*p) where p=候选 keep 率
+      # p 由任务 1 baseline 实测后写死；起草时用 p≈0.05 的保守估计
+      # 得 2145 + 30*(3 + 165*0.05) = 2145 + 30*11.25 = 2482.5
+      # 复核：Study-001 corpus 61100 次运行 / 4 臂 ≈ 15275 次/臂级别；
+      # 2482 < 15275，预算可行
+    budget_checkpoints: [0.25, 0.50, 1.00]   # 三点切点；统计检验仅在此三点做
+    alignment_discipline:
+      - NOT wall-clock 对齐；NOT 轮数对齐
+      - 任何"按时间对齐"或"按 R 对齐"的报告都被视为违反本预注册，
+        与 Study-001 的"田级聚合不消费伪重复"同等级的纪律违反
+  anytime:
+    surface: anytime_curve(records) -> tuple[(evaluations_used, cumulative_best_delta), ...]
+      # 任务 1 实现：src/agriautolab/agent/ledger.py::anytime_curve
+      # 口径：CO CO/IOHprofiler 式"评估次数 → 当前最优 ΔHV"
+    test_points: 评估检验**仅**在 budget_checkpoints 上做
+      # 避免事后挑点（p-hacking）；检验对象 = checkpoint 处每臂的
+      # cumulative_best_delta 分布
+    primary_test: 田级 Wilcoxon 符号秩检验（每块训练田上对臂 A 与臂 B 取
+      cumulative_best_delta 差值，跨田配对）
+  slots:
+    - swath_angle     # 必含——Study-001 已验证可演化的单槽位
+    - route_order     # 必含——任务 3 实现的双槽位证据
+    exclude:
+      - headland_turn  # 见 docs/HEADLAND_TURN_SLOT_DESIGN.md §5.3：
+                       # 评估最贵 + 解析最短词主导 + 与 reverse_cost
+                       # / allowed_region 协议纠缠 + 被前两槽位隐式
+                       # 决定。建议砍出 Study-002，列为 Study-003 候选。
+  holdout:
+    conflict_with_study_001: |
+      Study-001 的 70 块留出田已在 D7 一次性消费（evidence/v7/holdout_seal.json，
+      seal_hash=be973254f805ebbe14539fef6174707d3537423c9f9cf30addbb530992e9b91f，
+      seed=20260821）。它们**不能**被本研究重新当作 pristine confirmatory
+      holdout——任何 D7 后对留出集的查询都会污染留出集性质。
+    new_holdout: |
+      从 evidence/v7/cv_assignment.json 的训练侧 165 块田中，按
+      `SHA256(seed=20260823, field_id)` 稳定伪随机排序并 round-robin 分
+      5 折，取其中**一折**（33 块）作 Study-002 留出集，余 132 块作
+      Study-002 训练集。
+    genesis_sealing: |
+      新留出集的 field_id 列表内容哈希作为新 ledger genesis 封存（仅一次）。
+      与 Study-001 留出集 70 块的交集必须**为空**（构造保证：165 训练
+      侧与 70 留出侧互斥），但**与训练侧**的并集恰好是 Study-001 训练侧
+      165 块——这是预期的，不是错。
+    seed: 20260823
+  provenance:
+    fields_per_call: [model_id, temperature, top_p, seed, prompt_tokens,
+                      completion_tokens, cost, latency_ms, request_id]
+      # 任务 4 实现：CompletionResult.to_dict() 十一字段中的八项入证据链
+      # （model_id/prompt/response 是 prompt 本身，不重复入账；其余十一
+      # 字段定义见任务 4 spec）
+    replay_verification: |
+      任务 4 的 replay_candidate(round_index, CompletionResult) 离线重建
+      ProposalCandidate，断言
+      candidate_identity(replay) == candidate_identity(在线候选) 逐位
+      相同。identity 来自 content_hash({algorithm_id, source_code,
+      description})，provenance **不**进 identity。
+    chain: provenance per call → evolve_pool per round → EvolutionRecord.
+      evaluations_used 字段（任务 1）→ evidence ledger genesis 节点。
+
+# ----------------------------------------------------------------------------
+# hypotheses
+# ----------------------------------------------------------------------------
+hypotheses:
+  H_A:
+    statement: 在 budget_checkpoints[2] (100%) 处，LLM_guided 臂的田级
+      cumulative_best_delta 中位数**严格大于** random_search 臂
+    test: 配对 Wilcoxon 符号秩检验（LLM 减 random 的差值，132 训练田
+      减去 1 fold 留出后的训练侧）
+    sample_size: 132 训练田
+    alpha: 0.01
+    failure: LLM 减 random 的中位数 ≤ 0（无差异或更差），或 p ≥ 0.01
+  H_B:
+    statement: 在 100% checkpoint 处，LLM_guided 臂的田级
+      cumulative_best_delta 中位数**严格大于** non_llm_evolution 臂
+      （剥离 LLM 语义先验的影响——LLM 优于演化但演化优于随机的论证
+      才能稳固）
+    test: 配对 Wilcoxon 符号秩检验
+    sample_size: 132
+    alpha: 0.01
+    failure: LLM 减 non-LLM-evolution 的中位数 ≤ 0，或 p ≥ 0.01
+  H_C:
+    statement: 在 100% checkpoint 处，non_llm_evolution 臂的田级
+      cumulative_best_delta 中位数**严格大于** frozen_natural_baseline
+      臂（演化在双槽位上能找到自然池之外的互补启发式）
+    test: 配对 Wilcoxon 符号秩检验
+    sample_size: 132
+    alpha: 0.01
+    failure: 演化减自然基线的中位数 ≤ 0，或 p ≥ 0.01
+  # 三条假设共同支持主主张："LLM 引导的演化能在冻结自然基线之外找到
+  # 互补启发式，且 LLM 语义先验对此有边际贡献"。
+  # 【允许阴性结论】：Study-001 的 H3 是预注册阴性结果（H3 未获支持，
+  # D7 一次性消费），这是项目的优点不是污点；本研究允许任何一条 H_X
+  # 触发 failure 判据——失败同样构成有信息量的预注册结论。
+
+# ----------------------------------------------------------------------------
+# multiple_comparison
+# ----------------------------------------------------------------------------
+multiple_comparison:
+  correction: Holm-Bonferroni
+  family: [H_A, H_B, H_C]   # 3 条；EoH_S reference 层不参与校正
+  alpha: 0.01
+  stepwise_thresholds:
+    # 3 条按 p 值升序排，逐步比较 alpha/(m-k+1)
+    k=1: 0.01 / 3 = 0.00333
+    k=2: 0.01 / 2 = 0.00500
+    k=3: 0.01 / 1 = 0.01000
+  rule: |
+    按 p 值升序排序 (p_(1) ≤ p_(2) ≤ p_(3))；找到最小 k 使 p_(k) >
+    alpha/(m-k+1)，则该 k 之前（含）全部拒绝。EoH_S 的报告**不**进入
+    此 Holm 流程；它单独作为"方法学邻居的实测对比"以 median [IQR]
+    表 + 散点呈现，不参与 confirmatory 决定。
+
+# ----------------------------------------------------------------------------
+# independent_evaluator
+# ----------------------------------------------------------------------------
+independent_evaluator:
+  delta_HV:
+    method: 对每块田 f、每条臂 a、每 checkpoint c：取 cumulative_best_delta
+      序列在 c 对应 evaluations_used 处的值；不重用 evolve 循环的中间
+      Hypervolume 累计，**重新**对 (frontier(pool) ∪ {kept_candidate}) 与
+      frontier(pool) 取差。
+    note: hypervolume_delta（evolve.py 模块内）本身已经按实例独立
+      复算（"基线 = 基础池 + 已保留候选（不含本候选）"的注释明示），
+      独立 evaluator 复用该函数但**不**在账本哈希链上做差——账本里
+      的 cumulative_best_delta 是 runtime 写的，独立复算仅在检验时用。
+  route_evaluator:
+    method: 对每条被演化的 route_order 候选（任务 3 的 ranked_swath_order
+      planner），evaluate_route_order(swaths, visit_order, start_position)
+      独立复算总转移距离（不复用构造过程的任何累计值——构造过程只
+      在问题侧累积 visited set，不累计距离）。
+    failure: 独立 evaluator 与构造过程差值 > 1e-9 m 时报 ValueError
+      （与 TransferBreakdown.turn_count 计数对账）；多 cell 田上
+      必须同时通过 turn_count + inter_cell_count 完整性检查
+      （metrics/path.py::TransferBreakdown 的完备性守门）
+  invariance_replay:
+    method: 对每个新槽位（route_order），8 组随机刚体变换下重放
+      候选的 invariance 闸（任务 3 路由槽位版的 invariance_check
+      8×3 uniform 模式，与 SwathAngleSlot 一致）；不通过即候选
+      整体不计入 confirmatory 分析。
+
+# ----------------------------------------------------------------------------
+# random_seeds
+# ----------------------------------------------------------------------------
+random_seeds:
+  evolution_master_seed: 20260825
+    # evolve_pool 的 master_rng.integers 派生所有子流；同一 master →
+    # 同一轨迹（tests/agent/test_agent.py::test_evolution_with_mock_
+    # proposer_is_bitwise_reproducible 已钉）
+  invariance_rng_seed: 20260826
+    # 8×3 uniform 刚体变换的派生种子；与 master 解耦以便复现独立闸门
+  reviewer_rng_seed: 20260827
+  perm_test_seed: 20260828
+    # Holm 检验的配对 Wilcoxon 不需要置换种子（Wilcoxon 是符号秩），
+    # 但 H_C 若需附加敏感分析（如 Mann-Whitney 置换）也用此种子
+  holdout_split_seed: 20260823
+    # 新留出集划分的 SHA256 种子（见 design.holdout.new_holdout）
+  llm_temperature: 0.2
+  llm_top_p: 0.95
+  llm_seed_per_call: 内容随 prompt 与 round_index 派生（任务 4 实现）；
+    具体公式：seed = SHA256(master_seed || round_index)[:8] 截为 int
+
+# ----------------------------------------------------------------------------
+# non_goals
+# ----------------------------------------------------------------------------
+non_goals:
+  - 跨作物外推（小麦 → 玉米 / 水稻等）
+  - 真实农机部署（机具控制接口、田间实测）
+  - 能耗第四目标（USV 功率-边权方法移植，列为 Study-003+ 候选）
+  - 多机 MAPF / 课程 RL / 扩散轨迹生成（同上）
+  - headland_turn 槽位（见 docs/HEADLAND_TURN_SLOT_DESIGN.md）
+  - 修改 configs/corpus_13.json / evidence/v7/* / prereg/AGRIPLAN-PARETO-001*
+  - EoH_S 的开源复现（仅作 reference 层引用，不重训其源码）
+  - 重新打开 Study-001 留出集（D7 已一次性消费——任何"补跑 H3" /
+    "用 70 块留出集做 H_X 验证"都视同违规）
+
+# ----------------------------------------------------------------------------
+# wording_discipline
+# ----------------------------------------------------------------------------
+wording_discipline:
+  allowed: 仿真协议 / 冻结基准 / 评估预算 / ΔHV 增量 / 互补性 / 田级聚合
+  forbidden:
+    - 因果 / 普适 / "在真实地块上优于..."（仿真外推）
+    - "首次" / "首个"（已被 TURNING_POINT §二调研报告判定为需
+      重新核查的"空白"判断；论文定稿前再次文献检索）
+    - "AGI 启发" / "通用人工智能"类不当类比
+  rule: 受控仿真协议下结论不外推；本研究的所有主张仅在
+    evidence/v7 语料 + Study-002 新留出集范围内有效，不暗示因果或
+    对其他域的可迁移性。
+
+# ----------------------------------------------------------------------------
+# replication
+# ----------------------------------------------------------------------------
+replication:
+  determinism: |
+    演化账本逐位可复现（tests/agent/test_agent.py::
+    test_evolution_with_mock_proposer_is_bitwise_reproducible，
+    同 seed 跑两次账本 JSON 串接逐位相等）；任务 4 加 LLM provenance
+    后 provenance 字段也是同 seed 逐位相等（replay_candidate 的构造
+    共享保证）。
+  frozen_baselines:
+    - Dubins 解析真值（kinematics/dubins.py 的六字闭式解 + 正演闭合测试）
+    - BCD cell 数（coverage.stages.boustrophedon）
+    - 超体积解析真值（pareto.hypervolume.analytic_reference，进协议哈希）
+    - 特征不变性（features/invariance.py 的 FEATURE_INVARIANCE 表驱动）
+    - TransferBreakdown 完备性（metrics/path.py::TransferBreakdown.other_m
+      哨兵，非零即抛）
+  seal_method: scripts/seal_preregistration.py（人类评审完成后由所有者执行）
+  amendment_policy: 任何修改必须走新的 study 注册；预注册本身**不**
+    允许修正案（与 AGRIPLAN-PARETO-001 的"修正案 02..05"纪律不同——
+    本研究承诺"一次封口"——这是简化，不是降级；学习曲线已走完）
+
+# ----------------------------------------------------------------------------
+# budget 公式的硬数字自检（写死前实测推导）
+# ----------------------------------------------------------------------------
+# I=165、P=13、R=30
+# baseline_pool_evaluations = 165 * 13 = 2145
+# per_round_min = 3（candidate 被 contract 拒：仅 contract 0 + invariance 0）
+# per_round_max = 3 + 165 = 168（candidate 全过闸且被评估：3 闸门 + 165 逐实例）
+# per_arm_total_min = 2145 + 30*3 = 2235
+# per_arm_total_max = 2145 + 30*168 = 7185
+# per_arm_total_expected @ p_keep=0.05 = 2145 + 30*(3 + 165*0.05)
+#                              = 2145 + 30*11.25 = 2482.5
+# 4 臂 confirmatory = 4 * 2482.5 ≈ 9930 次评估
+# + 1 reference EoH_S 臂（不参与 Holm）≈ 2482 次评估
+# 总 ≈ 12412 次评估
+# Study-001 corpus = 61100 次运行；本研究总预算约其 20%——预算可行。
+# 若实测 p_keep 偏离 0.05 显著（>3× 或 <0.3×），回到此处升 V2 预注册。
