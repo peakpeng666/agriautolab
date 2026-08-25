@@ -231,25 +231,18 @@ class RouteOrderSlot:
             raise ValueError(f"候选返回非有限分数：{value!r}")
         return float(value)
 
-    def build_config(self, function: HeuristicFn, problem: CoverageProblem,
-                     vehicle: VehicleSpec) -> PipelineConfig:
-        """直接调上游阶段类拿 swaths，用 construct_solution 求访问序。
+    def _geometry_for(self, problem: CoverageProblem, vehicle: VehicleSpec):
+        """跑上游三阶段，返回 (swath_id -> 端点, 地块质心, 主轴法向)。
 
-        关键纪律：禁止调用 run_pipeline——会污染任务 1 的评估计数。
-        候选选择通过 params["rank:<swath_id>"] 烘焙；rank = 访问序号。
+        关键纪律：禁止调用 run_pipeline——会污染 anytime 评估计数。
         """
         from agriautolab.algorithms.headland.uniform_headland import ConstantWidthHeadland
         from agriautolab.coverage.stages.decomposition import NoDecomposition
         from agriautolab.algorithms.swath.principal_axis import PrincipalAxisSwathGenerator
-        from agriautolab.algorithms.route.constructive_order import (
-            RouteOrderProblem, endpoints_of, project_state,
-        )
+        from agriautolab.algorithms.route.constructive_order import endpoints_of
         from agriautolab.geometry.validate import polygon_from_spec
         from agriautolab.geometry.robust import robust_union
         from agriautolab.algorithms.swath.principal_axis import principal_axis
-        from agriautolab.optimization.constructive import (
-            construct_solution,
-        )
 
         # 上游分解必须与返回的 PipelineConfig 声明的 decomposition 一致。
         # 曾用 BoustrophedonDecomposition 烘焙 rank 却返回 no_decomposition：
@@ -264,7 +257,7 @@ class RouteOrderSlot:
             mains, working_width_m=vehicle.working_width_m, problem=problem,
         )
         if not swaths.swaths:
-            raise ValueError("build_config: 参考田未产生条带，构造空访问序失败")
+            raise ValueError("_geometry_for: 参考田未产生条带，构造空访问序失败")
 
         # 主轴法向（旋转不变键的来源）
         field = polygon_from_spec(problem.field)
@@ -274,40 +267,61 @@ class RouteOrderSlot:
         scale_hint = max(field.bounds[2] - field.bounds[0], field.bounds[3] - field.bounds[1], 1.0)
         free = field.difference(robust_union(obstacles, scale_hint=scale_hint)) if obstacles else field
         ux, uy = principal_axis(free if free.geom_type == "Polygon" else free.convex_hull)
-        # 地块质心 = 简单算术（不调 shapely）
-        ext = problem.field.exterior
-        cx = sum(p.x for p in ext) / len(ext)
-        cy = sum(p.y for p in ext) / len(ext)
 
-        # 几何由构造函数必填注入：端点原样进去，进入/离开哪一端由访问序奇偶在
-        # RouteOrderProblem 内部决定（REVERSE 从 points[0] 出，不是 points[-1]）。
+        # 质心用真正的多边形质心，与主轴取自同一 free 几何。
+        # 曾用外环顶点算术平均：闭合点被重复计数，且插入共线冗余顶点就会改变结果
+        # ——60×40 矩形写成 (0,0)…(0,0) 时得 (24,16) 而非 (30,20)。该值同时是
+        # distance_norm 的初始出口与 projection_norm 的原点，因此等价的多边形
+        # 编码会烘焙出不同的 rank。test_field_centroid_is_encoding_independent 钉住。
+        centroid_point = free.centroid
+        cx, cy = float(centroid_point.x), float(centroid_point.y)
+
+        # 端点原样返回：进入/离开哪一端由访问序奇偶在 RouteOrderProblem 内部决定
+        # （REVERSE 从 points[0] 出，不是 points[-1]）。
+        endpoints = {s.swath_id: endpoints_of(s) for s in swaths.swaths}
+        return endpoints, (cx, cy), (-uy, ux)   # 主轴旋转 90° 得法向
+
+    def _plan(self, function: HeuristicFn, problem: CoverageProblem,
+              vehicle: VehicleSpec) -> tuple[str, ...]:
+        """上游几何 + 候选决策 → 访问序。"""
+        endpoints, centroid, normal = self._geometry_for(problem, vehicle)
+        return self._order_for(function, endpoints, vehicle=vehicle,
+                               centroid=centroid, normal=normal)
+
+    @staticmethod
+    def _order_for(function: HeuristicFn, endpoints, *, vehicle: VehicleSpec,
+                   centroid, normal) -> tuple[str, ...]:
+        """给定条带端点几何，直接求候选的访问序（不经过上游生成器）。
+
+        `invariance_check` 用它把候选行为与 swath 生成器的行为**隔离**开，
+        理由见该方法的 docstring。
+        """
+        from agriautolab.algorithms.route.constructive_order import (
+            RouteOrderProblem, project_state,
+        )
+        from agriautolab.optimization.constructive import construct_solution
+
         problem_obj = RouteOrderProblem(
-            {s.swath_id: endpoints_of(s) for s in swaths.swaths},
+            endpoints,
             min_turning_radius_m=vehicle.min_turning_radius_m,
             working_width_m=vehicle.working_width_m,
-            field_centroid=(cx, cy),
-            principal_normal=(-uy, ux),  # 旋转 90° 得法向
+            field_centroid=centroid,
+            principal_normal=normal,
         )
-        total_swath_count = len(swaths.swaths)
+        total = len(endpoints)
 
-        # 构造沙箱评分函数：state, candidate -> float，调用槽位的实际候选
-        candidate_fn = function
-
-        class _SandboxHeuristic:
+        class _H:
             heuristic_id: str = "candidate"
 
             def score(self, state, action) -> float:
-                # state 必须先投影成 Mapping 再交给候选：construct_solution 传进来的是
-                # 原始 tuple[str, ...]，而契约与 prompt 模板向候选承诺的是
-                # {"visited_count", "remaining_count"}。不投影则任何用 state.get(...)
-                # 的候选都会在此抛异常 → ConstructionError → 被 validation 闸淘汰，
-                # 槽位静默退化成 action-only 启发式。
-                return float(candidate_fn(
-                    project_state(state, total_swath_count=total_swath_count), action,
-                ))
+                return float(function(project_state(state, total_swath_count=total), action))
 
-        visit_order = construct_solution(problem_obj, _SandboxHeuristic())
-        # 烘焙 rank：访问序号 = rank（rank 升序访问；并列按 swath_id 决胜）
+        return construct_solution(problem_obj, _H())
+
+    def build_config(self, function: HeuristicFn, problem: CoverageProblem,
+                     vehicle: VehicleSpec) -> PipelineConfig:
+        """把候选选出的访问序烘焙进 params["rank:<swath_id>"]。"""
+        visit_order = self._plan(function, problem, vehicle)
         rank_params: dict[str, float] = {
             f"rank:{swath_id}": float(index)
             for index, swath_id in enumerate(visit_order)
@@ -319,56 +333,132 @@ class RouteOrderSlot:
             params=params,
         )
 
+    # 分数比较容差：投影键都是无量纲量，旋转+平移的浮点残差在 1e-13 量级，
+    # 取 1e-9 与 SwathAngleSlot 的偏移容差同级。
+    _SCORE_TOLERANCE = 1e-9
+
+    def _scores_along(self, function: HeuristicFn, endpoints, order, *, vehicle,
+                      centroid, normal) -> list[dict[str, float]]:
+        """沿给定访问序逐步取候选对**每个可行动作**的评分。
+
+        返回 [ {swath_id: score} ]，第 k 项对应状态 order[:k]。
+        """
+        from agriautolab.algorithms.route.constructive_order import (
+            RouteOrderProblem, project_state,
+        )
+
+        problem_obj = RouteOrderProblem(
+            endpoints,
+            min_turning_radius_m=vehicle.min_turning_radius_m,
+            working_width_m=vehicle.working_width_m,
+            field_centroid=centroid,
+            principal_normal=normal,
+        )
+        total = len(endpoints)
+        out: list[dict[str, float]] = []
+        for k in range(len(order)):
+            state = tuple(order[:k])
+            projected = project_state(state, total_swath_count=total)
+            out.append({
+                action["swath_id"]: float(function(projected, action))
+                for action in problem_obj.feasible_actions(state)
+            })
+        return out
+
     def invariance_check(self, function: HeuristicFn, problem: CoverageProblem,
                          vehicle: VehicleSpec, rng) -> GateOutcome:
-        """8 组随机刚体变换下，build_config 烘焙的访问序逐元素相同（离散序不变）。
+        """8 组随机刚体变换下，候选对每个可行动作的**评分**保持不变。
 
-        与 SwathAngleSlot 的 8×3 uniform 消耗模式完全一致（theta/tx/ty 顺序），
-        但判定标准从「标量差 < 1e-9」改为「tuple 相等」——离散枚举无 ULP 噪声。
+        与 SwathAngleSlot 的 8×3 uniform 消耗模式一致（theta/tx/ty 顺序）。
+
+        **变换施加在条带几何上，而不是地块上**——这是本方法与初版最关键的差别，
+        理由是实测发现的一个上游性质：
+
+        `PrincipalAxisSwathGenerator` 在**地块**被旋转时并不是刚体等变的。当旋转
+        把 PCA 主轴推过 `canonical_direction` 的半平面边界，扫掠方向与法向一起
+        翻转，`_sweep.py` 于是从地块的另一侧开始铺条带，**残余余量随之换到另一端**
+        ——不只是 id 重新编号，条带的实际位置就变了。90×50 田实测：
+        基线条带中心 y = 12.85 / 22.55 / 32.25 / 37.15（间隔 9.7, 9.7, 4.9），
+        旋转 1.5857 rad 后逆变换回原坐标是 12.85 / 17.75 / 27.45 / 37.15
+        （间隔 4.9, 9.7, 9.7）。两组条带集合根本不是同一批几何对象。
+
+        若照初版那样"旋转地块 → 重跑上游 → 比访问序"，闸门测的就是**生成器的
+        等变性**而不是候选的不变性，最近邻这类几何等变的合法候选会被误拒。
+        本闸门的职责是拒绝使用非不变特征的候选，不是给 swath 生成器打分。
+        因此：上游只跑一次拿到条带集合，随后把**端点、质心、主轴法向一起**做
+        刚体变换，再看同一批条带的访问序是否逐元素相同。
+
+        基线取**未变换**的原几何，在循环之前算好。初版把第一次随机变换的结果当
+        基线，于是从不与原始坐标下的路线比较——某个只在原始坐标触发分支的候选，
+        可以让原始路线与八个扰动路线全都不同却照样过闸。
+
+        生成器本身的非等变性是真实的、已记录的局限，属于上游 swath 层的议题，
+        不在本槽位范围内。
+
+        **判定量是评分，不是访问序**——这是第二个关键选择。贪心构造在**评分并列**
+        时由稳定枚举序决胜，而刚体变换会引入 ~1e-16 的舍入任意打破并列；一旦某步
+        的并列翻转，后续整条路线随之发散。规则条带间距在 CPP 里恰恰极常见（实测
+        90×50 参考田上，第 1 步到两条条带的距离精确同为 9.7 m），因此"比较访问序"
+        会让最近邻这类完全合法的候选被随机误拒。
+
+        本闸门要拒的是**使用非不变特征的候选**（例如读原始角度或绝对坐标）。
+        那类候选的评分本身就会随变换改变，因此逐动作比较评分既直接命中该性质，
+        又对并列免疫。并列翻转不改变任何一个动作的分数，只改变谁被选中。
         """
-        from shapely.affinity import rotate as shp_rotate, translate as shp_translate
+        try:
+            endpoints, centroid, normal = self._geometry_for(problem, vehicle)
+            base_order = self._order_for(function, endpoints, vehicle=vehicle,
+                                         centroid=centroid, normal=normal)
+            base_scores = self._scores_along(function, endpoints, base_order,
+                                             vehicle=vehicle, centroid=centroid, normal=normal)
+        except Exception as error:  # noqa: BLE001 -- 闸门把一切失败转为淘汰记录
+            return GateOutcome(GATE_INVARIANCE, False, f"基线构造失败：{type(error).__name__}: {error}")
 
-        from agriautolab.geometry.validate import polygon_from_spec, polygon_to_spec
-
-        base_order: tuple[str, ...] | None = None
         for _ in range(8):
             theta = float(rng.uniform(-math.pi, math.pi))
             tx, ty = float(rng.uniform(-100.0, 100.0)), float(rng.uniform(-100.0, 100.0))
+            cos_t, sin_t = math.cos(theta), math.sin(theta)
 
-            def move(geometry):
-                return shp_translate(shp_rotate(geometry, theta, origin=(0.0, 0.0), use_radians=True), tx, ty)
+            def move(point: tuple[float, float]) -> tuple[float, float]:
+                return (tx + cos_t * point[0] - sin_t * point[1],
+                        ty + sin_t * point[0] + cos_t * point[1])
 
-            rotated = problem.model_copy(update={
-                "field": polygon_to_spec(move(polygon_from_spec(problem.field)), problem.field.geometry_id),
-                "obstacles": tuple(
-                    polygon_to_spec(move(polygon_from_spec(spec)), spec.geometry_id) for spec in problem.obstacles
-                ),
-            })
+            moved_endpoints = {
+                swath_id: (move(start), move(end)) for swath_id, (start, end) in endpoints.items()
+            }
+            # 质心随几何平移+旋转；法向只旋转（方向量不平移）
+            moved_centroid = move(centroid)
+            moved_normal = (cos_t * normal[0] - sin_t * normal[1],
+                            sin_t * normal[0] + cos_t * normal[1])
             try:
-                config = self.build_config(function, rotated, vehicle)
+                # 沿**同一条基线访问序**取分：比较的是同状态同动作下的评分，
+                # 与变换后候选自己会不会选同一条路线无关。
+                moved_scores = self._scores_along(
+                    function, moved_endpoints, base_order,
+                    vehicle=vehicle, centroid=moved_centroid, normal=moved_normal,
+                )
             except Exception as error:  # noqa: BLE001 -- 闸门把一切失败转为淘汰记录
                 return GateOutcome(GATE_INVARIANCE, False, f"{type(error).__name__}: {error}")
-            order = tuple(
-                key.removeprefix("rank:") for key, _ in sorted(
-                    ((k, v) for k, v in config.params.items() if k.startswith("rank:")),
-                    key=lambda kv: (kv[1], kv[0]),
-                )
-            )
-            if base_order is None:
-                base_order = order
-            elif order != base_order:
-                # 找出第一个差异位置以便诊断
-                for index, (a, b) in enumerate(zip(order, base_order)):
-                    if a != b:
+
+            for step, (base_step, moved_step) in enumerate(zip(base_scores, moved_scores)):
+                if set(base_step) != set(moved_step):
+                    return GateOutcome(
+                        GATE_INVARIANCE, False,
+                        f"刚体变换（theta={theta:.4f} rad）后第 {step} 步可行动作集合变化",
+                    )
+                for swath_id, base_value in base_step.items():
+                    drift = abs(moved_step[swath_id] - base_value)
+                    if not math.isfinite(drift) or drift > self._SCORE_TOLERANCE:
                         return GateOutcome(
                             GATE_INVARIANCE, False,
-                            f"旋转 {theta:.4f} rad 后访问序在 index {index} 由 {a!r} 变 {b!r}",
+                            f"刚体变换（theta={theta:.4f} rad）后第 {step} 步对 "
+                            f"{swath_id!r} 的评分漂移 {drift:.3e}"
+                            f"（容差 {self._SCORE_TOLERANCE:g}）",
                         )
-                return GateOutcome(
-                    GATE_INVARIANCE, False,
-                    f"旋转 {theta:.4f} rad 后访问序长度变化 {len(order)} vs {len(base_order)}",
-                )
-        return GateOutcome(GATE_INVARIANCE, True, "8 组随机刚体变换下访问序逐元素相同")
+        return GateOutcome(
+            GATE_INVARIANCE, True,
+            "8 组随机刚体变换下逐状态逐动作评分不变（< 1e-9）",
+        )
 
 
 # 已登记槽位注册表：新增槽位在此登记。本次新增 route_order（任务 3 提交二）。

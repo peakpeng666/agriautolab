@@ -318,6 +318,195 @@ def test_exact_ties_are_broken_by_enumeration_order_not_geometry() -> None:
     assert order[1] == "swath-0000"
 
 
+# ---------- 复核第二轮：质心 / 不变性闸基线与比较口径 ----------
+
+def _rect_problem(problem_id: str, exterior) -> CoverageProblem:
+    return CoverageProblem(
+        problem_id=problem_id,
+        field=PolygonSpec(geometry_id="field", exterior=exterior),
+    )
+
+
+def test_field_centroid_is_encoding_independent() -> None:
+    """同一矩形的两种等价编码必须烘焙出相同访问序。
+
+    【证伪力】修复前用外环顶点算术平均当质心：闭合点被重复计数，插入共线冗余
+    顶点又会再次改变结果。质心同时是 distance_norm 的初始出口与 projection_norm
+    的原点，因此等价编码会得到不同 rank。60×40 矩形写成 (0,0)…(0,0) 时
+    顶点平均给 (24,16)，真质心是 (30,20)。
+    """
+    plain = _rect_problem("plain", (
+        Point(x=0.0, y=0.0), Point(x=60.0, y=0.0), Point(x=60.0, y=40.0),
+        Point(x=0.0, y=40.0), Point(x=0.0, y=0.0),
+    ))
+    # 同一个矩形，但每条边中点插入共线冗余顶点——几何完全相同
+    redundant = _rect_problem("redundant", (
+        Point(x=0.0, y=0.0), Point(x=30.0, y=0.0), Point(x=60.0, y=0.0),
+        Point(x=60.0, y=20.0), Point(x=60.0, y=40.0), Point(x=30.0, y=40.0),
+        Point(x=0.0, y=40.0), Point(x=0.0, y=20.0), Point(x=0.0, y=0.0),
+    ))
+    slot = SLOTS["route_order"]
+    function = slot.compile(
+        "def next_swath_score(state, candidate):\n"
+        "    return candidate['distance_norm'] + 0.5 * candidate['projection_norm']\n"
+    )
+
+    def ranks_of(problem):
+        config = slot.build_config(function, problem, VEHICLE)
+        return tuple(
+            k.removeprefix("rank:") for k, _ in sorted(
+                ((k, v) for k, v in config.params.items() if k.startswith("rank:")),
+                key=lambda kv: (kv[1], kv[0]),
+            )
+        )
+
+    assert ranks_of(plain) == ranks_of(redundant)
+
+
+def test_invariance_gate_accepts_geometry_equivariant_candidate() -> None:
+    """最近邻候选是几何等变的，不变性闸必须放行。
+
+    【证伪力】修复前闸门比较**重新生成的 swath id**：旋转把 PCA 方向推过
+    canonical_direction 的半平面边界时，_sweep.py 从地块另一侧开始分配顺序 id，
+    同一条物理路线因此得到不同 id 排列，闸门把合法候选判为失败。
+    现在改为把访问序映射成条带中心点、逆刚体变换回原坐标后逐点比较。
+    """
+    slot = SLOTS["route_order"]
+    function = slot.compile(
+        "def next_swath_score(state, candidate):\n"
+        "    return candidate['distance_norm']\n"
+    )
+    problem = _rect_problem("invariance-ref", (
+        Point(x=0.0, y=0.0), Point(x=90.0, y=0.0), Point(x=90.0, y=50.0),
+        Point(x=0.0, y=50.0), Point(x=0.0, y=0.0),
+    ))
+    outcome = slot.invariance_check(function, problem, VEHICLE, np.random.default_rng(20260825))
+    assert outcome.passed, outcome.detail
+
+
+def test_invariance_gate_baseline_is_the_untransformed_geometry() -> None:
+    """基线必须来自未变换的原几何，而不是第一个随机变换的结果。
+
+    【证伪力】修复前 base_order 取第一次循环的结果，闸门从不与原始坐标下的路线
+    比较——只在原坐标触发分支的候选可以让原始路线与八个扰动路线全都不同却过闸。
+    这里统计 _order_for 的调用次数：修复后应为 1（基线）+ 8（扰动）= 9 次，
+    且第一次传入的必须是未变换端点（与 _geometry_for 的输出逐点相等）。
+    """
+    slot = SLOTS["route_order"]
+    function = slot.compile(
+        "def next_swath_score(state, candidate):\n"
+        "    return candidate['distance_norm']\n"
+    )
+    problem = _rect_problem("baseline-ref", (
+        Point(x=0.0, y=0.0), Point(x=90.0, y=0.0), Point(x=90.0, y=50.0),
+        Point(x=0.0, y=50.0), Point(x=0.0, y=0.0),
+    ))
+    untransformed, _c, _n = slot._geometry_for(problem, VEHICLE)
+
+    seen = []
+    original = type(slot)._scores_along
+
+    def recording(self, fn, endpoints, order, **kwargs):
+        seen.append(endpoints)
+        return original(self, fn, endpoints, order, **kwargs)
+
+    type(slot)._scores_along = recording
+    try:
+        outcome = slot.invariance_check(function, problem, VEHICLE, np.random.default_rng(0))
+    finally:
+        type(slot)._scores_along = original
+
+    assert outcome.passed, outcome.detail
+    assert len(seen) == 9, f"应为 1 次基线 + 8 次扰动，实测 {len(seen)}"
+    assert seen[0] == untransformed, "第一次取分必须用未变换的几何做基线"
+
+
+def test_invariance_gate_rejects_non_invariant_candidate() -> None:
+    """使用绝对坐标的候选必须被不变性闸拒绝。
+
+    候选通过 projection_norm 间接读到几何，但真正的非不变量要靠"闸门能否分辨"
+    来验证。这里用一个**故意不减质心**的等效构造：候选把 distance_norm 与
+    一个随平移改变的量混合——通过 state 无法做到，因此改用可行动作集合之外的
+    路径：直接断言闸门对"评分随变换漂移"的响应。
+    """
+    slot = SLOTS["route_order"]
+    problem = _rect_problem("reject-ref", (
+        Point(x=0.0, y=0.0), Point(x=90.0, y=0.0), Point(x=90.0, y=50.0),
+        Point(x=0.0, y=50.0), Point(x=0.0, y=0.0),
+    ))
+
+    class _DriftingFn:
+        """每次调用返回略有不同的分数——模拟非不变特征。"""
+
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def __call__(self, state, candidate) -> float:
+            self.calls += 1
+            return candidate["distance_norm"] + self.calls * 1e-3
+
+    outcome = slot.invariance_check(_DriftingFn(), problem, VEHICLE, np.random.default_rng(0))
+    assert not outcome.passed
+    assert "评分漂移" in outcome.detail
+
+
+def test_swath_generator_is_not_rigid_equivariant_when_field_rotates() -> None:
+    """记录上游性质：旋转**地块**会改变条带的实际位置，不只是 id 重新编号。
+
+    这是不变性闸把刚体变换施加在**条带几何**而非地块上的原因。若照初版旋转地块
+    再重跑上游，闸门测的是 PrincipalAxisSwathGenerator 的等变性而不是候选的
+    不变性，几何等变的合法候选会被误拒。
+
+    本测试断言这个上游非等变性**确实存在**——它是一条已知局限，不是本槽位的缺陷。
+    若将来上游改成等变的，本测试会变红，提示可以简化闸门。
+    """
+    from shapely.affinity import rotate as shp_rotate, translate as shp_translate
+
+    from agriautolab.geometry.validate import polygon_from_spec, polygon_to_spec
+
+    slot = SLOTS["route_order"]
+    problem = _rect_problem("upstream-equivariance", (
+        Point(x=0.0, y=0.0), Point(x=90.0, y=0.0), Point(x=90.0, y=50.0),
+        Point(x=0.0, y=50.0), Point(x=0.0, y=0.0),
+    ))
+    base_endpoints, _c, _n = slot._geometry_for(problem, VEHICLE)
+
+    theta, tx, ty = 1.5857, 0.0, 0.0
+    cos_t, sin_t = math.cos(theta), math.sin(theta)
+    rotated = problem.model_copy(update={
+        "field": polygon_to_spec(
+            shp_translate(
+                shp_rotate(polygon_from_spec(problem.field), theta, origin=(0.0, 0.0), use_radians=True),
+                tx, ty,
+            ),
+            problem.field.geometry_id,
+        ),
+    })
+    moved_endpoints, _c2, _n2 = slot._geometry_for(rotated, VEHICLE)
+
+    def unmove(point):
+        px, py = point[0] - tx, point[1] - ty
+        return (cos_t * px + sin_t * py, -sin_t * px + cos_t * py)
+
+    def center_set(endpoints):
+        return sorted(
+            round(sum(c) / 2.0, 3)
+            for c in (
+                (start[1], end[1]) for start, end in endpoints.values()
+            )
+        )
+
+    base_ys = center_set(base_endpoints)
+    moved_ys = sorted(
+        round((unmove(start)[1] + unmove(end)[1]) / 2.0, 3)
+        for start, end in moved_endpoints.values()
+    )
+    assert base_ys != moved_ys, (
+        "上游若已变为刚体等变，不变性闸可以简化为直接旋转地块；"
+        f"实测 base={base_ys} moved={moved_ys}"
+    )
+
+
 # ---------- 协议契约 ----------
 
 def test_nan_score_raises_construction_error() -> None:
