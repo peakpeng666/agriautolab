@@ -86,10 +86,16 @@ class DegenerateCaseReviewer:
 # 不变性复核不在此列：对 area_m2/obstacle_count 的扰动检查与 proposer prompt
 # （把这些特征列为可用输入）自相矛盾，会错杀合法的专家启发式；真正的问题对称性
 # （几何刚体变换下行为不变）由 gates.invariance_gate 承担。
-DEFAULT_REVIEWERS: tuple[AdversarialReviewer, ...] = (
+#
+# 这两个 reviewer 内嵌 swath 值域假设（单参 features dict 调用 +
+# |v|≤π/2 hard 否决）；新槽位【必须自带 reviewer 集】，不得照抄 SWATH_REVIEWERS。
+SWATH_REVIEWERS: tuple[AdversarialReviewer, ...] = (
     CorrectnessReviewer(),
     DegenerateCaseReviewer(),
 )
+# 兼容别名：单槽位时代的公开名 `DEFAULT_REVIEWERS`。新代码请用 SWATH_REVIEWERS
+# 或更明确的 `<slot>_REVIEWERS` 命名。
+DEFAULT_REVIEWERS = SWATH_REVIEWERS
 
 
 def majority_refuted(verdicts: tuple[ReviewVerdict, ...]) -> bool:

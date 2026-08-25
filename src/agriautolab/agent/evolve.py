@@ -137,6 +137,42 @@ def evolve_pool(
             f"槽位注册键 {slot!r} 与 slot_id {candidate_slot.slot_id!r} 不一致："
             "注册键即 wire ID，两者必须相同，否则实验归因错位"
         )
+    # 三表齐全性：proposer 的 PROMPT_TEMPLATES 与 MOCK_CANDIDATES_BY_SLOT 也必须
+    # 登记该 slot，否则 LLM/Mock 提议者会在轮循环内 KeyError 静默炸（不在
+    # 闸门 try/except 范围内）。在进入轮循环之前 fail-closed 是为让错误立即
+    # 可见，不污染账本。
+    from agriautolab.agent.proposer import MOCK_CANDIDATES_BY_SLOT, PROMPT_TEMPLATES
+
+    if slot not in PROMPT_TEMPLATES:
+        raise ValueError(
+            f"槽位 {slot!r} 缺 PROMPT_TEMPLATES 登记：LLM 提议将 KeyError。"
+            f"已登记键：{tuple(sorted(PROMPT_TEMPLATES))}"
+        )
+    if slot not in MOCK_CANDIDATES_BY_SLOT:
+        raise ValueError(
+            f"槽位 {slot!r} 缺 MOCK_CANDIDATES_BY_SLOT 登记：Mock 提议将 KeyError。"
+            f"已登记键：{tuple(sorted(MOCK_CANDIDATES_BY_SLOT))}"
+        )
+    # 协议完整性：八成员都存在。前四个是数据（slot_id/stage/contract_function/
+    # reviewers），后四个是方法（compile/probe_value/build_config/invariance_check）。
+    # 缺 build_config / invariance_check 等会被闸门 try/except 静默吞——
+    # 这是 fail-closed 必须前置的原因。
+    _data_members = ("slot_id", "stage", "contract_function", "reviewers")
+    _method_members = ("compile", "probe_value", "build_config", "invariance_check")
+    missing: list[str] = []
+    for name in _data_members:
+        if not hasattr(candidate_slot, name):
+            missing.append(name)
+    for name in _method_members:
+        attr = getattr(candidate_slot, name, None)
+        if attr is None or not callable(attr):
+            missing.append(name)
+    if missing:
+        raise ValueError(
+            f"槽位 {slot!r} 协议缺成员：{missing}。"
+            "缺 build_config / invariance_check 等会被闸门 try/except 静默吞，"
+            "必须在 evolve_pool 进入轮循环前 fail-closed。"
+        )
     active_reviewers = candidate_slot.reviewers if reviewers is None else reviewers
     ledger = EvolutionLedger()
     memo = StageMemo()
