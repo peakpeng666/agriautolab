@@ -181,6 +181,36 @@ def test_ledger_verify_passes_with_provenance_records() -> None:
     ledger.verify()  # 不抛即通过
 
 
+def test_ledger_provenance_mirrors_completion_validation() -> None:
+    """账本里的 ProvenanceRecord 必须与 CompletionResult 同样严格。
+
+    【证伪力】不加约束时，直接构造或从 JSON 还原的记录可以携带 top_p=1.5、
+    负 token 数、负成本——`append()` 照样对这些有限值算哈希、`verify()` 照样通过，
+    证据链于是为一份违反公开 completion 契约、无法重建成合法 `CompletionResult`
+    的 provenance 背书。
+    """
+    from pydantic import ValidationError
+
+    from agriautolab.agent.ledger import ProvenanceRecord
+
+    base = _result_for("p").to_dict()
+    for field, bad in (
+        ("top_p", 1.5),
+        ("temperature", -0.1),
+        ("prompt_tokens", -1),
+        ("completion_tokens", -3),
+        ("cost", -0.01),
+        ("latency_ms", -1.0),
+        ("model_id", ""),
+        ("request_id", ""),
+        ("cost", float("inf")),
+    ):
+        with pytest.raises(ValidationError):
+            ProvenanceRecord(**{**base, field: bad})
+
+    assert ProvenanceRecord(**base).top_p == base["top_p"]
+
+
 def test_ledger_provenance_cannot_be_mutated_through_records() -> None:
     """账本里的 provenance 深度不可变——嵌套赋值不能悄悄破坏 entry hash。
 

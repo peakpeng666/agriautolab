@@ -41,17 +41,22 @@ class ProvenanceRecord(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    model_id: str
+    # 约束与 proposer.CompletionResult 的构造期校验逐条对应。缺了它们，
+    # 直接构造或从 JSON 还原的记录可以携带 top_p=1.5、负 token 数、负成本——
+    # append() 照样对这些有限值算哈希、verify() 照样通过，证据链于是为一份
+    # **违反公开 completion 契约、无法重建成合法 CompletionResult** 的 provenance
+    # 背书。校验必须在两处都成立，不能只靠上游。
+    model_id: str = Field(min_length=1)
     prompt: str
     response: str
-    temperature: float
-    top_p: float
+    temperature: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
+    top_p: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
     seed: int
-    prompt_tokens: int
-    completion_tokens: int
-    cost: float
-    latency_ms: float
-    request_id: str
+    prompt_tokens: int = Field(ge=0)
+    completion_tokens: int = Field(ge=0)
+    cost: float = Field(ge=0.0, allow_inf_nan=False)
+    latency_ms: float = Field(ge=0.0, allow_inf_nan=False)
+    request_id: str = Field(min_length=1)
 
 
 class EvolutionRecord(BaseModel):
