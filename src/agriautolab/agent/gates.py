@@ -65,12 +65,12 @@ def candidate_config(angle_rad: float) -> PipelineConfig:
 
 def contract_gate(source_code: str, *, slot: CandidateSlot | None = None) -> tuple[HeuristicFn | None, GateOutcome]:
     """第一道：能过沙箱编译、契约函数存在且签名正确、典型输入下返回有限偏移。"""
-    from agriautolab.agent.slots import _reference_problem, _reference_vehicle
+    from agriautolab.agent.slots import reference_problem, reference_vehicle
 
     resolved = _default_slot(slot)
     try:
         function = resolved.compile(source_code)
-        resolved.probe_value(function, _reference_problem(), _reference_vehicle())
+        resolved.probe_value(function, reference_problem(), reference_vehicle())
     except (SandboxViolation, ValueError, TypeError) as error:
         return None, GateOutcome(GATE_CONTRACT, False, f"{type(error).__name__}: {error}")
     return function, GateOutcome(GATE_CONTRACT, True, "沙箱编译通过，契约签名正确，偏移有限")

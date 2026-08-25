@@ -8,8 +8,11 @@
 偏移量因此按构造旋转不变——这不变性由第四道闸（invariance gate）强制兑现，
 不靠候选代码自觉。
 
-槽位注册表（agent/slots.py）把每个槽位的契约函数名、提示词模板与 mock 候选
-清单绑定在同一个 slot_id 下；本模块按 ProposalContext.slot_id 分派。
+槽位分三处登记：agent/slots.py 的 SLOTS（闸门与演化循环语义）、本模块的
+PROMPT_TEMPLATES（LLM 提示词）与 MOCK_CANDIDATES_BY_SLOT（确定性 mock 候选
+清单）。本模块按 ProposalContext.slot_id 分派；漏登记 SLOTS 会在 evolve_pool
+处 ValueError，漏登记本模块两表会在 propose/build_prompt 时 KeyError——
+都 fail-closed，三表键一致性由 tests/agent/test_slots.py 钉住。
 """
 
 from __future__ import annotations
@@ -27,6 +30,8 @@ class ProposalContext:
     stage: CoverageStage
     round_index: int
     pool_config_ids: tuple[str, ...]
+    # DEFAULT_SLOT_ID 的字面量镜像：本模块有意不依赖 slots.py（proposer 可独立于
+    # 槽位注册表被 import），与注册表键的一致性由 tests/agent/test_slots.py 钉住。
     slot_id: str = "swath_angle"
 
 

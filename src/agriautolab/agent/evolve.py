@@ -24,7 +24,7 @@ from agriautolab.agent.gates import (
 from agriautolab.agent.ledger import EvolutionLedger, EvolutionRecord, GateRecord
 from agriautolab.agent.proposer import ProposalContext, ProposalCandidate
 from agriautolab.agent.reviewer import AdversarialReviewer, final_refuted
-from agriautolab.agent.slots import SLOTS, CandidateSlot
+from agriautolab.agent.slots import DEFAULT_SLOT_ID, SLOTS, CandidateSlot
 from agriautolab.contracts.problem import CoverageProblem
 from agriautolab.contracts.protocol import BenchmarkProtocol
 from agriautolab.contracts.vehicle import VehicleSpec
@@ -114,7 +114,7 @@ def evolve_pool(
     rng: np.random.Generator,
     rounds: int,
     keep_rule: KeepRule = KeepRule.HYPERVOLUME_DELTA,
-    slot: str = "swath_angle",
+    slot: str = DEFAULT_SLOT_ID,
     reviewers: tuple[AdversarialReviewer, ...] | None = None,
 ) -> tuple[EvolutionLedger, tuple[KeptCandidate, ...]]:
     """演化循环主体。返回（账本, 保留候选）。失败候选照记账——只记成功就是发表偏倚。

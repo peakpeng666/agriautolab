@@ -3,7 +3,10 @@
 一个 CandidateSlot 完整描述某个 pipeline 阶段上开放的启发式槽位：槽位 id、
 所属阶段、契约函数名、沙箱编译、探针值检查、评估配置构造、不变性检查与
 对抗复核器集。四道闸（gates.py）与演化循环（evolve.py）通过槽位对象引用
-这些语义；新增槽位只需实现协议并登记进 SLOTS 字典。
+这些语义。新增槽位要登记三处：本模块的 SLOTS 字典（漏登记 -> evolve_pool
+对未知 slot id 抛 ValueError）、proposer.py 的 PROMPT_TEMPLATES 与
+MOCK_CANDIDATES_BY_SLOT（漏登记 -> propose/build_prompt 时 KeyError）；
+三表键一致性由 tests/agent/test_slots.py 钉住。
 
 当前唯一登记的槽位是 swath_angle（swath 阶段的扫掠角偏移启发式）。其全部
 语义自 gates.py 逐字迁移——包括 RNG 消耗顺序（8 组 × 每组 3 次 uniform，
@@ -89,7 +92,8 @@ def _candidate_angle(function: HeuristicFn, problem: CoverageProblem, vehicle: V
     return principal_angle_of(problem, vehicle) + _offset_only(function, problem, vehicle)
 
 
-def _reference_problem() -> CoverageProblem:
+def reference_problem() -> CoverageProblem:
+    """契约闸的参考田（60x40 矩形，无障碍）：主轴角浮点精确为 0.0。"""
     from agriautolab.contracts.geometry import Point, PolygonSpec
 
     return CoverageProblem(
@@ -101,7 +105,8 @@ def _reference_problem() -> CoverageProblem:
     )
 
 
-def _reference_vehicle() -> VehicleSpec:
+def reference_vehicle() -> VehicleSpec:
+    """契约闸的参考机具。"""
     return VehicleSpec(working_width_m=9.7, body_width_m=2.0, min_turning_radius_m=3.0)
 
 

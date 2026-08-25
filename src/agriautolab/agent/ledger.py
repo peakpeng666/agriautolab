@@ -29,8 +29,10 @@ class EvolutionRecord(BaseModel):
     round_index: int = Field(ge=0)
     algorithm_id: str = Field(min_length=1)
     proposal_hash: str = Field(min_length=64, max_length=64)
-    # 候选槽位 id（agent/slots.py 的 SLOTS 注册表键）。演化账本从未落盘，
-    # 无历史迁移问题；一旦开始落盘，slot_id 即成为证据身份（wire ID）永不改。
+    # 候选槽位 id（agent/slots.py 的 SLOTS 注册表键；字面量是 DEFAULT_SLOT_ID 的
+    # 镜像——本模块有意不依赖 agent 内其他模块，保持账本模型可独立 import）。
+    # 演化账本从未落盘，无历史迁移问题；一旦开始落盘，slot_id 即成为
+    # 证据身份（wire ID）永不改。
     slot_id: str = "swath_angle"
     compiled: bool
     gates: tuple[GateRecord, ...] = ()

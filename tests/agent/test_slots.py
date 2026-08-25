@@ -28,11 +28,12 @@ from agriautolab.agent.gates import (
 )
 from agriautolab.agent.ledger import EvolutionRecord
 from agriautolab.agent.proposer import (
-    MOCK_CANDIDATES, PROMPT_TEMPLATE, PROMPT_TEMPLATES, LLMProposer, MockProposer, ProposalContext,
+    MOCK_CANDIDATES, MOCK_CANDIDATES_BY_SLOT, PROMPT_TEMPLATE, PROMPT_TEMPLATES,
+    LLMProposer, MockProposer, ProposalContext,
 )
 from agriautolab.agent.reviewer import DEFAULT_REVIEWERS
 from agriautolab.agent.slots import (
-    DEFAULT_SLOT_ID, SLOTS, CandidateSlot, SwathAngleSlot, _reference_problem, _reference_vehicle,
+    DEFAULT_SLOT_ID, SLOTS, CandidateSlot, SwathAngleSlot, reference_problem, reference_vehicle,
 )
 from agriautolab.contracts.enums import CoverageStage
 
@@ -55,13 +56,20 @@ def test_slots_registry_exposes_swath_angle_as_default() -> None:
     assert slot.reviewers == DEFAULT_REVIEWERS
 
 
+def test_slot_registries_stay_in_sync() -> None:
+    # 三张按槽位分派的表必须同键：SLOTS（闸门/演化语义）、MOCK_CANDIDATES_BY_SLOT
+    # 与 PROMPT_TEMPLATES（proposer 分派表）。新增槽位漏登记任何一张时，报错点
+    # 前移到这里，而不是等到 evolve_pool 的 ValueError 或 propose/build_prompt 的 KeyError。
+    assert set(SLOTS) == set(MOCK_CANDIDATES_BY_SLOT) == set(PROMPT_TEMPLATES)
+
+
 def test_golden_config_ids_pinned_through_slot_build_config() -> None:
     # gate-reference 田主轴角恰为 0.0（浮点精确），固定偏移 mock 的 build_config
     # 与 candidate_config(offset) 逐位同构；黄金值来自重构前基线实测。
-    assert principal_angle_of(_reference_problem(), _reference_vehicle()) == 0.0
+    assert principal_angle_of(reference_problem(), reference_vehicle()) == 0.0
     slot = SLOTS["swath_angle"]
-    half = slot.build_config(lambda features: 0.5, _reference_problem(), _reference_vehicle())
-    sixth = slot.build_config(lambda features: math.pi / 6.0, _reference_problem(), _reference_vehicle())
+    half = slot.build_config(lambda features: 0.5, reference_problem(), reference_vehicle())
+    sixth = slot.build_config(lambda features: math.pi / 6.0, reference_problem(), reference_vehicle())
     assert half.config_id() == GOLDEN_CONFIG_ID_OFFSET_HALF
     assert sixth.config_id() == GOLDEN_CONFIG_ID_OFFSET_PI_OVER_6
     # gates 的兼容入口与槽位实现同源：同输入必须同 config_id
@@ -154,23 +162,43 @@ def test_proposer_dispatches_prompt_and_mocks_by_slot_id() -> None:
         LLMProposer().build_prompt(stage=CoverageStage.SWATH, context=unknown)
 
 
+class _RecordingRng:
+    """记录型 rng 包装：把 uniform(low, high) 的调用参数与返回值按序记下。
+
+    只代理 uniform——被测路径若改经其他 rng 方法消耗随机数，这里直接
+    AttributeError，本身即「只能经 uniform 消耗」的一条约束。
+    """
+
+    def __init__(self, rng):
+        self._rng = rng
+        self.calls: list[tuple[float, float, float]] = []   # (low, high, value)
+
+    def uniform(self, low, high):
+        value = self._rng.uniform(low, high)
+        self.calls.append((low, high, value))
+        return value
+
+
 def test_invariance_consumes_exactly_three_uniforms_per_group() -> None:
-    # 不变性检查的 RNG 消耗顺序是行为契约：8 组 × 每组恰 3 次 uniform（theta/tx/ty）。
-    # 多耗或漏耗一次都会移动 gate_rng 流、进而改变整条演化轨迹——用比特生成器
-    # 状态对齐钉住（旧实现下这段循环体在 gates 里，无槽位方法可调）。
+    # 不变性检查的 RNG 消耗是行为契约：8 组 × 每组恰 3 次 uniform，顺序
+    # theta/tx/ty、范围 (-pi, pi) 与 (-100, 100)x2。记录型包装与同 seed 参考
+    # 序列逐项比对——调用次数、每次 (low, high)（顺序+范围）与返回值同时钉住：
+    # 交换 theta/tx、篡改范围或增删一次调用都会让元组序列先失配。
     slot = SLOTS["swath_angle"]
-    problem, vehicle = _reference_problem(), _reference_vehicle()
+    problem, vehicle = reference_problem(), reference_vehicle()
     function = slot.compile(MOCK_CANDIDATES[0].source_code)
 
-    used = np.random.default_rng(11)
-    outcome = slot.invariance_check(function, problem, vehicle, used)
+    recorded = _RecordingRng(np.random.default_rng(11))
+    outcome = slot.invariance_check(function, problem, vehicle, recorded)
     assert outcome.passed
+
     reference = np.random.default_rng(11)
-    for _ in range(8):
-        reference.uniform(-math.pi, math.pi)
-        reference.uniform(-100.0, 100.0)
-        reference.uniform(-100.0, 100.0)
-    assert used.bit_generator.state == reference.bit_generator.state
+    expected_calls = [
+        (low, high, reference.uniform(low, high))
+        for _ in range(8)
+        for low, high in ((-math.pi, math.pi), (-100.0, 100.0), (-100.0, 100.0))
+    ]
+    assert recorded.calls == expected_calls
 
 
 def test_ledger_records_slot_id() -> None:
