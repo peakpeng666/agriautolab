@@ -16,12 +16,24 @@
   或六字闭式解+正演采样，没有 per-turn 决策。
 - **结论（诚实）**：建议把 `headland_turn` **砍出** Study-002 候选槽位，列为
   Study-003 候选。研究主张相应收缩为「不主张全阶段自动设计」。
-- **判据**：path 阶段评估最贵（解析 + 采样两遍以保确定性）；解析最短词在多数几何下
-  唯一；两槽位（`swath_angle` + `route_order`，见任务 3）已足以支撑"多槽位互补演化"
-  的研究主张；headland_turn 与协议级 `reverse_cost` 乘子和 `allowed_region` 约束
-  深度纠缠，独立可证伪性弱。
-- **若保留**（审慎的反弹判据）：先实测任务 3 合并后单次评估成本，预算允许（参考
-  Study-001 corpus 的 61 100 次运行级别的开销）再启动 path 阶段槽位设计。
+- **判据（按强度排序）**：① path 阶段评估最贵（解析 + 采样两遍以保确定性）；
+  ② 解析最短词在多数几何下唯一，启发式自由度天然窄；③ 两槽位
+  （`swath_angle` + `route_order`，见 PR #28）已足以支撑"多槽位互补演化"的
+  研究主张；④ 与协议级 `ReverseCostSpec` / `allowed_region` 存在耦合，
+  而 Study-002 尚未定这些参数。
+- **若保留**（审慎的反弹判据）：先实测 PR #28 合并后单次评估成本，预算允许（参考
+  Study-001 corpus 的 61,100 次运行级别的开销）再启动 path 阶段槽位设计。
+
+> **本文修订说明（复核后）**：初稿有若干处引用了**不存在的 API** 或**不可能的
+> 协议取值**，已逐条据实修正，修正点在正文内就地标注：
+> `RouteArtifact.transfer_segments`（不存在，须自派生）、
+> `kinematics.dubins.length_optimal`（不存在，且现有 API 跨家族取最短，
+> 无法复算被选中的词）、独立 evaluator 缺 `cell_of_work_index`、
+> `projection_norm` 未减质心因而不是平移不变量、
+> `fixed_angle` 不具旋转等变性（不做 PCA）、
+> `reverse_cost=0` 在本仓库构造不出来（`ge=1.0`）。
+> 最后一条曾被用作支持"砍掉本槽位"的论据之一，**该论据已减弱**；
+> 结论不变，但现在主要依赖判据 ① 与 ②。
 
 ---
 
@@ -47,9 +59,24 @@ _PATHS = {"dubins_transit": DubinsPathPlanner, "reeds_shepp_transit": ReedsShepp
 ### 1.2 最小改动路径
 
 新增一个 `path` 阶段的 wire ID —— `selective_turn_transit` —— 并在
-`run.py:57` 的 `_PATHS` 注册到新的 planner 类。该 planner 把 RouteArtifact
-拆成逐 transfer 段（按 `RouteArtifact.transfer_segments` —— 实测位置见
-`contracts.artifacts`），对每段枚举离散转弯类型（U-turn / teardrop / curve-only /
+`run.py` 的 `_PATHS` 注册到新的 planner 类。
+
+**转移段必须自己派生，`RouteArtifact` 没有现成字段。** 实测其契约只有两个成员：
+
+```python
+class RouteArtifact(BaseModel):
+    traversals: tuple[SwathTraversal, ...]
+    swaths: tuple[Swath, ...]
+```
+
+因此「逐 transfer 段」要由**相邻有向 traversal 两两配对**派生：第 i 段的起点 =
+第 i 个 traversal 按其 `direction` 的出口端点，终点 = 第 i+1 个 traversal 按其
+`direction` 的入口端点。n 个 traversal 给出 n−1 个转移段。这与 `route_order`
+槽位（PR #28）里 `entry_of`/`exit_of` 按访问序奇偶取端点的做法同源，应当复用
+而不是各写一套。**不要**扩展 `RouteArtifact` 契约来塞 `transfer_segments`：
+它是刻意精简的产物契约，派生量属于消费方。
+
+planner 对每段枚举离散转弯类型（U-turn / teardrop / curve-only /
 hook 等，从现有 Dubins 六字与 Reeds-Shepp 46 字里挑出**正反向约定一致**的子集），
 按 `params["turn_type:<segment_index>"]`（如 `"turn_type:3" → "curve_only"`）
 烘焙选择。**注意：候选选择是按段枚举+评分的，而不是按段重写解析公式**——解析
@@ -67,7 +94,8 @@ hook 等，从现有 Dubins 六字与 Reeds-Shepp 46 字里挑出**正反向约�
 ### 1.3 运行时形态与 ConstructiveProblem 化
 
 - **新 planner 接口**：`run(route, robot, *, allowed_region=None) -> PathArtifact`，
-  内部按 `route.transfer_segments` 枚举（实测在 `RouteArtifact` 模型里）；
+  内部按 §1.2 的方式从相邻 traversal 对**派生**转移段（`RouteArtifact` 无
+  `transfer_segments` 字段）；
   对每段调用 `_select_turn_type(transfer, params)` 取 `params` 烘焙的离散选择；
   按选择调对应解析闭式解 + 采样；按 `transit` 顺序拼接。
 - **ConstructiveProblem 化**（对照 `src/agriautolab/optimization/constructive.py:21-44`）：
@@ -115,8 +143,20 @@ def next_turn_score(state: Mapping[str, float], candidate: Mapping[str, float]) 
 - `state["distance_remaining_norm"]`：剩余转移总长 / `min_turning_radius`（无量纲）
 
 - `candidate["distance_norm"]`：本段欧氏起讫距离 / `min_turning_radius`
-- `candidate["projection_norm"]`：段中点在已选主轴法向上的投影 / `working_width`
-  （主轴法向随刚体变换协变，投影值不变——见 §3）
+- `candidate["projection_norm"]`：**（段中点 − 地块质心）** 在已选主轴法向上的
+  投影 / `working_width`
+
+  > **必须先减质心，否则这个键在平移下不是不变量。** 设中点 `p`、法向 `n`、
+  > 平移 `t`，未减质心时投影从 `p·n` 变为 `p·n + t·n`——整体加同一常数。
+  > 纯按该键排序看不出（同序），但只要候选把它与 `distance_norm` 混合加权
+  > （例如 `0.6*d + 0.4*proj`），次序就会随 `tx`/`ty` 改变，候选于是**因为
+  > 平移而非自身缺陷**被 invariance 闸拒。减去随刚体变换协变的原点
+  > （地块质心或转移段集合质心）之后，`(p−c)·n` 才真正平移不变。
+  >
+  > 这不是假设性风险：PR #28 的 `route_order` 槽位实现里出现过同一缺陷，
+  > 已由 `test_projection_is_translation_invariant` 钉住并修复。新槽位应
+  > 直接复用 `algorithms/route/constructive_order.py::project_candidate` 的
+  > 减质心写法。
 - `candidate["curvature_sign"]`：本段解析解的曲率符号 ∈ {-1.0, 0.0, +1.0}（无量纲）
 - `candidate["turn_type_onehot"]`：四选一 one-hot（无量纲，4 维）
 
@@ -176,9 +216,18 @@ swath 生成器在 id 分配上不具旋转等变性（`min_width` 生成器在�
 2. 候选源码**必须**用旋转不变键（见 §2.2）做评分；任何包含 raw 角度的候选
    在 invariance 闸必拒。
 3. 若实测发现 swath 生成器 id 分配漂移（`min_width` 是高风险项，因它解
-   `min_width_direction` 闭式解），任务 1 的 `test_anytime.py` 与 §4 真值测试
-   必须用 **`principal_axis` 或 `fixed_angle`** 作为参考生成器（它们的
-   `algorithm_id` 分配是旋转等变的：固定角或主轴角度都是 PCA 闭式解）。
+   `min_width_direction` 闭式解），§4 真值测试必须用 **`principal_axis`** 作为
+   参考生成器：它按 PCA 主轴取方向，主轴随地块一同旋转，因此是旋转等变的。
+
+   > **不要用 `fixed_angle`。** 实测其实现是
+   > `swaths_along_direction(mains, cos(self.angle_rad), sin(self.angle_rad), ...)`
+   > ——方向直接来自协议参数，**完全不做 PCA**。只旋转地块而不同时旋转
+   > `params["angle_rad"]` 时，条带方向不变而地块变了，条带数量与邻接关系
+   > 都会变，严格序列闸会把一个本来不变的转弯启发式判为失败——**失败原因
+   > 在上游生成器，不在候选**。若确需用 `fixed_angle` 做对照，必须把刚体
+   > 旋转量显式加进 `angle_rad`（`angle_rad + theta`），与
+   > `SwathAngleSlot.invariance_check` 对 `row_structure.direction_rad`
+   > 的协变处理同源。
 
 ## 4. 独立 evaluator 如何在不复用候选逻辑的前提下复算转弯代价？
 
@@ -208,24 +257,49 @@ def evaluate_headland_turn_path(
     robot: VehicleSpec,
     *,
     turn_type_sequence: tuple[str, ...],
+    cell_of_work_index: tuple[int, ...],   # 必需，见下
 ) -> TransferBreakdown:
     """对 path_artifact 逐 transfer 段用 kinematics 独立复算长度与可行性。
 
     不调用 selective_turn_transit planner 的任何内部状态：按 turn_type_sequence
-    直接对每段调 Dubins/Reeds-Shepp 解析闭式解，独立采样，正演闭合测试
-    （沿用 kinematics/dubins.py 的"起点→终点→起点"闭合 < 1e-9 守门），
-    与 planner 自报值对照，差异 > 1e-6 抛 ValueError。
-
-    返回 TransferBreakdown（metrics/path.py:174 起）— 它的 other_m 字段
-    本身就是完备性哨兵：分类有遗漏就当场抛，不必等事后对账才发现。
+    对每段**在候选家族内**独立复算（见下），与 planner 自报值对照，
+    差异 > 1e-6 抛 ValueError。
     """
 ```
 
 **为什么必须逐段独立**：planner 在 `selective_turn_transit` 内部有累计状态
 （`curvature_sign_balance` 等被未来候选可能利用的中间量）。如果 evaluator
 接受 planner 自报的中间结果，就是允许候选把"对自己有利的统计偏差"洗进评估
-——**违反独立性原则**。逐段用 `kinematics.dubins.length_optimal(start, goal, radius)`
-的闭式解（与 planner 用的同源但路径独立）复算，差异只在浮点 ULP。
+——**违反独立性原则**。
+
+**但复算必须复算"被选中的那个词"，不是全局最短词。** 这是本节最容易写错的地方：
+
+实测 `src/agriautolab/kinematics/dubins.py` 的公开 API 只有
+
+```
+dubins_words(start, goal, radius) -> tuple[DubinsWord, ...]   # 全部可行家族
+dubins_word(start, goal, radius)  -> DubinsWord               # 跨家族取最短
+dubins_length(p0, p1, radius)     -> float                    # 跨家族取最短长度
+dubins_endpoint(start, word, radius) -> Pose2D
+```
+
+**没有 `length_optimal`**。而 `dubins_word` / `dubins_length` 都是**跨家族求最小**，
+完全忽略 `turn_type_sequence`。若拿它们做复算，会出现两种错误：候选**故意**选了
+非最短家族时，evaluator 拿最短词去比对 → 差异超阈值 → 合法候选被误拒；或者
+反过来报出一个与实际所选转弯无关的代价。
+
+正确做法：调 `dubins_words(...)`（Reeds-Shepp 侧同理用 `reeds_shepp_words`）拿到
+**全部家族**，按 `turn_type_sequence[i]` 从中**挑出被选中的那一个**，再对它
+`dubins_endpoint` 正演闭合校验并取长度。这样复算路径与 planner 同源但独立，
+差异只在浮点 ULP，且能真正验证"候选选的那个词"。
+
+**`cell_of_work_index` 为什么必需**：`TransferBreakdown` 的
+`turn_total_m` 与 `inter_cell_m` 是两个不同类别，而实测
+`metrics/path.py` 的 `transit_breakdown(path, *, cell_of_work_index)` 正是靠这个
+映射把二者分开。`RouteArtifact` **刻意不携带 cell 归属**，所以只给
+`path_artifact + route` 的签名在多 cell 路线上无法产出承诺的分解——实现只能把
+所有作业段间连接一律当成转弯，两个类别同时失真。因此 evaluator 必须显式接收
+`cell_of_work_index`（或能派生它的 `CellsArtifact`）。
 
 ### 4.3 TransferBreakdown 守门
 
@@ -260,11 +334,24 @@ headland_turn 槽位的独立 evaluator 必须用同一个 `TransferBreakdown` �
   候选"选择不同家族"只在边界几何上（非对称、allowed_region 紧、reverse_cost
   极化）有自由度。**启发式自由度天然窄**——这是任务 2 spec 描述里直接说出的
   事实。
-- **协议纠缠**：headland_turn 的合理选择与协议级 `reverse_cost` 乘子和
-  `allowed_region` 强耦合：reverse_cost=0 时所有解析解代价相等，候选无差别；
-  reverse_cost 极大时只能选直行，候选被约束在单点。**研究的边际收益与
-  协议参数选择纠缠**——Study-002 还没确定协议细节（见任务 5），headland_turn
-  进 Study-002 等于把协议未定参数又绑了一个。
+- **协议纠缠**：headland_turn 的合理选择与协议级 `ReverseCostSpec` 和
+  `allowed_region` 强耦合，Study-002 的协议细节尚未确定（见任务 5），
+  把它一起绑进来等于多绑一个未定参数。
+
+  > **勘误（本轮复核修正）**：本节初稿写的是「`reverse_cost=0` 时所有解析解
+  > 代价相等、`reverse_cost` 极大时只能选直行」。这两个论据都不成立，因为
+  > 实测 `contracts/protocol.py` 的约束是
+  > `reverse_length_multiplier: float = Field(ge=1.0)`——**取 0 在本仓库
+  > 根本构造不出来**，倒车永远不比前进便宜；换挡罚则是独立的非负项。
+  > 即便取几何退化设置 `(multiplier=1, penalty=0)`，不同家族的几何长度本来
+  > 就不同，代价并不相等；换挡罚则极大时解趋近**纯前向 Dubins 词**，也不是
+  > 「只能选直行」。
+  >
+  > 用有效取值重述后，本条论据**减弱但未推翻**：真实存在的耦合是
+  > `multiplier` 与 `gear_shift_penalty` 共同决定含倒车家族（Reeds-Shepp）
+  > 相对纯前向家族的相对代价，从而改变候选的可选面。这仍然是一个未定协议
+  > 参数与研究结论的纠缠，只是不再有「代价全等」「退化为单点」这样的极端形态。
+  > 结论所依赖的主要论据仍是**评估成本**与**解析最短词主导**两条。
 - **与两槽位重叠**：swath_angle（选长程方向）已经决定了"主轴大致怎么走"，
   route_order（选访问序）决定了"哪些段相邻"。**headland_turn 的很多选择
   被前两槽位隐式决定**——三槽位的"互补"是表面的，实际自由度被前两槽位锁
