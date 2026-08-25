@@ -175,14 +175,20 @@ def test_project_state_reports_visited_and_remaining() -> None:
 # ---------- 缺陷 2：烘焙与重放必须同一分解 ----------
 
 def test_baked_ranks_match_replayed_swaths_on_obstacle_field() -> None:
-    """有障碍田上，build_config 烘焙的 rank 键必须覆盖重放时真实产生的条带。
+    """有障碍田上，烘焙的 rank 键集合必须与重放时真实产生的条带 id 集合**精确相等**。
 
     【证伪力】修复前烘焙走 BoustrophedonDecomposition、返回的 config 却声明
-    no_decomposition。BCD 在有障碍田上切出不同 cell 布局 → 重放条带数量/序号
-    不同 → RankedSwathOrderPlanner 抛「缺 rank 键」。本测试直接跑 run_pipeline
-    重放，修复前必失败。
+    no_decomposition。本例田上 BCD 产 10 条带、no_decomposition 产 7 条带。
+
+    关键：两种分解的 id 都是顺序 `swath-NNNN`，10 个 id 是 7 个的**超集**，
+    因此 RankedSwathOrderPlanner **不会**报「缺 rank 键」——它照跑不误，
+    只是把 rank 套到几何上毫不相干的条带（Codex 警告的正是这一半）。
+    所以断言必须直接比集合，不能只看 run_pipeline 是否抛异常，
+    也不能只看 config_id 回填——那两种断言在缺陷下都会通过。
     """
-    from agriautolab.pipeline.run import run_pipeline
+    from agriautolab.algorithms.swath.principal_axis import PrincipalAxisSwathGenerator
+    from agriautolab.algorithms.headland.uniform_headland import ConstantWidthHeadland
+    from agriautolab.coverage.stages.decomposition import NoDecomposition
 
     problem = CoverageProblem(
         problem_id="obstacle-field",
@@ -203,12 +209,22 @@ def test_baked_ranks_match_replayed_swaths_on_obstacle_field() -> None:
         "    return candidate['distance_norm']\n"
     )
     config = slot.build_config(function, problem, VEHICLE)
+    baked_ids = {k.removeprefix("rank:") for k in config.params if k.startswith("rank:")}
 
-    instance = make_instance()
-    protocol = make_protocol(instance)
-    # 重放：不得抛「缺 rank 键」
-    result = run_pipeline(problem, VEHICLE, config, protocol)
-    assert result.config_id == config.config_id()
+    # 按 config 自己声明的 decomposition 重放上游，取真实条带 id
+    assert config.decomposition == "no_decomposition"
+    cells = NoDecomposition().run(problem)
+    headland = ConstantWidthHeadland(config.params["headland_width_m"]).run(cells)
+    mains = tuple(part for cell in headland.cells for part in cell.main_field)
+    replayed = PrincipalAxisSwathGenerator().run(
+        mains, working_width_m=VEHICLE.working_width_m, problem=problem,
+    )
+    replayed_ids = {s.swath_id for s in replayed.swaths}
+
+    assert baked_ids == replayed_ids, (
+        f"烘焙 rank 的条带集合与重放不一致：烘焙 {len(baked_ids)} 条、"
+        f"重放 {len(replayed_ids)} 条；仅烘焙有={sorted(baked_ids - replayed_ids)}"
+    )
 
 
 # ---------- 缺陷 4：投影必须减质心（平移不变） ----------
