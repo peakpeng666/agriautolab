@@ -114,7 +114,10 @@ TSPLIB/CVRPLIB 数据适配、EoH reproduction、真实模型 provenance 与自�
 
 当前 `agent/` 是**农业 swath 方向启发式演化骨架**，不是完整 EoH reproduction：
 
-- 候选槽位为受限的 swath-angle heuristic；
+- 候选槽位已抽象为可登记的 `CandidateSlot` 协议（`agent/slots.py` 的 `SLOTS`
+  注册表），闸门与演化循环按槽位对象分派契约函数、探针值检查、评估配置构造、
+  不变性检查与对抗复核器集；当前唯一登记的槽位仍是受限的 swath-angle
+  heuristic（`swath_angle`），尚未新增其他槽位；
 - 有 AST 扫描、验证/确定性/几何不变性闸门、对抗探针和演化账本；
 - LLM backend 通过接口注入，默认测试使用 hermetic mock；
 - 候选适应度基于农业三目标 hypervolume contribution。
