@@ -81,6 +81,14 @@ agent 层候选槽位抽象使用角色明确的规范名：`CandidateSlot`（�
 `ProposalContext.slot_id` 与 `EvolutionRecord.slot_id`，按总纲属于将来的
 证据身份：演化账本一旦开始落盘，已用的 slot id 即为 wire ID 永不改。
 
+演化账本加 anytime 性能轨迹字段（`EvolutionRecord.evaluations_used`、
+`EvolutionRecord.cumulative_best_delta`）与模块级函数
+`agriautolab.agent.ledger.anytime_curve(records) -> tuple[tuple[int, float | None], ...]`。
+字段为「真实 run_pipeline 调用累计数」与「迄今各轮 hypervolume_delta 非 None
+值的 running max」；`anytime_curve` 按这两个字段返回 COCO/IOHprofiler 式的
+"评估次数 → 当前最优"采样点，O(n)。口径与 `evaluations_used` 字段 docstring
+一致，是 Study-002 预算公式的唯一来源。
+
 ## 4. 包结构命名
 
 当前真实包名就是文档事实，不再维护“计划中的 canonical 幽灵目录”：
