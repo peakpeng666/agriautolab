@@ -17,6 +17,7 @@ from agriautolab.algorithms.headland.uniform_headland import ConstantWidthHeadla
 from agriautolab.algorithms.path.dubins_transit import DubinsPathPlanner
 from agriautolab.algorithms.path.reeds_shepp_transit import ReedsSheppPathPlanner
 from agriautolab.algorithms.route.boustrophedon_order import BoustrophedonRoutePlanner
+from agriautolab.algorithms.route.ranked_swath_order import RankedSwathOrderPlanner
 from agriautolab.algorithms.route.rural_postman_greedy import GreedyRuralPostmanRoutePlanner
 from agriautolab.algorithms.route.skip_one_order import SkipOneRoutePlanner
 from agriautolab.algorithms.swath.fixed_angle import FixedAngleSwathGenerator
@@ -53,6 +54,7 @@ _ROUTES = {
     "boustrophedon_order": BoustrophedonRoutePlanner,
     "skip_one_order": SkipOneRoutePlanner,
     "rural_postman_greedy": GreedyRuralPostmanRoutePlanner,
+    "ranked_swath_order": RankedSwathOrderPlanner,
 }
 _PATHS = {"dubins_transit": DubinsPathPlanner, "reeds_shepp_transit": ReedsSheppPathPlanner}
 
@@ -234,6 +236,18 @@ def run_pipeline(
         route: RouteArtifact = memo.get_or_compute(
             memo.key("route", config.route, {"radius": vehicle.min_turning_radius_m}, swaths),
             lambda: _ROUTES[config.route]().run(swaths, min_turning_radius_m=vehicle.min_turning_radius_m),
+        )
+    elif config.route == "ranked_swath_order":
+        # 候选选择烘焙进 config.params["rank:<swath_id>"]；memo key 自动包含，
+        # 13 个冻结配置不含此 id，其 config_id 逐位不变。
+        ranks = {
+            key.removeprefix("rank:"): float(value)
+            for key, value in config.params.items()
+            if key.startswith("rank:")
+        }
+        route = memo.get_or_compute(
+            memo.key("route", config.route, dict(sorted(ranks.items())), swaths),
+            lambda: _ROUTES[config.route]().run(swaths, ranks=ranks),
         )
     else:
         route = memo.get_or_compute(

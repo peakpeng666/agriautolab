@@ -45,8 +45,10 @@ GOLDEN_CONFIG_ID_OFFSET_PI_OVER_6 = "ee57b34caaafa4498cb89f687d25982955cbe29bb22
 
 def test_slots_registry_exposes_swath_angle_as_default() -> None:
     # 旧实现没有注册表：单槽位硬编码在 gates 里，无从谈起 SLOTS/DEFAULT_SLOT_ID。
+    # 多槽位时代收紧为「swath_angle 必须登记且作为默认槽位」；不再断言 SLOTS
+    # 只含 swath_angle（任务 3 提交二新增 route_order）。
     assert DEFAULT_SLOT_ID == "swath_angle"
-    assert set(SLOTS) == {"swath_angle"}
+    assert "swath_angle" in set(SLOTS)
     slot = SLOTS[DEFAULT_SLOT_ID]
     assert isinstance(slot, SwathAngleSlot)
     assert isinstance(slot, CandidateSlot)  # 协议结构检查（runtime_checkable）
@@ -157,7 +159,9 @@ def test_registry_key_must_match_slot_id() -> None:
 
 def test_proposer_dispatches_prompt_and_mocks_by_slot_id() -> None:
     # 提示词模板按槽位登记：单槽位时代的公开名 PROMPT_TEMPLATE 是其中一个值。
-    assert set(PROMPT_TEMPLATES) == {"swath_angle"}
+    # 多槽位时代改为 "swath_angle 必须存在"；不再断言严格唯一（任务 3 提交二
+    # 新增 route_order）。
+    assert "swath_angle" in set(PROMPT_TEMPLATES)
     assert PROMPT_TEMPLATE == PROMPT_TEMPLATES["swath_angle"]
 
     context = ProposalContext(stage=CoverageStage.SWATH, round_index=0, pool_config_ids=(),

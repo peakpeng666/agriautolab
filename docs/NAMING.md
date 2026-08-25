@@ -89,6 +89,18 @@ agent 层候选槽位抽象使用角色明确的规范名：`CandidateSlot`（�
 "评估次数 → 当前最优"采样点，O(n)。口径与 `evaluations_used` 字段 docstring
 一致，是 Study-002 预算公式的唯一来源。
 
+route 阶段条带访问序槽位（任务 3 提交二）：`RouteOrderSlot`（八成员协议实现，
+slot_id="route_order"）、`agriautolab.algorithms.route.constructive_order.RouteOrderProblem`
+（公共 ConstructiveProblem 的领域 adapter，放农业侧以遵守
+optimization/ 不得 import 农业的依赖纪律）、`evaluate_route_order(swaths, visit_order, start_position)`
+（独立 evaluator，从 swath 中心线端点几何独立复算总转移距离，不复用构造过程累计值）。
+候选选择通过 `params["rank:<swath_id>"]` 烘焙进 PipelineConfig；新 path 阶段
+planner id `ranked_swath_order`（`RankedSwathOrderPlanner`，按 rank 升序、swath_id
+决胜，第 i 个访问偶数 FORWARD / 奇数 REVERSE）。13 个冻结配置不含该 id，
+其 config_id 逐位不变。槽位专属 reviewer 集 `ROUTE_REVIEWERS`（route 槽位不复用
+SWATH_REVIEWERS 的 |v|≤π/2 假设）；4 个 mock 候选源码以 dict-get 形式使用
+`distance_norm` / `projection_norm`（旋转不变键）。
+
 ## 4. 包结构命名
 
 当前真实包名就是文档事实，不再维护“计划中的 canonical 幽灵目录”：

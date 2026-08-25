@@ -91,6 +91,40 @@ MOCK_CANDIDATES: tuple[ProposalCandidate, ...] = (
 # 未知 slot_id 直接 KeyError（fail-closed），不静默回退。
 MOCK_CANDIDATES_BY_SLOT: dict[str, tuple[ProposalCandidate, ...]] = {
     "swath_angle": MOCK_CANDIDATES,
+    "route_order": (
+        ProposalCandidate(
+            algorithm_id="route_nearest_neighbor",
+            source_code=(
+                "def next_turn_score(state, candidate):\n"
+                "    return candidate.get('distance_norm', 0.0)\n"
+            ),
+            description="贪心最近邻：每次选出口到条带入口距离归一化最小的未访问条带",
+        ),
+        ProposalCandidate(
+            algorithm_id="route_stable_id_order",
+            source_code=(
+                "def next_turn_score(state, candidate):\n"
+                "    return 0.0\n"
+            ),
+            description="恒取 0.0：等评分并列时由 feasible_actions 的 swath_id 稳定排序决胜",
+        ),
+        ProposalCandidate(
+            algorithm_id="route_projection_order",
+            source_code=(
+                "def next_turn_score(state, candidate):\n"
+                "    return candidate.get('projection_norm', 0.0)\n"
+            ),
+            description="按条带中心主轴法向投影归一化排序——退化等价于 boustrophedon 的入口端约定版本",
+        ),
+        ProposalCandidate(
+            algorithm_id="route_mixed",
+            source_code=(
+                "def next_turn_score(state, candidate):\n"
+                "    return 0.6 * candidate.get('distance_norm', 0.0) + 0.4 * candidate.get('projection_norm', 0.0)\n"
+            ),
+            description="距离与投影加权混合；权重 0.6/0.4 写死于源码（不来自 features）",
+        ),
+    ),
 }
 
 
@@ -126,6 +160,27 @@ reflex_vertex_count, obstacle_count, obstacle_area_ratio,
 row_angle_vs_principal, turning_ratio, swath_count_at_minwidth。
 
 返回值：相对地块 PCA 主轴的扫掠角偏移（弧度），必须在 [-pi/2, pi/2] 内且有限。
+可用内建：math, len, range, min, max, abs, sum, enumerate, sorted, tuple, list, float, int。
+禁止 import、open、eval、exec、双下划线属性。代码会在受限沙箱里执行并过四道闸。
+目标：让 Pareto 前沿的超体积增大（造互补性，不是造单项冠军）。
+""",
+    "route_order": """你在一个农业覆盖路径规划的算法演化循环里担任启发式提议者。
+
+阶段：{stage}
+当前池子的配置：{pool}
+轮次：{round_index}
+
+请只输出一个 Python 函数定义，不要任何解释：
+
+    def next_turn_score(state, candidate):
+        ...
+
+输入 state 与 candidate 都是 dict[str, float]；可用键（全部旋转不变、无量纲）：
+  state: visited_count, remaining_count
+  candidate: distance_norm（出口到条带入口欧氏距离 / min_turning_radius）、
+             projection_norm（条带中心在主轴法向的投影 / working_width）
+
+返回值：浮点分数，越小优先级越高；必须有限。
 可用内建：math, len, range, min, max, abs, sum, enumerate, sorted, tuple, list, float, int。
 禁止 import、open、eval、exec、双下划线属性。代码会在受限沙箱里执行并过四道闸。
 目标：让 Pareto 前沿的超体积增大（造互补性，不是造单项冠军）。

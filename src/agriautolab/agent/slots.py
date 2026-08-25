@@ -22,7 +22,7 @@ import math
 from typing import Protocol, runtime_checkable
 
 from agriautolab.agent.gates import GATE_INVARIANCE, GateOutcome, HeuristicFn
-from agriautolab.agent.reviewer import AdversarialReviewer, DEFAULT_REVIEWERS
+from agriautolab.agent.reviewer import ROUTE_REVIEWERS, SWATH_REVIEWERS, AdversarialReviewer
 from agriautolab.agent.sandbox import SandboxViolation, run_sandboxed
 from agriautolab.contracts.enums import CoverageStage
 from agriautolab.contracts.problem import CoverageProblem
@@ -122,7 +122,7 @@ class SwathAngleSlot:
     slot_id: str = "swath_angle"
     stage: CoverageStage = CoverageStage.SWATH
     contract_function: str = "swath_angle_offset_rad"
-    reviewers: tuple[AdversarialReviewer, ...] = DEFAULT_REVIEWERS
+    reviewers: tuple[AdversarialReviewer, ...] = SWATH_REVIEWERS
 
     def compile(self, source: str) -> HeuristicFn:
         """沙箱编译并提取契约函数。任何违规（语法/禁令/缺函数/签名不符）当场抛。"""
@@ -182,9 +182,208 @@ class SwathAngleSlot:
         return GateOutcome(GATE_INVARIANCE, True, "8 组随机刚体变换下偏移不变（< 1e-9）")
 
 
-# 已登记槽位注册表：新增槽位在此登记（本次重构不新增）。键是槽位 id（wire 身份），
-# 进入 ProposalContext.slot_id 与 EvolutionRecord.slot_id。
-SLOTS: dict[str, CandidateSlot] = {"swath_angle": SwathAngleSlot()}
+class RouteOrderSlot:
+    """route 阶段的条带访问序槽位：契约函数 next_turn_score(state, candidate) -> float。
+
+    与 SwathAngleSlot 的语义区别：
+    - 契约函数是**双参** (state, candidate)，不是单参 (features)；
+    - probe_value / invariance_check 的形态必须适配"双参 + 离散序贯"——不设 |v|≤π/2 界；
+    - build_config **不**调用 run_pipeline（会污染任务 1 的评估计数），
+      直接调上游阶段类拿 swaths，用 construct_solution 求访问序，把
+      排名烘焙进 params 即可；
+    - reviewers 用 ROUTE_REVIEWERS（不复用 SWATH_REVIEWERS 的 swath 值域假设）。
+    """
+
+    slot_id: str = "route_order"
+    stage: CoverageStage = CoverageStage.ROUTE
+    contract_function: str = "next_turn_score"
+    reviewers: tuple[AdversarialReviewer, ...] = ROUTE_REVIEWERS
+
+    # 试调用输入：作为槽位私有常量，compile 后立即用这对输入验签名
+    _PROBE_STATE: dict[str, float] = {"visited_count": 1.0, "remaining_count": 3.0}
+    _PROBE_CANDIDATE: dict[str, float] = {"distance_norm": 1.0, "projection_norm": 0.0}
+
+    def compile(self, source: str) -> HeuristicFn:
+        """沙箱编译并提取契约函数 next_turn_score(state, candidate) -> float。
+
+        试调用：function(_PROBE_STATE, _PROBE_CANDIDATE) 捕 TypeError 报签名不符。
+        """
+        namespace = run_sandboxed(source)
+        function = namespace.get(self.contract_function)
+        if not callable(function):
+            raise SandboxViolation(f"候选代码必须定义顶层函数 {self.contract_function}(state, candidate)")
+        try:
+            function(self._PROBE_STATE, self._PROBE_CANDIDATE)
+        except TypeError as error:
+            raise SandboxViolation(
+                f"契约函数签名不符（应接受两个 dict 形参）：{error}"
+            ) from error
+        return function
+
+    def probe_value(self, function: HeuristicFn, problem: CoverageProblem,
+                    vehicle: VehicleSpec) -> float:
+        """route 槽位不暴露单一标量探针；返回 0.0（无 π/2 界，参考田上跑一次）。"""
+        try:
+            value = function(self._PROBE_STATE, self._PROBE_CANDIDATE)
+        except (TypeError, ValueError) as error:
+            raise ValueError(f"候选探针失败：{type(error).__name__}: {error}") from error
+        if not math.isfinite(float(value)):
+            raise ValueError(f"候选返回非有限分数：{value!r}")
+        return float(value)
+
+    def build_config(self, function: HeuristicFn, problem: CoverageProblem,
+                     vehicle: VehicleSpec) -> PipelineConfig:
+        """直接调上游阶段类拿 swaths，用 construct_solution 求访问序。
+
+        关键纪律：禁止调用 run_pipeline——会污染任务 1 的评估计数。
+        候选选择通过 params["rank:<swath_id>"] 烘焙；rank = 访问序号。
+        """
+        from agriautolab.algorithms.headland.uniform_headland import ConstantWidthHeadland
+        from agriautolab.algorithms.decomposition.boustrophedon_cells import BoustrophedonDecomposition
+        from agriautolab.algorithms.swath.principal_axis import PrincipalAxisSwathGenerator
+        from agriautolab.algorithms.route.constructive_order import (
+            RouteOrderProblem,
+        )
+        from agriautolab.geometry.validate import polygon_from_spec
+        from agriautolab.geometry.robust import robust_union
+        from agriautolab.algorithms.swath.principal_axis import principal_axis
+        from agriautolab.optimization.constructive import (
+            construct_solution,
+        )
+
+        # 上游分解（与 pipeline 同样的实操）
+        cells = BoustrophedonDecomposition().run(problem)
+        headland = ConstantWidthHeadland(8.0).run(cells)
+        mains = tuple(part for cell in headland.cells for part in cell.main_field)
+        swaths = PrincipalAxisSwathGenerator().run(
+            mains, working_width_m=vehicle.working_width_m, problem=problem,
+        )
+        if not swaths.swaths:
+            raise ValueError("build_config: 参考田未产生条带，构造空访问序失败")
+
+        # 主轴法向（旋转不变键的来源）
+        field = polygon_from_spec(problem.field)
+        obstacles = tuple(
+            polygon_from_spec(spec) for spec in sorted(problem.obstacles, key=lambda item: item.geometry_id)
+        )
+        scale_hint = max(field.bounds[2] - field.bounds[0], field.bounds[3] - field.bounds[1], 1.0)
+        free = field.difference(robust_union(obstacles, scale_hint=scale_hint)) if obstacles else field
+        ux, uy = principal_axis(free if free.geom_type == "Polygon" else free.convex_hull)
+        # 地块质心 = 简单算术（不调 shapely）
+        ext = problem.field.exterior
+        cx = sum(p.x for p in ext) / len(ext)
+        cy = sum(p.y for p in ext) / len(ext)
+
+        all_ids = tuple(s.swath_id for s in swaths.swaths)
+        problem_obj = RouteOrderProblem(
+            all_ids,
+            min_turning_radius_m=vehicle.min_turning_radius_m,
+            working_width_m=vehicle.working_width_m,
+            field_centroid=(cx, cy),
+            principal_normal=(-uy, ux),  # 旋转 90° 得法向
+        )
+        # 注入出口位置（条带中心线终点）+ 入口位置（中心线起点），
+        # 让 feasible_actions 的 distance_norm 是真实几何距离
+        problem_obj._exit_positions = {
+            s.swath_id: (
+                float(s.centerline.points[-1].x),
+                float(s.centerline.points[-1].y),
+            ) for s in swaths.swaths
+        }
+        problem_obj._entry_positions = {
+            s.swath_id: (
+                float(s.centerline.points[0].x),
+                float(s.centerline.points[0].y),
+            ) for s in swaths.swaths
+        }
+        problem_obj._centers = {
+            s.swath_id: (
+                (float(s.centerline.points[0].x) + float(s.centerline.points[-1].x)) / 2.0,
+                (float(s.centerline.points[0].y) + float(s.centerline.points[-1].y)) / 2.0,
+            ) for s in swaths.swaths
+        }
+
+        # 构造沙箱评分函数：state, candidate -> float，调用槽位的实际候选
+        candidate_fn = function
+
+        class _SandboxHeuristic:
+            heuristic_id: str = "candidate"
+
+            def score(self, state, action) -> float:
+                # 把沙箱函数的"两个 dict"形态桥到公共协议
+                return float(candidate_fn(state, action))
+
+        visit_order = construct_solution(problem_obj, _SandboxHeuristic())
+        # 烘焙 rank：访问序号 = rank（rank 升序访问；并列按 swath_id 决胜）
+        rank_params: dict[str, float] = {
+            f"rank:{swath_id}": float(index)
+            for index, swath_id in enumerate(visit_order)
+        }
+        params = {"headland_width_m": 8.0, **rank_params}
+        return PipelineConfig(
+            decomposition="no_decomposition", headland="uniform_headland",
+            swath="principal_axis", route="ranked_swath_order", path="dubins_transit",
+            params=params,
+        )
+
+    def invariance_check(self, function: HeuristicFn, problem: CoverageProblem,
+                         vehicle: VehicleSpec, rng) -> GateOutcome:
+        """8 组随机刚体变换下，build_config 烘焙的访问序逐元素相同（离散序不变）。
+
+        与 SwathAngleSlot 的 8×3 uniform 消耗模式完全一致（theta/tx/ty 顺序），
+        但判定标准从「标量差 < 1e-9」改为「tuple 相等」——离散枚举无 ULP 噪声。
+        """
+        from shapely.affinity import rotate as shp_rotate, translate as shp_translate
+
+        from agriautolab.geometry.validate import polygon_from_spec, polygon_to_spec
+
+        base_order: tuple[str, ...] | None = None
+        for _ in range(8):
+            theta = float(rng.uniform(-math.pi, math.pi))
+            tx, ty = float(rng.uniform(-100.0, 100.0)), float(rng.uniform(-100.0, 100.0))
+
+            def move(geometry):
+                return shp_translate(shp_rotate(geometry, theta, origin=(0.0, 0.0), use_radians=True), tx, ty)
+
+            rotated = problem.model_copy(update={
+                "field": polygon_to_spec(move(polygon_from_spec(problem.field)), problem.field.geometry_id),
+                "obstacles": tuple(
+                    polygon_to_spec(move(polygon_from_spec(spec)), spec.geometry_id) for spec in problem.obstacles
+                ),
+            })
+            try:
+                config = self.build_config(function, rotated, vehicle)
+            except Exception as error:  # noqa: BLE001 -- 闸门把一切失败转为淘汰记录
+                return GateOutcome(GATE_INVARIANCE, False, f"{type(error).__name__}: {error}")
+            order = tuple(
+                key.removeprefix("rank:") for key, _ in sorted(
+                    ((k, v) for k, v in config.params.items() if k.startswith("rank:")),
+                    key=lambda kv: (kv[1], kv[0]),
+                )
+            )
+            if base_order is None:
+                base_order = order
+            elif order != base_order:
+                # 找出第一个差异位置以便诊断
+                for index, (a, b) in enumerate(zip(order, base_order)):
+                    if a != b:
+                        return GateOutcome(
+                            GATE_INVARIANCE, False,
+                            f"旋转 {theta:.4f} rad 后访问序在 index {index} 由 {a!r} 变 {b!r}",
+                        )
+                return GateOutcome(
+                    GATE_INVARIANCE, False,
+                    f"旋转 {theta:.4f} rad 后访问序长度变化 {len(order)} vs {len(base_order)}",
+                )
+        return GateOutcome(GATE_INVARIANCE, True, "8 组随机刚体变换下访问序逐元素相同")
+
+
+# 已登记槽位注册表：新增槽位在此登记。本次新增 route_order（任务 3 提交二）。
+# 键是槽位 id（wire 身份），进入 ProposalContext.slot_id 与 EvolutionRecord.slot_id。
+SLOTS: dict[str, CandidateSlot] = {
+    "swath_angle": SwathAngleSlot(),
+    "route_order": RouteOrderSlot(),
+}
 
 # 默认槽位：闸门与演化循环未显式指定 slot 时解析到这里，单槽位时代行为因此不变。
 DEFAULT_SLOT_ID = "swath_angle"

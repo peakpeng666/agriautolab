@@ -98,6 +98,43 @@ SWATH_REVIEWERS: tuple[AdversarialReviewer, ...] = (
 DEFAULT_REVIEWERS = SWATH_REVIEWERS
 
 
+class RouteOrderCorrectnessReviewer:
+    """route_order 槽位专属复核器：探针 = 典型 (state, candidate) 对。
+
+    与 SWATH_REVIEWERS 的区别：双参调用、(state, candidate) 形态；
+    **不设 |v|≤π/2 界**——离散序贯决策的分数无自然标量界。
+    hard 否决仅用于「抛异常」与「非有限」两类正确性问题。
+    """
+
+    PROBES: tuple[tuple[dict[str, float], dict[str, float]], ...] = (
+        ({"visited_count": 0.0, "remaining_count": 4.0}, {"distance_norm": 1.0, "projection_norm": 0.5}),
+        ({"visited_count": 1.0, "remaining_count": 3.0}, {"distance_norm": 0.0, "projection_norm": 0.0}),
+        ({"visited_count": 3.0, "remaining_count": 1.0}, {"distance_norm": 2.5, "projection_norm": -0.3}),
+    )
+
+    def review(self, candidate: ProposalCandidate, function: HeuristicFn) -> ReviewVerdict:
+        for index, (state, action) in enumerate(self.PROBES):
+            try:
+                value = function(state, action)
+            except Exception as error:  # noqa: BLE001 -- 探针失败是反例本身
+                return ReviewVerdict(
+                    True, (f"探针 {index} 抛出 {type(error).__name__}: {error}",), hard=True,
+                )
+            if not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+                return ReviewVerdict(
+                    True, (f"探针 {index} 返回非有限数：{value!r}",), hard=True,
+                )
+        return ReviewVerdict(False, tuple(
+            f"探针 {index} 通过（返回 {function(state, action)!r}）"
+            for index, (state, action) in enumerate(self.PROBES)
+        ))
+
+
+# route_order 槽位专属复核器集：不复用 SWATH_REVIEWERS（其内嵌 |v|≤π/2 界
+# 不适用于双参 (state, candidate) 评分；硬要复用会在所有离散评分上误杀）。
+ROUTE_REVIEWERS: tuple[AdversarialReviewer, ...] = (RouteOrderCorrectnessReviewer(),)
+
+
 def majority_refuted(verdicts: tuple[ReviewVerdict, ...]) -> bool:
     """多数否决即淘汰。平票（偶数复核器）按否决处理——保守侧。"""
     refuted = sum(1 for verdict in verdicts if verdict.refuted)
