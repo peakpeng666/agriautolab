@@ -216,22 +216,42 @@ def test_provenance_must_match_the_candidate_source() -> None:
     from agriautolab.agent.evolve import _provenance_record
     from agriautolab.agent.proposer import ProposalCandidate
 
-    good = ProposalCandidate(
-        algorithm_id="a", source_code=SOURCE, description="d",
-        provenance=_result_for("p", response=SOURCE),
-    )
-    assert _provenance_record(good) is not None
+    from agriautolab.agent.proposer import replay_candidate
 
+    # 与 replay_candidate 逐字一致的候选：通过
+    good = replay_candidate(0, _result_for("p", response=SOURCE))
+    assert _provenance_record(good, 0) is not None
+
+    # 源码不符：拒
     mismatched = ProposalCandidate(
-        algorithm_id="a", source_code=SOURCE, description="d",
+        algorithm_id=good.algorithm_id, source_code=SOURCE, description=good.description,
         provenance=_result_for("p", response="def swath_angle_offset_rad(f):\n    return 1.0\n"),
     )
-    with pytest.raises(ValueError, match="与 provenance.response 不一致"):
-        _provenance_record(mismatched)
+    with pytest.raises(ValueError, match="重放身份不一致"):
+        _provenance_record(mismatched, 0)
+
+    # 源码相符、但 algorithm_id 自定义：仍须拒。
+    # 【证伪力】只比 source_code 的版本会放行它，而 replay_candidate 把
+    # algorithm_id / description 写死成自己的取值，重放出的 candidate_identity
+    # 与记录的 proposal_hash 不同——账本与重放对不上。
+    custom_id = ProposalCandidate(
+        algorithm_id="my_custom_id", source_code=SOURCE, description=good.description,
+        provenance=_result_for("p", response=SOURCE),
+    )
+    with pytest.raises(ValueError, match="重放身份不一致"):
+        _provenance_record(custom_id, 0)
+
+    # description 自定义同理
+    custom_desc = ProposalCandidate(
+        algorithm_id=good.algorithm_id, source_code=SOURCE, description="自定义描述",
+        provenance=_result_for("p", response=SOURCE),
+    )
+    with pytest.raises(ValueError, match="重放身份不一致"):
+        _provenance_record(custom_desc, 0)
 
     # MockProposer 路径：无 provenance 不受影响
     assert _provenance_record(
-        ProposalCandidate(algorithm_id="a", source_code=SOURCE, description="d")
+        ProposalCandidate(algorithm_id="a", source_code=SOURCE, description="d"), 0,
     ) is None
 
 
