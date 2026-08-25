@@ -110,9 +110,14 @@ class MockProposer:
 class CompletionResult:
     """模型后端单次调用的完整结果（含 provenance 十一字段）。
 
-    字段全部必填；__post_init__ 做 fail-closed 校验（model_id/request_id 非空、
+    字段全部必填；构造期做 fail-closed 校验（model_id/request_id 非空、
     temperature/top_p 有限且在 [0,1]、tokens 为 int >= 0、cost/latency_ms 有限
     且 >= 0）。这是 evidence 链的入口——任何字段缺失都视同未做 provenance。
+
+    **不可变性是契约的一部分**：`__setattr__` / `__delattr__` 一律拒绝。
+    `ProposalCandidate` 只是浅冻结，而 `evolve_pool` 在四道闸与**注入的对抗复核器**
+    跑完之后才把 provenance 序列化入账；若字段可写，任何持有引用者都能在
+    「实际调用」与「写入账本」之间改写元数据，账本于是为被篡改的数据背书。
 
     to_dict 返回 JSON 可序列化 dict；replay_candidate 用其离线重建 ProposalCandidate。
     """
@@ -160,17 +165,31 @@ class CompletionResult:
                 raise ValueError(f"CompletionResult.{name} 必须 >= 0 且有限：{f!r}")
         if not isinstance(seed, int) or isinstance(seed, bool):
             raise ValueError(f"CompletionResult.seed 必须为 int：{seed!r}")
-        self.model_id = str(model_id)
-        self.prompt = str(prompt)
-        self.response = str(response)
-        self.temperature = float(temperature)
-        self.top_p = float(top_p)
-        self.seed = int(seed)
-        self.prompt_tokens = int(prompt_tokens)
-        self.completion_tokens = int(completion_tokens)
-        self.cost = float(cost)
-        self.latency_ms = float(latency_ms)
-        self.request_id = str(request_id)
+        # 经 object.__setattr__ 落字段：本类的 __setattr__ 一律拒绝，
+        # 构造之后 provenance 不可变（见类 docstring 的不可变性契约）。
+        for name, coerced in (
+            ("model_id", str(model_id)),
+            ("prompt", str(prompt)),
+            ("response", str(response)),
+            ("temperature", float(temperature)),
+            ("top_p", float(top_p)),
+            ("seed", int(seed)),
+            ("prompt_tokens", int(prompt_tokens)),
+            ("completion_tokens", int(completion_tokens)),
+            ("cost", float(cost)),
+            ("latency_ms", float(latency_ms)),
+            ("request_id", str(request_id)),
+        ):
+            object.__setattr__(self, name, coerced)
+
+    def __setattr__(self, name: str, value: object) -> None:
+        raise AttributeError(
+            f"CompletionResult 构造后不可变，拒绝改写 {name!r}：provenance 是证据链的"
+            "入账内容；若能在闸门与对抗复核之后被改写，账本证明的就不是真实发生的那次调用"
+        )
+
+    def __delattr__(self, name: str) -> None:
+        raise AttributeError(f"CompletionResult 构造后不可变，拒绝删除 {name!r}")
 
     def to_dict(self) -> dict[str, Any]:
         """JSON 可序列化 dict；入账 / replay 唯一入口。"""
@@ -252,6 +271,15 @@ class LLMProposer:
             )
         prompt = self.build_prompt(stage=stage, context=context)
         result = self._client.complete(prompt)
+        if result.prompt != prompt:
+            # fail closed：后端返回的 provenance 必须对应本次实际发出的请求。
+            # 否则账本记下的是另一次调用的 prompt，离线重放会喂错输入，
+            # 「哪个请求产生了这个响应」这一主张就无法成立。
+            raise ValueError(
+                "模型后端返回的 CompletionResult.prompt 与本次发出的 prompt 不一致："
+                f"request_id={result.request_id!r}，"
+                f"发出 {len(prompt)} 字符、返回 {len(result.prompt)} 字符"
+            )
         return _candidate_from_completion(context.round_index, result)
 
 

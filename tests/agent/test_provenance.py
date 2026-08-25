@@ -55,41 +55,98 @@ def test_completion_result_rejects_out_of_range_top_p() -> None:
 
 # ---- b. propose + replay identity 一致 ----
 
-class _FakeClient:
-    """假模型后端：每次 complete 返回固定 CompletionResult。"""
-
-    def __init__(self, result: CompletionResult) -> None:
-        self._result = result
-        self.calls = 0
-
-    def complete(self, prompt: str) -> CompletionResult:
-        self.calls += 1
-        return self._result
+SOURCE = "def swath_angle_offset_rad(features):\n    return 0.0\n"
 
 
-def test_propose_records_provenance_and_replay_matches_identity() -> None:
-    result = CompletionResult(
-        model_id="m1", prompt="PROMPT", response=(
-            "def swath_angle_offset_rad(features):\n    return 0.0\n"
-        ),
+def _result_for(prompt: str, *, response: str = SOURCE) -> CompletionResult:
+    return CompletionResult(
+        model_id="m1", prompt=prompt, response=response,
         temperature=0.2, top_p=0.95, seed=42,
         prompt_tokens=20, completion_tokens=15,
         cost=0.001, latency_ms=200.0, request_id="req-007",
     )
-    proposer = LLMProposer(client=_FakeClient(result))
-    context = ProposalContext(
+
+
+class _EchoClient:
+    """正确的假后端：把**本次实际收到的 prompt** 原样带进 provenance。"""
+
+    def __init__(self, response: str = SOURCE) -> None:
+        self._response = response
+        self.calls = 0
+        self.last_result: CompletionResult | None = None
+
+    def complete(self, prompt: str) -> CompletionResult:
+        self.calls += 1
+        self.last_result = _result_for(prompt, response=self._response)
+        return self.last_result
+
+
+class _StalePromptClient:
+    """故障后端：返回的 provenance 携带另一次调用的 prompt。"""
+
+    def complete(self, prompt: str) -> CompletionResult:
+        return _result_for("另一次调用的 prompt")
+
+
+def _context() -> ProposalContext:
+    return ProposalContext(
         stage=CoverageStage.SWATH, round_index=0, pool_config_ids=("c1",), slot_id="swath_angle",
     )
-    rng = np.random.default_rng(0)
 
-    online = proposer.propose(stage=CoverageStage.SWATH, context=context, rng=rng)
+
+def test_propose_records_provenance_and_replay_matches_identity() -> None:
+    client = _EchoClient()
+    proposer = LLMProposer(client=client)
+    online = proposer.propose(
+        stage=CoverageStage.SWATH, context=_context(), rng=np.random.default_rng(0),
+    )
+    result = client.last_result
     assert online.provenance is result
-    assert online.source_code == result.response  # 源码来自 response
+    assert online.source_code == result.response
+    # provenance 必须对应**本次实际发出**的 prompt，不是任意字符串
+    assert result.prompt == proposer.build_prompt(stage=CoverageStage.SWATH, context=_context())
     # identity（三元组）逐位与 replay 相等——provenance 不进 identity
     replay = replay_candidate(0, result)
     assert candidate_identity(online) == candidate_identity(replay)
-    # 重放确定性：两次 replay 同一 result identity 逐位相同
     assert candidate_identity(replay) == candidate_identity(replay_candidate(0, result))
+
+
+def test_propose_rejects_completion_for_a_different_prompt() -> None:
+    """后端返回的 prompt 与本次发出的不一致 → fail closed。
+
+    【证伪力】修复前 propose 从不校验 result.prompt，本测试的故障后端会被静默
+    接受，账本记下另一次调用的 prompt。旧测试的假 client 恰好也返回固定
+    prompt="PROMPT"，等于把这个缺陷写进了测试——所以 673 全绿也没暴露。
+    """
+    proposer = LLMProposer(client=_StalePromptClient())
+    with pytest.raises(ValueError, match="与本次发出的 prompt 不一致"):
+        proposer.propose(
+            stage=CoverageStage.SWATH, context=_context(), rng=np.random.default_rng(0),
+        )
+
+
+def test_completion_result_is_immutable_after_construction() -> None:
+    """provenance 构造后不可改写。
+
+    【证伪力】修复前 CompletionResult 是带 __slots__ 的可写普通类，docstring 却
+    声称 frozen。ProposalCandidate 只是浅冻结，而 evolve_pool 在闸门与**注入的
+    对抗复核器**跑完之后才序列化 provenance——期间任何持有引用者都能改写字段，
+    账本于是为被篡改的元数据背书。
+    """
+    result = _result_for("p")
+    for field, value in (
+        ("prompt", "改写的 prompt"),
+        ("response", "改写的 response"),
+        ("cost", 999.0),
+        ("model_id", "另一个模型"),
+    ):
+        with pytest.raises(AttributeError, match="构造后不可变"):
+            setattr(result, field, value)
+    with pytest.raises(AttributeError, match="构造后不可变"):
+        del result.request_id
+    # 原值未受影响
+    assert result.prompt == "p"
+    assert result.model_id == "m1"
 
 
 # ---- c. MockProposer + evolve_pool → record.provenance 全 None ----
