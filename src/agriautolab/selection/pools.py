@@ -186,7 +186,7 @@ def seal_pool_census_ledger(payload: dict, ledger_path: str | Path) -> dict:
 
     if len(entries) != 1:
         raise ValueError("pool census 尚未封存，但账本已含 genesis 之后的其他事件；拒绝重排历史")
-    entry = jsonl_log.entry(1, payload)
+    entry = jsonl_log.entry_after(entries, payload)
     with ledger_file.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(entry, ensure_ascii=False, sort_keys=True) + "\n")
     jsonl_log.verify_entries(entries + (entry,))

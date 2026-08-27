@@ -196,11 +196,15 @@ def _write_parquet(rows: Sequence[dict[str, object]], path: Path) -> None:
 
 
 def _write_artifact_ledger(path: Path, manifest_hash: str, run_rows: Sequence[dict[str, object]]) -> None:
-    """逐行追加 JSONL 实验记录：manifest 一条 + 每条 run 一条，无前哈希链。"""
+    """逐行追加 JSONL 实验记录：manifest 一条 + 每条 run 一条，逐条绑定前驱哈希。"""
     payloads = [{"artifact": "manifest", "hash": manifest_hash}] + [
         {"artifact": "run", "run_key": row["run_key"], "row_hash": content_hash(row)} for row in run_rows
     ]
-    entries = [jsonl_log.entry(index, payload) for index, payload in enumerate(payloads)]
+    entries: list[dict] = []
+    prev_hash: str | None = None
+    for index, payload in enumerate(payloads):
+        entries.append(jsonl_log.entry(index, payload, prev_hash))
+        prev_hash = entries[-1]["entry_hash"]
     path.write_text("".join(json.dumps(item, ensure_ascii=False, sort_keys=True) + "\n" for item in entries), encoding="utf-8")
 
 

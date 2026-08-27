@@ -12,11 +12,9 @@ from agriautolab.pipeline import jsonl_log
 
 
 def _d4_ledger(path: Path) -> None:
-    entries = []
-    for index, artifact in enumerate(("d1", "pool_census", "benchmark_cv_protocol", "selection_cv_result")):
-        payload = {"artifact": artifact}
-        entry = jsonl_log.entry(index, payload)
-        entries.append(entry)
+    entries: list[dict] = []
+    for artifact in ("d1", "pool_census", "benchmark_cv_protocol", "selection_cv_result"):
+        entries.append(jsonl_log.entry_after(tuple(entries), {"artifact": artifact}))
     path.write_text("".join(json.dumps(entry, sort_keys=True) + "\n" for entry in entries), encoding="utf-8")
 
 
@@ -73,7 +71,7 @@ def test_pareto_seal_refuses_wrong_predecessor(tmp_path: Path):
     result = tmp_path / "h1.json"
     _d4_ledger(ledger)
     entries = [json.loads(line) for line in ledger.read_text().splitlines()]
-    entries[-1] = jsonl_log.entry(3, {"artifact": "wrong"})
+    entries[-1] = jsonl_log.entry(3, {"artifact": "wrong"}, entries[2]["entry_hash"])
     ledger.write_text("".join(json.dumps(entry, sort_keys=True) + "\n" for entry in entries))
     _result(result)
     with pytest.raises(ValueError, match="requires|predecessor|前序"):

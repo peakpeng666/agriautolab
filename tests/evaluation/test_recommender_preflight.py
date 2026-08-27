@@ -26,7 +26,7 @@ def _write_json(path: Path, value: dict) -> None:
 
 
 def _append(entries: list[dict], payload: dict) -> None:
-    entries.append(jsonl_log.entry(len(entries), payload))
+    entries.append(jsonl_log.entry_after(tuple(entries), payload))
 
 
 def _fixture(tmp_path: Path) -> dict[str, Path]:

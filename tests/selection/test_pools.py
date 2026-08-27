@@ -140,7 +140,7 @@ def test_census_rejects_truncated_or_duplicate_instance_matrix(tmp_path):
 
 def test_pool_census_ledger_sealing_is_idempotent_and_conflict_safe(tmp_path):
     ledger = tmp_path / "ledger.jsonl"
-    genesis = jsonl_log.entry(0, {"event": "cv_assignment_sealed", "study_id": "study"})
+    genesis = jsonl_log.entry(0, {"event": "cv_assignment_sealed", "study_id": "study"}, None)
     ledger.write_text(json.dumps(genesis, sort_keys=True) + "\n", encoding="utf-8")
     payload = {
         "artifact": "pool_census",

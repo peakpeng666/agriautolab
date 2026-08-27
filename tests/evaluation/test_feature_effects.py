@@ -238,15 +238,14 @@ def test_predecessor_sha_tamper_is_rejected(tmp_path: Path):
     pareto_result.write_text(json.dumps({"hypothesis": "pareto_optimality"}) + "\n", encoding="utf-8")
     import hashlib
 
-    entries = []
-    for index, artifact in enumerate(("cv_assignment", "pool_census", "benchmark_cv_protocol", "selection_cv_result")):
-        entry = jsonl_log.entry(index, {"artifact": artifact})
-        entries.append(entry)
+    entries: list[dict] = []
+    for artifact in ("cv_assignment", "pool_census", "benchmark_cv_protocol", "selection_cv_result"):
+        entries.append(jsonl_log.entry_after(tuple(entries), {"artifact": artifact}))
     payload = {
         "artifact": "pareto_optimality_result",
         "result_file_sha256": hashlib.sha256(pareto_result.read_bytes()).hexdigest(),
     }
-    entries.append(jsonl_log.entry(4, payload))
+    entries.append(jsonl_log.entry_after(tuple(entries), payload))
     assert _validate_predecessor(tuple(entries), pareto_result)["hypothesis"] == "pareto_optimality"
 
     pareto_result.write_text(

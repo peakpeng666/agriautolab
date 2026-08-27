@@ -244,7 +244,7 @@ def register_cv_assignment(
     """
     ledger_file = Path(ledger_path)
     payload = cv_assignment_ledger_payload(evidence, assignment_path)
-    expected = jsonl_log.entry(0, payload)
+    expected = jsonl_log.entry(0, payload, None)
 
     if ledger_file.exists():
         entries = jsonl_log.read_entries(ledger_file)
