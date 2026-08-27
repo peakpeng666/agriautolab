@@ -5,6 +5,29 @@
 
 ## [未发布]
 
+- **TSPLIB / CVRPLIB 标准实例接入**：新增 `datasets/tsplib.py`——
+  `load_tsplib_tsp` / `load_tsplib_cvrp` 把标准实例映射到既有的
+  `TSPProblem` / `CVRPProblem` 契约；`TSPLIBInstance` 携带 name / dimension /
+  edge_weight_type / 公开最优值 / 声明车辆数 / capacity。
+
+  关键点是**距离语义与文献一致**：TSPLIB 的 `EUC_2D` 是逐边取整
+  `nint(sqrt(xd*xd+yd*yd))`，而仓库既有的 `euclidean_node_distance_m` 是精确
+  `hypot`——两者不是同一个目标函数，公开最优值全部按前者计算。因此单独提供
+  `tsplib_distance` / `tsplib_tour_length` / `tsplib_tour_length_of` /
+  `optimality_gap`，与几何距离明确分开，谁也不冒充谁。`nint` 按规范实现为
+  `int(x+0.5)`（四舍五入），**不是** Python `round()` 的银行家舍入。
+
+  实测佐证（berlin52 官方最优 tour，公开最优值 7542）：逐边 nint 得 **7542.0**、
+  精确欧氏浮点求和得 **7544.3659**、逐边向上取整得 **7570.0**——后两者正是文献中
+  常见的两种错法；误用精确欧氏会把 gap 虚报 0.0314%。
+
+  fail-closed 覆盖：仅接受 `EUC_2D` / `CEIL_2D`（GEO / ATT / EXPLICIT 等点名拒绝，
+  不按欧氏静默降级）、DIMENSION 与数据不符、重复节点号、缺 section、多仓库、
+  仓库 demand 非零、DEMAND 与 COORD 节点集合不一致、显式 `max_vehicles` 与
+  COMMENT 声明冲突。车辆数**不从文件名反推**（`A-n32-k5` 的 `k5` 是约定不是声明）。
+  真实实例不入仓（不猜第三方数据许可），对应回归测试以
+  `AGRIAUTOLAB_TSPLIB_DIR` 环境变量 opt-in，默认跳过。
+
 - **agent 层候选槽位抽象（1→N，行为逐位不变）**：新增 `agent/slots.py`——
   `CandidateSlot` 协议（slot_id / stage / 契约函数名 / 沙箱编译 / 探针值 /
   评估配置构造 / 不变性检查 / 对抗复核器集）与 `SLOTS` 注册表

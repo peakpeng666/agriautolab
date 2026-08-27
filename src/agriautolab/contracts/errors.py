@@ -38,3 +38,12 @@ class TransitDecompositionError(AgriAutoLabError):
 
     分类不完备就是分类错误：留一个「其他」筐，50% 的超额就能永远藏在里面不被发现。
     """
+
+
+class TSPLIBFormatError(AgriAutoLabError):
+    """TSPLIB / CVRPLIB 实例不满足本契约的接入前提。
+
+    两类：文件本身不合规（缺 section、声明与数据不一致、多仓库、仓库 demand 非零），
+    以及**语义无法无损映射**（GEO / ATT / EXPLICIT 等边权类型）。后者拒绝而不是
+    按欧氏静默降级——那会产出看着合理、实则与公开最优值不可比的数。
+    """
