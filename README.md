@@ -35,7 +35,9 @@ pip install -e .[dev] "shapely==2.1.2"
 pytest -q          # 以 CI 徽章为准（计数随提交演进，不在文档硬编码）
 ```
 
-净室安装记录与自校验见 [docs/INSTALL_TRANSCRIPT.md](docs/INSTALL_TRANSCRIPT.md)。
+净室安装记录与自校验已随冻结研究归档：见
+[study-001-frozen tag 的 docs/INSTALL_TRANSCRIPT.md](https://github.com/peakpeng666/agriautolab/blob/study-001-frozen/docs/INSTALL_TRANSCRIPT.md)
+（主干不再携带该文档，复现方式见下节）。
 
 ## 包结构
 

@@ -44,8 +44,21 @@ ANALYSIS_CODE_FILES = (
 )
 
 
+# Known identity of the study-001 preregistration protocol bundle: content_hash over
+# the sha256_by_source of the preregistration sources archived at the study-001-frozen
+# tag, where the sealed result payloads and ledger entries record the same value. A
+# --protocol-bundle-hash override must match it before any result seals or replays.
+KNOWN_PROTOCOL_BUNDLE_HASH = "5d7b4d66ae02702faec68d3d32a83cd687fb426c72a22ea771e7d07306482bc4"
+
+
 def _protocol_bundle_hash_from_log(entries: tuple[dict, ...], override: str | None) -> str:
     if override:
+        if override != KNOWN_PROTOCOL_BUNDLE_HASH:
+            raise ValueError(
+                "--protocol-bundle-hash does not match the preregistration bundle identity "
+                f"archived at the study-001-frozen tag ({override[:16]}...); refusing to seal "
+                "an unverified protocol identity"
+            )
         return override
     for entry in entries:
         value = entry.get("payload", {}).get("protocol_bundle_hash")

@@ -5,8 +5,9 @@ experiment log at index 4 (after the selection_cv_result entry at index 3).
 The result document carries the full byte identity (runs parquet, configs,
 manifest, pool hash, analysis code) so replays are byte-deterministic. The
 protocol bundle hash is inherited from the experiment log when present, or must
-be supplied with --protocol-bundle-hash on a first run; the preregistration
-sources it was originally computed from are archived at the study-001-frozen tag.
+be supplied with --protocol-bundle-hash on a first run; the override is validated
+against the known bundle identity recorded at the study-001-frozen tag, where the
+preregistration sources it was originally computed from are archived.
 """
 
 from __future__ import annotations
@@ -39,8 +40,21 @@ def _load(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+# Known identity of the study-001 preregistration protocol bundle: content_hash over
+# the sha256_by_source of the preregistration sources archived at the study-001-frozen
+# tag, where the sealed result payloads and ledger entries record the same value. A
+# --protocol-bundle-hash override must match it before any result seals or replays.
+KNOWN_PROTOCOL_BUNDLE_HASH = "5d7b4d66ae02702faec68d3d32a83cd687fb426c72a22ea771e7d07306482bc4"
+
+
 def _protocol_bundle_hash_from_log(entries: tuple[dict, ...], override: str | None) -> str:
     if override:
+        if override != KNOWN_PROTOCOL_BUNDLE_HASH:
+            raise ValueError(
+                "--protocol-bundle-hash does not match the preregistration bundle identity "
+                f"archived at the study-001-frozen tag ({override[:16]}...); refusing to seal "
+                "an unverified protocol identity"
+            )
         return override
     for entry in entries:
         value = entry.get("payload", {}).get("protocol_bundle_hash")

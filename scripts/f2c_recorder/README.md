@@ -19,7 +19,7 @@ scripts/f2c_recorder  ──emit──>  golden_f2c.csv  ──read──>  Reco
 
 本目录下的脚本**只依赖 python3.10 + fields2cover + shapely**，
 不 import 任何 agriautolab 内容。链路实现按文件路径加载
-`src/agriautolab/cross_validation/f2c_chain.py` —— 那个模块同样不 import agriautolab、
+`src/agriautolab/validation/f2c_chain.py` —— 那个模块同样不 import agriautolab、
 只用 3.10 兼容语法，因此录制壳与 `PythonBindingAdapter` **共用同一份链路实现**，
 等价性由构造保证，不靠事后比对两份输出。
 
@@ -57,7 +57,7 @@ python3 "$REPO/scripts/f2c_recorder/record_golden.py" --requests "$WORK/requests
 ### 3. 从 Windows 侧一键调用（可选）
 
 ```bash
-python -c "from agriautolab.cross_validation.f2c import SubprocessAdapter; print(SubprocessAdapter.wsl_command('/mnt/d/.../record_golden.py'))"
+python -c "from agriautolab.validation.f2c import SubprocessAdapter; print(SubprocessAdapter.wsl_command('/mnt/d/.../record_golden.py'))"
 ```
 
 `SubprocessAdapter(wsl_command=...)` 会用 `wsl.exe -e python3 ...` 跨过去调用，

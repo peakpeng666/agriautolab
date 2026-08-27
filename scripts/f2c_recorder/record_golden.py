@@ -2,7 +2,7 @@
 """正式 F2C 录制壳。**只依赖 python3.10 + fields2cover + shapely，不 import agriautolab。**
 
 链路实现不在本文件里：它按文件路径加载
-`src/agriautolab/cross_validation/f2c_chain.py`（该模块刻意不 import 任何 agriautolab
+`src/agriautolab/validation/f2c_chain.py`（该模块刻意不 import 任何 agriautolab
 内容、且只用 3.10 兼容语法），从而绕开包 `__init__` 的 3.11 语法。
 于是「录制壳与 PythonBindingAdapter 等价」是**只有一份实现**，不是事后比对两份输出。
 
@@ -51,7 +51,7 @@ _REQUIRED_REQUEST_KEYS = (
 
 def load_chain(repo_root):
     """按文件路径加载 f2c_chain，绕开 agriautolab 包 __init__ 的 3.11 语法。"""
-    path = os.path.join(repo_root, "src", "agriautolab", "cross_validation", "f2c_chain.py")
+    path = os.path.join(repo_root, "src", "agriautolab", "validation", "f2c_chain.py")
     if not os.path.isfile(path):
         raise SystemExit("找不到链路模块：%s（--repo-root 指对了吗）" % path)
     spec = importlib.util.spec_from_file_location("f2c_chain", path)
