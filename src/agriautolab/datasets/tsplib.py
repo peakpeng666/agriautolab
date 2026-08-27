@@ -173,8 +173,25 @@ def tsplib_tour_length_of(problem: TSPProblem, tour, edge_weight_type: str) -> f
 
     直接把 `tour.node_ids` 传给 `tsplib_tour_length` 会因重复起点被判为非置换。
     提供这个入口是为了让"正确用法"比"错误用法"更顺手。
+
+    **剥掉末位之前必须先校验回路本身**：`TSPTour` 是无校验的 dataclass，调用方
+    完全可以构造一个"前 n 项是合法置换、末位是任意节点"的序列。若直接 `[:-1]`，
+    那个非法末位会被静默丢掉，本函数照样算出一个看着合法的长度与 gap——而同一个
+    回路在 `evaluate_tsp_tour` 那里会因"没回到 start_node_id"被拒。两条评估路径
+    对同一份输入给出相反判断，是比算错更坏的失败模式。
     """
+    expected_length = len(problem.nodes) + 1
+    if len(tour.node_ids) != expected_length:
+        raise TSPLIBFormatError(
+            f"闭合回路长度必须是节点数+1={expected_length}，实际 {len(tour.node_ids)}"
+        )
+    if tour.node_ids[0] != problem.start_node_id or tour.node_ids[-1] != problem.start_node_id:
+        raise TSPLIBFormatError(
+            f"闭合回路必须从 {problem.start_node_id!r} 出发并回到该节点，"
+            f"实际首尾为 {tour.node_ids[0]!r} / {tour.node_ids[-1]!r}"
+        )
     nodes_by_id = {node.node_id: node for node in problem.nodes}
+    # 前 n 项是否为全节点置换，由 tsplib_tour_length 统一 fail-closed
     return tsplib_tour_length(nodes_by_id, tuple(tour.node_ids[:-1]), edge_weight_type, closed=True)
 
 
@@ -349,9 +366,14 @@ def load_tsplib_cvrp(
         if len(parts) < 2:
             raise TSPLIBFormatError(f"DEMAND_SECTION 行需要 2 个字段：{line!r}")
         try:
-            demands[int(parts[0])] = float(parts[1])
+            index, demand = int(parts[0]), float(parts[1])
         except ValueError as error:
             raise TSPLIBFormatError(f"DEMAND_SECTION 行无法解析：{line!r}") from error
+        # 与 _parse_coords 同一纪律：重复行不能后者覆盖前者。全节点齐备时再多一行
+        # 重复节点，节点集合比较照样通过，而容量约束已被悄悄改写。
+        if index in demands:
+            raise TSPLIBFormatError(f"DEMAND_SECTION 出现重复节点号 {index}")
+        demands[index] = demand
     if sorted(demands) != sorted(coords):
         raise TSPLIBFormatError("DEMAND_SECTION 与 NODE_COORD_SECTION 的节点集合不一致")
 

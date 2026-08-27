@@ -296,6 +296,53 @@ def test_tour_length_rejects_non_permutation() -> None:
         tsplib_tour_length(nodes_by_id, ("n1", "n2", "n3", "n4", "n1"), "EUC_2D")
 
 
+def test_tour_length_of_validates_the_closed_tour_before_stripping() -> None:
+    """剥掉末位之前必须先校验回路，否则非法末位会被静默丢掉。
+
+    【证伪力】`TSPTour` 是无校验 dataclass。构造"前 n 项是合法置换、末位是任意
+    节点"的序列时，直接 `[:-1]` 的实现会算出一个看着合法的长度与 gap，
+    而同一份输入在 `evaluate_tsp_tour` 那里会被拒——两条评估路径对同一个回路
+    给出相反判断，比算错更坏。
+    """
+    from agriautolab.optimization.tsp import TSPTour
+
+    problem, instance = load_tsplib_tsp(SQUARE_TSP)
+
+    # 前 4 项是合法置换，末位却不是起点
+    bogus = TSPTour(node_ids=("n1", "n2", "n3", "n4", "n3"))
+    with pytest.raises(TSPLIBFormatError, match="出发并回到"):
+        tsplib_tour_length_of(problem, bogus, instance.edge_weight_type)
+    with pytest.raises(ValueError):                      # evaluator 同样拒绝
+        evaluate_tsp_tour(problem, bogus)
+
+    # 长度不对
+    with pytest.raises(TSPLIBFormatError, match="节点数\\+1"):
+        tsplib_tour_length_of(problem, TSPTour(node_ids=("n1", "n2", "n1")), instance.edge_weight_type)
+
+    # 长度与首尾都对，但中间有重复 → 由置换检查兜住
+    with pytest.raises(TSPLIBFormatError, match="精确置换"):
+        tsplib_tour_length_of(
+            problem, TSPTour(node_ids=("n1", "n2", "n2", "n4", "n1")), instance.edge_weight_type,
+        )
+
+    assert tsplib_tour_length_of(
+        problem, TSPTour(node_ids=("n1", "n2", "n3", "n4", "n1")), instance.edge_weight_type,
+    ) == 40.0
+
+
+def test_duplicate_demand_row_is_rejected() -> None:
+    """DEMAND_SECTION 的重复行不能后者覆盖前者——与 _parse_coords 同一纪律。
+
+    【证伪力】全部节点齐备后再追加一行重复节点（拼接或手改实例的典型形态），
+    节点集合比较照样通过，而该客户的 demand 已被悄悄改写，容量约束与路由结果
+    随之改变却不报任何格式错误。
+    """
+    text = TOY_CVRP.replace("\n5 10\nDEPOT_SECTION", "\n5 10\n2 29\nDEPOT_SECTION")
+    assert text != TOY_CVRP, "测试数据替换未生效"
+    with pytest.raises(TSPLIBFormatError, match="重复节点号"):
+        load_tsplib_cvrp(text)
+
+
 def test_optimality_gap_rejects_degenerate_optimum() -> None:
     assert optimality_gap(44.0, 40.0) == pytest.approx(0.1)
     for bad in (0.0, -1.0):
