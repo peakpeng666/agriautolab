@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from agriautolab.evaluation.evidence import seal_confirmatory_result
+from agriautolab.evaluation.records import seal_confirmatory_result
 from agriautolab.pipeline import jsonl_log
 
 

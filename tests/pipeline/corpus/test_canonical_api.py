@@ -81,7 +81,7 @@ def test_frozen_files_untouched():
     （evidence.hashing→pipeline.hashing、cross_validation→validation），
     适配逻辑字节未动；哈希门钉住搬迁后的新字节（旧字节哈希见 study-001-frozen tag）。
     """
-    root = Path(__file__).resolve().parents[2]
+    root = Path(__file__).resolve().parents[3]
     import hashlib
 
     def sha256(path: Path) -> str:

@@ -12,7 +12,7 @@ from agriautolab.pipeline.pareto.preference_grid import (
 )
 from agriautolab.pipeline.pareto.scalarize import preference_weights
 
-EVIDENCE = Path(__file__).resolve().parents[2] / "evidence" / "preference_grid_v1.json"
+EVIDENCE = Path(__file__).resolve().parents[3] / "evidence" / "preference_grid_v1.json"
 
 
 def test_grid_is_on_simplex_and_unique():

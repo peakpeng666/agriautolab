@@ -58,7 +58,7 @@ def test_crossable_strata_export_to_separate_trees(tmp_path, c_record, c_vehicle
 
 def test_svg_is_xml_and_circle_count_equals_csv_rows(tmp_path, c_record, c_vehicle, c_configs, c_benchmark, c_corpus_protocol):
     corpus = _corpus(tmp_path, c_record, c_vehicle, c_configs, c_benchmark, c_corpus_protocol)
-    module_path = __import__("pathlib").Path(__file__).resolve().parents[2] / "scripts" / "make_figure_front.py"
+    module_path = __import__("pathlib").Path(__file__).resolve().parents[3] / "scripts" / "make_figure_front.py"
     spec = importlib.util.spec_from_file_location("make_figure_front", module_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

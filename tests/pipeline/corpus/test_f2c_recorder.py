@@ -14,7 +14,7 @@ from agriautolab.validation import f2c_chain
 from agriautolab.validation.f2c import PythonBindingAdapter, SubprocessAdapter
 
 
-REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
+REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
 CHAIN = REPO_ROOT / "src" / "agriautolab" / "validation" / "f2c_chain.py"
 RECORDER_DIR = REPO_ROOT / "scripts" / "f2c_recorder"
 PY310_SENSITIVE = (CHAIN, RECORDER_DIR / "record_golden.py", RECORDER_DIR / "env_probe.py")

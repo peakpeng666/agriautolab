@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from agriautolab.evaluation.h2 import (
+from agriautolab.evaluation.feature_effects import (
     OffsetFrontInstance,
     analyze_h2,
     build_offset_front_instance,
@@ -16,8 +16,8 @@ from agriautolab.evaluation.h2 import (
 from agriautolab.pipeline import jsonl_log
 
 
-_SCRIPT_PATH = Path(__file__).resolve().parents[2] / "scripts" / "analyze_h2.py"
-_SCRIPT_SPEC = importlib.util.spec_from_file_location("agriautolab_test_analyze_h2", _SCRIPT_PATH)
+_SCRIPT_PATH = Path(__file__).resolve().parents[2] / "scripts" / "evaluate_feature_effects.py"
+_SCRIPT_SPEC = importlib.util.spec_from_file_location("agriautolab_test_evaluate_feature_effects", _SCRIPT_PATH)
 assert _SCRIPT_SPEC is not None and _SCRIPT_SPEC.loader is not None
 _SCRIPT_MODULE = importlib.util.module_from_spec(_SCRIPT_SPEC)
 _SCRIPT_SPEC.loader.exec_module(_SCRIPT_MODULE)

@@ -167,7 +167,7 @@ CORPUS_13_SHA256 = "502b1e9053b598d62daafa0b3a819f3cebc8385cb356aa908433582b9308
 
 
 def _load_run_corpus():
-    module_path = Path(__file__).resolve().parents[2] / "scripts" / "run_corpus.py"
+    module_path = Path(__file__).resolve().parents[3] / "scripts" / "run_corpus.py"
     spec = importlib.util.spec_from_file_location("run_corpus_r1", module_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -176,7 +176,7 @@ def _load_run_corpus():
 
 def test_corpus_13_is_frozen_with_reasons() -> None:
     """文件哈希是回归基线：改一个字节都必须显式改这里的常量。"""
-    path = Path(__file__).resolve().parents[2] / "configs" / "corpus_13.json"
+    path = Path(__file__).resolve().parents[3] / "configs" / "corpus_13.json"
     assert hashlib.sha256(path.read_bytes()).hexdigest() == CORPUS_13_SHA256
     items = json.loads(path.read_text(encoding="utf-8"))
     assert len(items) == 13
@@ -191,7 +191,7 @@ def test_corpus_13_feasibility_smoke(c_benchmark, robot) -> None:
     RS 配置用可倒车机具验证（can_reverse=True）；Dubins 配置用默认前向机具。
     """
     module = _load_run_corpus()
-    path = Path(__file__).resolve().parents[2] / "configs" / "corpus_13.json"
+    path = Path(__file__).resolve().parents[3] / "configs" / "corpus_13.json"
     configs = module._load_configs(path)
     field = PolygonSpec(geometry_id="field", exterior=(
         Point(x=0.0, y=0.0), Point(x=100.0, y=0.0), Point(x=100.0, y=50.0),

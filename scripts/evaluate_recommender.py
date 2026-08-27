@@ -13,9 +13,9 @@ import importlib.metadata
 import json
 from pathlib import Path
 
-from agriautolab.evaluation.evidence import seal_confirmatory_result, sha256_file
-from agriautolab.evaluation.h3 import analyze_h3
-from agriautolab.evaluation.h3_preflight import ensure_h3_holdout_unsealed, verify_h3_preflight
+from agriautolab.evaluation.records import seal_confirmatory_result, sha256_file
+from agriautolab.evaluation.recommender_eval import analyze_h3
+from agriautolab.evaluation.recommender_preflight import ensure_h3_holdout_unsealed, verify_h3_preflight
 from agriautolab.contracts.vehicle import VehicleSpec
 from agriautolab.pipeline.hashing import content_hash
 from agriautolab.pipeline.config import PipelineConfig
@@ -31,16 +31,16 @@ EXPECTED_PROTOCOL_SHA256 = {
 }
 EXPECTED_AMENDMENT_01_EXCERPT_SHA256 = "162f28a32db646335019f9900130177d2c4aa3e8079188d9db71e9b74d6b5efb"
 ANALYSIS_CODE_FILES = (
-    "scripts/analyze_h3.py",
-    "src/agriautolab/confirmatory/h3.py",
-    "src/agriautolab/confirmatory/h3_preflight.py",
+    "scripts/evaluate_recommender.py",
+    "src/agriautolab/evaluation/recommender_eval.py",
+    "src/agriautolab/evaluation/recommender_preflight.py",
     "src/agriautolab/selection/evaluation.py",
     "src/agriautolab/selection/experiment.py",
     "src/agriautolab/selection/recommender.py",
     "src/agriautolab/selection/pools.py",
-    "src/agriautolab/pareto/preference_grid.py",
-    "src/agriautolab/corpus/derived_status.py",
-    "src/agriautolab/pareto/front.py",
+    "src/agriautolab/pipeline/pareto/preference_grid.py",
+    "src/agriautolab/pipeline/corpus/derived_status.py",
+    "src/agriautolab/pipeline/pareto/front.py",
 )
 EXPECTED_LEDGER_INDEX = 6
 REQUIRED_PREVIOUS_ARTIFACT = "h2_confirmatory_result"

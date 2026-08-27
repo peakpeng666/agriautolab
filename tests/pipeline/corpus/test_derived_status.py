@@ -14,7 +14,7 @@ from agriautolab.pipeline.corpus.derived_status import (
     DERIVED_STATUS_DEFINITION, derive_status, status_diff_counts,
 )
 
-SRC = Path(__file__).resolve().parents[2] / "src" / "agriautolab"
+SRC = Path(__file__).resolve().parents[3] / "src" / "agriautolab"
 
 
 def test_validator_fact_beats_runtime_merge():

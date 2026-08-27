@@ -10,7 +10,7 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 
-from agriautolab.evaluation.evidence import sha256_file
+from agriautolab.evaluation.records import sha256_file
 from agriautolab.pipeline import jsonl_log
 
 

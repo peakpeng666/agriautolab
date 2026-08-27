@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from agriautolab.evaluation.evidence import sha256_file
-from agriautolab.evaluation.h3_preflight import verify_h3_preflight
+from agriautolab.evaluation.records import sha256_file
+from agriautolab.evaluation.recommender_preflight import verify_h3_preflight
 from agriautolab.pipeline import jsonl_log
 
 

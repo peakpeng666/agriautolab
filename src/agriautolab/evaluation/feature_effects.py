@@ -8,7 +8,7 @@ import statistics
 from pathlib import Path
 from typing import Iterable, Sequence
 
-from agriautolab.evaluation.h1 import build_front_instance
+from agriautolab.evaluation.pareto_optimality import build_front_instance
 from agriautolab.evaluation.stats import distribution_summary
 
 

@@ -9,8 +9,8 @@ import importlib.metadata
 import json
 from pathlib import Path
 
-from agriautolab.evaluation.evidence import seal_confirmatory_result, sha256_file
-from agriautolab.evaluation.h2 import analyze_h2, field_effects, load_offset_front_instances
+from agriautolab.evaluation.records import seal_confirmatory_result, sha256_file
+from agriautolab.evaluation.feature_effects import analyze_h2, field_effects, load_offset_front_instances
 from agriautolab.contracts.vehicle import VehicleSpec
 from agriautolab.pipeline.corpus.protocol import CorpusProtocol
 from agriautolab.pipeline.hashing import content_hash
@@ -28,12 +28,12 @@ EXPECTED_PROTOCOL_SHA256 = {
 }
 EXPECTED_AMENDMENT_01_EXCERPT_SHA256 = "162f28a32db646335019f9900130177d2c4aa3e8079188d9db71e9b74d6b5efb"
 ANALYSIS_CODE_FILES = (
-    "scripts/analyze_h2.py",
-    "src/agriautolab/confirmatory/h2.py",
-    "src/agriautolab/confirmatory/h1.py",
-    "src/agriautolab/confirmatory/stats.py",
-    "src/agriautolab/corpus/derived_status.py",
-    "src/agriautolab/pareto/front.py",
+    "scripts/evaluate_feature_effects.py",
+    "src/agriautolab/evaluation/feature_effects.py",
+    "src/agriautolab/evaluation/pareto_optimality.py",
+    "src/agriautolab/evaluation/stats.py",
+    "src/agriautolab/pipeline/corpus/derived_status.py",
+    "src/agriautolab/pipeline/pareto/front.py",
 )
 
 
