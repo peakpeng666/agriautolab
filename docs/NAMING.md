@@ -87,7 +87,7 @@ agent 层候选槽位抽象使用角色明确的规范名：`CandidateSlot`（�
 字段为「真实 run_pipeline 调用累计数」与「迄今各轮 hypervolume_delta 非 None
 值的 running max」；`anytime_curve` 按这两个字段返回 COCO/IOHprofiler 式的
 "评估次数 → 当前最优"采样点，O(n)。口径与 `evaluations_used` 字段 docstring
-一致，是 Study-002 预算公式的唯一来源。
+一致，Standard evaluation budget accounting.
 
 TSPLIB / CVRPLIB 标准实例接入：`agriautolab.datasets.tsplib` 的
 `load_tsplib_tsp(source)` / `load_tsplib_cvrp(source, *, max_vehicles=None)`
@@ -145,7 +145,7 @@ identity 仍由三元组（algorithm_id/source_code/description）决定，prove
 - `pipeline/`：农业 CPP 五阶段组合与执行；
 - `corpus/`：真实语料批量运行与产物；
 - `cross_validation/`：历史名称虽不完美，但含字节冻结 F2C 适配器，原路径保留；
-- `selection/`、`confirmatory/`、`evidence/`：分别承担推荐、确证统计和证据纪律。
+- `selection/`、`evaluation/`、`validation/`：分别承担算法推荐、实证评测和独立校验。
 
 若未来确需改包名，必须以兼容入口 + 明确迁移期完成，不允许只改 README 先制造
 第二套“逻辑目录”。
@@ -159,7 +159,7 @@ identity 仍由三元组（algorithm_id/source_code/description）决定，prove
 3. 状态与不变量的含义；
 4. 非显然决策的原因（为什么不用显然的做法）。
 
-**不进生产源码**：日期、迭代轮次（Block A/B/C）、field ID、历史实测
+**不进生产源码**：日期、迭代轮次、field ID、历史实测
 数字（「0/4000」「150.7 s」）、修复过程叙事。这些住在 AUDIT_NOTE.md、
 evidence/、tests/、docs/ 里——它们是历史，历史有专门的住所。
 

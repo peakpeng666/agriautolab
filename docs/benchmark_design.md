@@ -23,5 +23,5 @@ Planner output is only an artifact. Metrics are recomputed by validators.
 
 ## Scope
 
-Block A targets reproducible 2D agricultural coverage planning experiments.
+AgriAutoLab targets reproducible 2D agricultural coverage path planning experiments.
 It intentionally does not model robot dynamics.

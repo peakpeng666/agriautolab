@@ -2,8 +2,7 @@
 """用 Fields2Cover Python binding 录制 golden CSV（在装有 F2C 的 Linux/WSL 上运行）。
 
 用法（WSL 内，仓库经 /mnt/d 挂载）：
-  PYTHONPATH=/mnt/d/Peak/Desktop/URP/agriautolab-blockC/agriautolab-blockC/src \
-  python3 scripts/record_f2c_golden.py --requests requests.json --output golden_f2c.csv
+  PYTHONPATH=src python3 scripts/record_f2c_golden.py --requests requests.json --output golden_f2c.csv
 
 CSV schema 与 RecordedCsvAdapter 锁死的五列一致。逐请求打印结果行，
 任何请求失败立即中止——缺行的 golden 文件比没有 golden 更坏。

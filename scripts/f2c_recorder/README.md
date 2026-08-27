@@ -32,8 +32,8 @@ scripts/f2c_recorder  ──emit──>  golden_f2c.csv  ──read──>  Reco
 仓库经 `/mnt/d` 挂载。以下把 `REPO` 与 `WORK` 设成你自己的路径。
 
 ```bash
-export REPO=/mnt/d/Peak/Desktop/URP/agriautolab-blockC/agriautolab-blockC
-export WORK=/mnt/d/Peak/Desktop/URP/o2_workspace
+export REPO=.
+export WORK=./build/f2c_workspace
 ```
 
 ### 1. 环境指纹（先录，它要进证据链）
