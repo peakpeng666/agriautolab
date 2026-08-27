@@ -89,6 +89,20 @@ agent 层候选槽位抽象使用角色明确的规范名：`CandidateSlot`（�
 "评估次数 → 当前最优"采样点，O(n)。口径与 `evaluations_used` 字段 docstring
 一致，是 Study-002 预算公式的唯一来源。
 
+TSPLIB / CVRPLIB 标准实例接入：`agriautolab.datasets.tsplib` 的
+`load_tsplib_tsp(source)` / `load_tsplib_cvrp(source, *, max_vehicles=None)`
+（返回 `(契约对象, TSPLIBInstance)`）、`TSPLIBInstance`（name / problem_type /
+dimension / edge_weight_type / comment / published_optimum / declared_vehicles /
+capacity，并提供 `node_id(i)` 与 `tsplib_index(node_id)` 双向映射）、
+`SUPPORTED_EDGE_WEIGHT_TYPES`、`nint`、`tsplib_distance`、`tsplib_tour_length`、
+`tsplib_tour_length_of`、`optimality_gap`；失败类型 `TSPLIBFormatError`。
+
+**距离口径必须与几何距离分开命名，因为它们不是同一个目标函数**：
+`optimization.routing.euclidean_node_distance_m` 是精确 `hypot`（几何真值），
+而 `tsplib_distance("EUC_2D")` 是逐边 `nint`（文献口径，公开最优值按它计算）。
+任何与公开最优值比较的 gap 只能用后者。节点 id 形如 `n01`（零填充到维数宽度），
+使字典序与数值序一致——构造式问题按 node_id 排序枚举可行动作。
+
 route 阶段条带访问序槽位（任务 3 提交二）：`RouteOrderSlot`（八成员协议实现，
 slot_id="route_order"）、`agriautolab.algorithms.route.constructive_order.RouteOrderProblem`
 （公共 ConstructiveProblem 的领域 adapter，放农业侧以遵守
