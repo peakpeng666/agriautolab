@@ -56,7 +56,7 @@ class CoverageTargets:
     地头生成本身就是被比较的五个阶段之一，各配置各用各的分母就等于没有比较。
 
     构造令牌（_token）是本类的第一层守卫，只允许 resolve_coverage_targets 持有。
-    这道令牌是纪律，不是安全边界。Python 没有真正的私有，存心绕过永远绕得过去。
+    Convention-enforced access boundary; not a hard Python privacy guarantee.
     它挡的是「顺手构造一个 CoverageTargets」——那是分母漂移实际发生的方式。
     存心绕过由 G-1.3 的证据链兜底：产物里记了分母的 hash，事后可以复算对账。
     """
@@ -176,14 +176,14 @@ def resolve_coverage_targets(
     else:
         # 申报的地头宽度必须可证伪。口径：**不绕损耗环**。
         # 备选口径 buffer(main∪ring, -W) 与 main 对账，在 UTM 大坐标真实地块上的
-        # buffer->difference->union->buffer 弦弧往返损耗实测达 rel 4.5e-04（真实地块、
+        # buffer->difference->union->buffer round-trip induces up to rel 4.5e-04 area loss;
         # w=12、残差 4.9 m²），与 mitre 信号（rel ~3e-03）只差一个量级，噪声地板太高。
         # 新口径是两条**无往返**的断言，诚实路径残差为精确 0 或网格噪声：
         # (a) main == cell.buffer(-W)——与生成侧同一调用直接对账：错宽度（~10-50%）、
         #     mitre（w²(1-π_d/4)·面积比）、quad_segs（弦弧差）全部被干净抓住；
         # (b) main ∪ ring == cell——环带恰好补满、无重叠无遗漏（划分语义）。
         # 不放在 CoverageTargets.__post_init__ 里做：那里只有 original_field（已扣障碍），
-        # 用它重算会在障碍周围双重内缩，诚实路径实测假阳性残差 472.9 m²
+        # recomputing with it causes double inset near obstacles, producing false-positive residuals;
         # （100x50 田、20x10 内部障碍、h=6），会把正确的分母当错误拒绝。
         #
         # 非均匀地头（逐边不同宽度，Required-Width 公式 H_i = r_rob*(sin(theta-gamma_i)+1) + w_rob/2
@@ -212,7 +212,7 @@ def resolve_coverage_targets(
                 quad_segs=QUAD_SEGS,
             )
             width_residual = main.symmetric_difference(reconstructed).area
-            # 实测噪声地板：UTM 坐标网格往返 rel ~5e-04；错宽度/mitre 在 rel 1e-2 以上。
+            # Observed noise floor: UTM grid round-trip rel ~5e-04; wrong width/mitre exceeds rel 1e-2.
             # 容差取 2e-03：距两侧各留 4 倍以上间隔。合成坐标（小数值）下往返为精确 0。
             tolerance = 2e-3 * max(cells_union.area, 1.0)
             if width_residual > tolerance or partition_residual > tolerance:

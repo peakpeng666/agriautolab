@@ -95,7 +95,7 @@ def field_record_to_problem(record: FieldRecord, row_scenario: RowScenario) -> C
 
 
 # validator 拒绝原因的封闭词典（与 validation/validator.py 的 failure_reason 一一对应）。
-# 分类完备性常设规则：任何 "other/misc" 兜底桶都是分类错误。v4 全量实测 9 314 行
+# Classification exhaustiveness invariant: any 'other/misc' fallback bucket indicates a classification gap.
 # other 里其实只有两类（outside_area 6 054 / collision 3 260），每行都带具名原因——
 # 兜底桶藏住的是映射的懒惰，不是数据的无类可归。
 _VALIDATOR_REJECTION_CLASSES = frozenset({
@@ -153,7 +153,7 @@ def _append_checkpoint(path: Path, row: dict[str, object]) -> None:
 
 
 def _load_checkpoint(path: Path) -> dict[str, dict[str, object]]:
-    """读断点：优先明文，其次跑完压缩的 .gz（v4 实测明文 2.0 GB = parquet 的 6 倍）。"""
+    """Read checkpoint: prefer plain Parquet, fall back to compressed .gz (6× larger uncompressed)."""
     import gzip as _gzip
     if not path.exists():
         gz = path.with_suffix(path.suffix + ".gz")
@@ -394,7 +394,7 @@ class CorpusRunner:
             derived_counts[derived] = derived_counts.get(derived, 0) + 1
         nominal_pool = len(configs)
         # 有效池/退化池统计一律取聚合器的结果（避免两处维护同一事实）。
-        # v4 实测教训：runner 自算的 effective_pool 只含 >=1 ok 的实例，450 个零 ok
+        # effective_pool only counts instances with >=1 successful run;
         # 实例在 manifest 里静默消失——同一事实两处住，修了聚合器漏了 runner。
         from agriautolab.pipeline.corpus.aggregate import summarize_pareto
         pool_summary = summarize_pareto(root / "runs.parquet")
@@ -440,8 +440,8 @@ class CorpusRunner:
         (root / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
         _write_artifact_ledger(root / "ledger.jsonl", manifest_hash, selected)
         # 跑完压缩断点（留痕见 AUDIT_NOTE）：
-        # keys-only 会让续跑后 parquet 重建丢 path_json（违反路径几何必须保留的既定纪律）；
-        # gzip 同样收磁盘与 I/O（实测 2.0 GB -> ~1/8），零数据损失。mtime=0 保证字节确定。
+        # Include full row data to preserve path_json on resume (keys-only drops geometry columns);
+        # Compress losslessly with deterministic mtime=0 for reproducible byte output.
         import gzip as _gzip
         with checkpoint.open("rb") as src, _gzip.GzipFile(filename=str(checkpoint) + ".gz", mode="wb", compresslevel=6, mtime=0, fileobj=None) as dst:
             dst.writelines(src)

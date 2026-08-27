@@ -3,7 +3,7 @@
 通用移动机器人规划把自由空间当各向同性的；农业不是。
 果园与温室里沿行走是自由的，横穿行被禁止或有代价。
 参数化而不是存折线，是为了让穿行次数与各向异性代价都**可解析计算**——
-实测 240 实例 × 12 配置里，crossings 与 length 的秩相关只有 −0.098，
+# crossings and path_length have low rank correlation (≈ −0.10 over the benchmark corpus),
 与 turns 是 −0.448：拿掉这个维度，目标空间塌成一根轴。
 """
 

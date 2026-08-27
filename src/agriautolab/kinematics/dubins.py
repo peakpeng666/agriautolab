@@ -5,7 +5,7 @@ Practical Planning of the Shortest Paths for Car-Like Robots: Anisotropic
 Cost Factors 的六字枚举（LSL/RSR/LSR/RSL/RLR/LRL）；LaValle, Planning
 Algorithms (2006) 式 (15.44) 保证最短前进路径必在这六个 word 里。
 
-陷阱（实测）：广为流传的实现把 LRL 的 q 写成 mod2pi(mod2pi(b) - a + mod2pi(2p))，
+# Common implementation error: LRL word q computed as mod2pi(mod2pi(b) - a + mod2pi(2p)),
 该式只在 t = -p 时成立，一般情况下三段转角不闭合（t - p + q != b - a）。
 抄来的版本在 5000 组随机位姿的正演闭合测试里终点误差到过 3.1e+01，
 六个字里只有 LRL 错，而五个手工样例一个都没命中它——正演闭合必须随机、必须大量。

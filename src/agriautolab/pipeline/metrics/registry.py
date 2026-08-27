@@ -103,7 +103,7 @@ def _install_defaults() -> None:
         MetricSpec("transit_length", "m", OptimizationDirection.MINIMIZE, ComparabilityScope.IMPL_INVARIANT,
                    ScaleBehavior.LINEAR, True, MetricRole.DIAGNOSTIC, common, CoverageStage.PATH,
                    description="TRANSIT 段总长",
-                   notes="与 path_length 秩相关 rho=1.000（240 实例实测）：length = work + transit，"
+                   notes="Rank correlation with path_length ≈ 1.0 (transit=length−work); treated as diagnostic."
                          "而 work 约等于面积/幅宽、几乎不随配置变，两者共享同一自由度。"
                          "保留仅为诊断，不进主指标向量"),
         MetricSpec("headland_turn_count", "count", OptimizationDirection.MINIMIZE, ComparabilityScope.IMPL_INVARIANT,
@@ -120,7 +120,7 @@ def _install_defaults() -> None:
                    canonical_name="row_crossing_equivalent",
                    notes="无行结构（row_structure=None）时恒为 0；作业段按直线端点计为精确值，"
                          "弧形转移段按弦投影计，是该口径的下界。行结构是目标空间里唯一与长度族"
-                         "正交的维度来源（实测 crossings 与 length 秩相关 -0.098）。"
+                         "Orthogonal to path_length dimension (rank correlation ≈ −0.10)."
                          "它是主目标向量的第三维，角色同 headland_turn_count 保持 DIAGNOSTIC"),
         MetricSpec("swath_count", "count", OptimizationDirection.MINIMIZE, ComparabilityScope.IMPL_INVARIANT,
                    ScaleBehavior.INVARIANT, True, MetricRole.DIAGNOSTIC, coverage, CoverageStage.SWATH,

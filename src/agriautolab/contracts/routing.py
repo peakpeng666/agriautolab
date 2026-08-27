@@ -2,7 +2,7 @@
 
 TSP/CVRP 在 AgriAutoLab 中不是示例代码，而是自动算法设计方法的参考问题族：
 它们提供成熟、可解释的 constructive heuristic 基线，后续与农业规划共享候选生成、
-评估和证据纪律。这里仅描述问题数据与静态可行性，不实现任何求解策略。
+Problem data and static feasibility constraints only; no solver logic.
 """
 
 from __future__ import annotations

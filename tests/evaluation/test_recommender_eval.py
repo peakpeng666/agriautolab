@@ -1,4 +1,4 @@
-"""H3 确证模块的合成数据测试（不触碰真实留出集）。"""
+"""Synthetic data tests for recommender evaluation (no real holdout data accessed)."""
 
 import math
 
@@ -102,7 +102,7 @@ def test_analyze_h3_dual_track_and_math():
     # 推荐器恒选 a（悔值 0），D = 0 - 0.5*0.4 = -0.2
     assert math.isclose(result["track_70"]["mean_D"], -0.2, abs_tol=1e-12)
     assert result["track_70"]["negative_D_share"] == 1.0
-    assert result["preregistered_failure_checks"]["any_triggered"] is False
+    assert result["failure_thresholds"]["any_triggered"] is False
 
 
 def test_even_field_median_uses_conventional_definition():
@@ -131,10 +131,10 @@ def test_failure_criterion_triggers_when_recommender_bad():
     training = _make("t", 3)
     result = analyze_h3(_BadRecommender(), training, holdout)
     # 恒选 b（悔值 1）> 0.5*0.4=0.2 → D=+0.8 → 失效判据 1 触发
-    assert result["preregistered_failure_checks"][
+    assert result["failure_thresholds"][
         "criterion_1_mean_regret_not_below_half_random"
     ]
-    assert result["preregistered_failure_checks"]["any_triggered"] is True
+    assert result["failure_thresholds"]["any_triggered"] is True
 
 
 def test_zero_ok_instances_counted_not_consumed():

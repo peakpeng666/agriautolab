@@ -14,7 +14,7 @@ from agriautolab.selection.cv import (
     assign_grouped_folds,
     build_cv_assignment_evidence,
     field_ids_from_manifest,
-    seal_cv_assignment_in_block_d_ledger,
+    register_cv_assignment,
     write_cv_assignment,
 )
 
@@ -90,15 +90,15 @@ def test_build_evidence_excludes_holdout_and_binds_source_files(tmp_path: Path) 
     assert roundtrip == evidence
 
 
-def test_cv_assignment_can_be_sealed_as_idempotent_block_d_genesis(tmp_path: Path) -> None:
+def test_cv_assignment_can_be_sealed_as_idempotent_benchmark_ledger_genesis(tmp_path: Path) -> None:
     manifest_path, holdout_path = _fixture_sources(tmp_path)
     evidence = build_cv_assignment_evidence(manifest_path, holdout_path, n_folds=3, seed=7)
     assignment_path = tmp_path / "cv_assignment.json"
-    ledger_path = tmp_path / "block_d_ledger.jsonl"
+    ledger_path = tmp_path / "benchmark_ledger.jsonl"
     write_cv_assignment(evidence, assignment_path)
 
-    first = seal_cv_assignment_in_block_d_ledger(evidence, assignment_path, ledger_path)
-    replay = seal_cv_assignment_in_block_d_ledger(evidence, assignment_path, ledger_path)
+    first = register_cv_assignment(evidence, assignment_path, ledger_path)
+    replay = register_cv_assignment(evidence, assignment_path, ledger_path)
     assert replay == first
     entries = tuple(json.loads(line) for line in ledger_path.read_text(encoding="utf-8").splitlines())
     assert len(entries) == 1
@@ -107,7 +107,7 @@ def test_cv_assignment_can_be_sealed_as_idempotent_block_d_genesis(tmp_path: Pat
 
     assignment_path.write_text(assignment_path.read_text(encoding="utf-8") + " ", encoding="utf-8")
     with pytest.raises(ValueError, match="genesis"):
-        seal_cv_assignment_in_block_d_ledger(evidence, assignment_path, ledger_path)
+        register_cv_assignment(evidence, assignment_path, ledger_path)
 
 
 def test_d1_frozen_constants_match_preregistration() -> None:

@@ -1,9 +1,9 @@
-"""H3 confirmatory：留出集田级偏好条件 Tchebycheff 悔值（一次性评估）。
+"""Recommender evaluation: one-shot field-level preference-conditioned Tchebycheff regret on holdout.
 
-口径全部来自修正案 03/04/05：统计单位是田；D_f = L_f^rec − 0.5·L_f^rand
-（random_applicable 精确期望）；符号翻转置换 10^4、种子 20260822、单侧
-（D_f 更小为备择）；双轨并报（70 块 / 剔除 2 块调试探针田的 68 块）；
-零 ok 实例保留计数不进损失。
+Estimand: per-field D_f = L_f^rec - 0.5 * L_f^rand_applicable (exact random-applicable
+expectation); sign-flip permutation with 10^4 resamples, seed 20260822, one-sided
+(smaller D_f is the alternative); both tracks reported (70 fields / 68 fields after
+excluding the 2 debug-probe fields); zero-ok instances stay counted but enter no loss.
 """
 
 from __future__ import annotations
@@ -61,8 +61,8 @@ def _track(fields, field_d: dict) -> dict:
     }
 
 
-def analyze_h3(recommender, training_instances, holdout_instances) -> dict:
-    """对留出实例执行一次性 H3 评估；SBS 只从训练田学习。"""
+def evaluate_recommender(recommender, training_instances, holdout_instances) -> dict:
+    """Run the one-shot holdout recommender evaluation; SBS learns only from training fields."""
     from agriautolab.selection.evaluation import select_sbs
     from agriautolab.selection.experiment import evaluate_fields
 
@@ -129,9 +129,13 @@ def analyze_h3(recommender, training_instances, holdout_instances) -> dict:
         "random_applicable_infeasible_rate": random_infeasible_rate,
         "track_70": track_70,
         "track_68_excluding_probe_fields": track_68,
-        "preregistered_failure_checks": failure,
+        "failure_thresholds": failure,
         "scope_validity": (
             "Preference-conditional selection under the frozen 2-D agricultural CPP "
-            "simulation protocol; holdout consumed once at D7."
+            "simulation protocol; holdout consumed once at the recommender evaluation stage."
         ),
     }
+
+
+# Legacy aliases
+analyze_h3 = evaluate_recommender

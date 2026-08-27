@@ -1,7 +1,8 @@
-"""Pareto 前沿与目标向量：主指标向量是三维，全部最小化。
+"""Pareto front and objective vector for multi-objective CPP evaluation.
 
-path_length / headland_turns / row_crossings。transit_length 因与 path_length
-秩相关 rho=1.000（240 实例实测）降为 DIAGNOSTIC，不进向量（见注册表 notes）。
+Three-dimensional objective: path_length, headland_turns, row_crossings (all minimized).
+transit_length is excluded as a primary dimension due to near-perfect rank correlation
+with path_length (see metric registry).
 """
 
 from __future__ import annotations
@@ -20,7 +21,7 @@ class ObjectiveVector:
 
     证据层（parquet 列名、wire ID）仍是 headland_turns / row_crossings；
     这里永久接受 legacy 关键字并提供 legacy 属性，旧构造点零改动。
-    位置顺序三时代一致：path_length, 转弯维, 穿行维。
+    Field order matches the three objective dimensions: path_length, turns, crossings.
     """
 
     path_length: float              # m，越小越好

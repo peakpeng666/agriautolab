@@ -9,7 +9,7 @@ import pytest
 
 from agriautolab.evaluation.feature_effects import (
     OffsetFrontInstance,
-    analyze_h2,
+    evaluate_row_angle_effects,
     build_offset_front_instance,
     field_effects,
 )
@@ -166,7 +166,7 @@ def test_field_effects_enforce_design_and_report_3_4_5_bins_constant_zero_and_se
     assert by_field["e"].spearman_rho is None
     assert by_field["z"].median_row_angle_vs_principal is None
 
-    result = analyze_h2(estimates)
+    result = evaluate_row_angle_effects(estimates)
     assert result["n_analyzable_fields"] == 4
     assert result["n_fewer_than_3_defined_offset_bins"] == 2
     assert (result["n_3_bins"], result["n_4_bins"], result["n_5_bins"]) == (1, 1, 2)
@@ -177,10 +177,8 @@ def test_field_effects_enforce_design_and_report_3_4_5_bins_constant_zero_and_se
     assert result["wilcoxon"]["n_zero_differences"] == 1
     assert result["full_5_bin_sensitivity"]["n_fields"] == 2
     assert result["full_5_bin_sensitivity"]["status"] == "secondary_sensitivity__not_in_holm_family"
-    assert result["deprecated_cross_field_descriptive"]["status"] == "descriptive_only__not_a_confirmatory_test"
-    assert "no cross-field explanatory interpretation" in result["deprecated_cross_field_descriptive"]["interpretation"]
     assert result["multiplicity"]["exact_holm_adjusted_p"] is None
-    assert result["multiplicity"]["exact_holm_status"] == "pending_H3_pvalue_for_final_ordering"
+    assert result["multiplicity"]["holm_adjusted_p_status"] == "awaiting_downstream_p_values"
 
 
 def test_field_effects_reject_missing_or_duplicate_frozen_design_cells():
@@ -199,7 +197,7 @@ def test_field_effects_reject_missing_or_duplicate_frozen_design_cells():
 
 def test_all_constant_responses_are_included_as_zero_not_dropped():
     estimates = _estimate(_field("a", tuple(([2] * 4) for _ in OFFSETS)))
-    result = analyze_h2(estimates)
+    result = evaluate_row_angle_effects(estimates)
     assert result["n_analyzable_fields"] == 1
     assert result["n_constant_response_fields"] == 1
     assert result["primary_rho_distribution"]["median"] == 0.0
@@ -241,7 +239,7 @@ def test_h1_predecessor_sha_tamper_is_rejected(tmp_path: Path):
     import hashlib
 
     entries = []
-    for index, artifact in enumerate(("d1", "pool_census", "selection_protocol_v1", "selection_cv_result")):
+    for index, artifact in enumerate(("d1", "pool_census", "benchmark_cv_protocol", "selection_cv_result")):
         entry = jsonl_log.entry(index, {"artifact": artifact})
         entries.append(entry)
     payload = {

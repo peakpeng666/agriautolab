@@ -4,7 +4,7 @@ import math
 
 import pytest
 
-from agriautolab.evaluation.pareto_optimality import FrontInstance, analyze_h1, build_front_instance, field_estimates
+from agriautolab.evaluation.pareto_optimality import FrontInstance, evaluate_pareto_optimality as analyze_h1, build_front_instance, field_estimates
 from agriautolab.evaluation.stats import wilcoxon_greater
 
 

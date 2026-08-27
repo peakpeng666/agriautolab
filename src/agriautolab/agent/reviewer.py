@@ -115,7 +115,7 @@ class RouteOrderCorrectnessReviewer:
     def review(self, candidate: ProposalCandidate, function: HeuristicFn) -> ReviewVerdict:
         """逐探针调用一次并**记住返回值**，成功理由由记下的值拼装。
 
-        两处纪律：
+        # Two invariants:
 
         1. 每个探针传**新副本**——沙箱不禁止候选改写入参，共用常量会让先跑的候选
            把后面的探针掏空，「候选能否通过」于是取决于提议顺序。

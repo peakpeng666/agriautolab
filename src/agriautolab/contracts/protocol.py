@@ -52,9 +52,9 @@ class BenchmarkProtocol(BaseModel):
     resample_step_m: float = Field(default=0.25, gt=0.0)
     clearance_sample_step_m: float = Field(default=0.25, gt=0.0)
     # 同样故意不给默认值：超体积的尺子（参考点）换了，两次运行在前沿层面
-    # 就不可比，证据层必须能区分——与 coverage_target 同一条纪律。
+    # must be distinguishable at the evidence layer for fair comparison.
     hypervolume_reference: HypervolumeReference
-    # 同一条纪律的第三例：Reeds-Shepp 的倒车代价是目标函数的一部分。
+    # Reverse cost configuration affects the objective function.
     reverse_cost: ReverseCostSpec
 
     def spec_hash(self) -> str:

@@ -11,7 +11,7 @@ from agriautolab.selection.cv import (
     CV_FOLDS,
     CV_SEED,
     build_cv_assignment_evidence,
-    seal_cv_assignment_in_block_d_ledger,
+    register_cv_assignment,
     write_cv_assignment,
 )
 
@@ -47,7 +47,7 @@ def main() -> None:
         write_cv_assignment(evidence, args.output)
     ledger_entry = None
     if args.ledger is not None:
-        ledger_entry = seal_cv_assignment_in_block_d_ledger(evidence, args.output, args.ledger)
+        ledger_entry = register_cv_assignment(evidence, args.output, args.ledger)
     print(
         "cv assignment: "
         f"all={evidence.n_all_fields}, holdout={evidence.n_holdout_fields}, "

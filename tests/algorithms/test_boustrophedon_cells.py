@@ -93,7 +93,7 @@ def test_real_field_defects_regression_synthetic() -> None:
     1) 透镜形地块（两端薄中间厚）组端点建箱只剩 2.6% 面积（ee_field_6）；
     2) robust_union 网格吸附的 ~1e-13 近退化顶点转回原坐标后自交（ee_field_77）；
     3) 洞尖藏于段内时端点通道配置不匹配，通道 0 与通道 1 重叠恰为洞面积
-       （nl_field_191476：重叠 1357 m^2，cells 并集正确但两两重叠）。
+       # Overlap of 1357 m² observed when hole vertex lies inside sweep band; union is correct but pairwise overlapping.
     断言：面积守恒（rel 1e-6）+ cells 两两互斥（划分语义）+ 全部可过 polygon_from_spec。
     """
     from shapely import Polygon

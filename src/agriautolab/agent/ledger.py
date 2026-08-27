@@ -4,7 +4,7 @@
 「演化试了 40 个、37 个被闸门否决」是两个完全不同的主张，
 后者才是可复现实验该有的记录。
 evidence 层的 EvidenceLedger 与 EvidenceRecord 强类型绑定（运行证据），
-演化记录字段不同，这里按同一哈希链纪律单独建账。
+Separate ledger maintained per benchmark run using the same hash-chain structure.
 """
 
 from __future__ import annotations
@@ -77,7 +77,7 @@ class EvolutionRecord(BaseModel):
     hypervolume_delta: float | None = None
     kept: bool
     # 记录 append 时刻的全程累计真实 run_pipeline 调用数（含轮前基线池 I×P、
-    # 闸门 1+2+0、候选逐实例评估）。这是 Study-002 预算口径的唯一来源。
+    # gate counts (1 contract, 2 validation, 0 skipped) per candidate evaluation.
     evaluations_used: int = 0
     # 迄今各轮 hypervolume_delta 非 None 值的 running max，单调不减；
     # 任何 delta 仍为 None 时也保持上轮值。口径是 COCO/IOHprofiler 式的

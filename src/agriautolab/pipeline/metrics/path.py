@@ -91,7 +91,7 @@ def densify(path: tuple[Point, ...], max_step: float) -> tuple[Point, ...]:
 def resample_uniform(path: tuple[Point, ...], step: float) -> tuple[Point, ...]:
     """低通滤波器，不是几何等价变换。会切角、会缩短长度。
 
-    实测：(0,0)-(100,0)-(100,50) 这条长 150.0 的折线，step=60 后只剩 134.7。
+    Example: polyline (0,0)-(100,0)-(100,50) has length 150.0; sampled with step=60 yields 134.7.
 
     step 是协议参数：同 step 可比，跨 step 不可比。
     当前主流程不启用 —— 角度类指标直接在原始折线上计算即可，
@@ -139,7 +139,7 @@ def min_clearance(path: tuple[Point, ...], obstacles: BaseGeometry) -> float:
 def transit_length(path: PathArtifact) -> float:
     """TRANSIT 段总长。
 
-    与 path_length 秩相关 rho=1.000（240 实例 x 12 配置实测）：length = work + transit，
+    Rank correlation with path_length ≈ 1.0 (transit = length − work);
     而 work ~= 面积/幅宽几乎不随配置变，两者共享同一自由度。注册为 DIAGNOSTIC，
     保留只为诊断「非作业里程里有多少是纯转场」，不进主指标向量。
     """

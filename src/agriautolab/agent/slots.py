@@ -261,7 +261,7 @@ class RouteOrderSlot:
     def _geometry_for(self, problem: CoverageProblem, vehicle: VehicleSpec):
         """跑上游三阶段，返回 (swath_id -> 端点, 地块质心, 主轴法向)。
 
-        关键纪律：禁止调用 run_pipeline——会污染 anytime 评估计数。
+        Do not call run_pipeline here — it would corrupt the anytime evaluation counter.
         """
         from agriautolab.algorithms.headland.uniform_headland import ConstantWidthHeadland
         from agriautolab.algorithms.decomposition.boustrophedon_cells import BoustrophedonDecomposition
@@ -421,12 +421,12 @@ class RouteOrderSlot:
         与 SwathAngleSlot 的 8×3 uniform 消耗模式一致（theta/tx/ty 顺序）。
 
         **变换施加在条带几何上，而不是地块上**——这是本方法与初版最关键的差别，
-        理由是实测发现的一个上游性质：
+        # Upstream geometric property:
 
         `PrincipalAxisSwathGenerator` 在**地块**被旋转时并不是刚体等变的。当旋转
         把 PCA 主轴推过 `canonical_direction` 的半平面边界，扫掠方向与法向一起
         翻转，`_sweep.py` 于是从地块的另一侧开始铺条带，**残余余量随之换到另一端**
-        ——不只是 id 重新编号，条带的实际位置就变了。90×50 田实测：
+        # strip positions physically shift (not just re-indexed). Example on a 90×50 field:
         基线条带中心 y = 12.85 / 22.55 / 32.25 / 37.15（间隔 9.7, 9.7, 4.9），
         旋转 1.5857 rad 后逆变换回原坐标是 12.85 / 17.75 / 27.45 / 37.15
         （间隔 4.9, 9.7, 9.7）。两组条带集合根本不是同一批几何对象。
@@ -446,7 +446,7 @@ class RouteOrderSlot:
 
         **判定量是评分，不是访问序**——这是第二个关键选择。贪心构造在**评分并列**
         时由稳定枚举序决胜，而刚体变换会引入 ~1e-16 的舍入任意打破并列；一旦某步
-        的并列翻转，后续整条路线随之发散。规则条带间距在 CPP 里恰恰极常见（实测
+        # symmetric reversal causes route divergence. Regular strip spacing is common in CPP (
         90×50 参考田上，第 1 步到两条条带的距离精确同为 9.7 m），因此"比较访问序"
         会让最近邻这类完全合法的候选被随机误拒。
 

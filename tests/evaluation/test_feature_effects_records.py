@@ -14,9 +14,9 @@ def _h1_ledger(path: Path) -> None:
     for index, artifact in enumerate((
         "d1",
         "pool_census",
-        "selection_protocol_v1",
+        "benchmark_cv_protocol",
         "selection_cv_result",
-        "h1_confirmatory_result",
+        "pareto_optimality_result",
     )):
         entry = jsonl_log.entry(index, {"artifact": artifact})
         entries.append(entry)
@@ -28,7 +28,7 @@ def _h1_ledger(path: Path) -> None:
 
 def _h2_result(path: Path, *, code_hash: str = "a" * 64) -> None:
     path.write_text(json.dumps({
-        "hypothesis": "H2",
+        "hypothesis": "feature_effects",
         "identity": {
             "analysis_code_hash": code_hash,
             "protocol_bundle_hash": "b" * 64,
@@ -49,32 +49,32 @@ def test_h2_seal_is_index_five_idempotent_and_conflict_safe(tmp_path: Path):
     _h1_ledger(ledger)
     _h2_result(result)
     first = seal_confirmatory_result(
-        hypothesis="H2",
+        hypothesis="feature_effects",
         expected_index=5,
-        required_previous_artifact="h1_confirmatory_result",
+        required_previous_artifact="pareto_optimality_result",
         result_path=result,
         ledger_path=ledger,
     )
     before = ledger.read_bytes()
     second = seal_confirmatory_result(
-        hypothesis="H2",
+        hypothesis="feature_effects",
         expected_index=5,
-        required_previous_artifact="h1_confirmatory_result",
+        required_previous_artifact="pareto_optimality_result",
         result_path=result,
         ledger_path=ledger,
     )
     assert first == second
     assert first["index"] == 5
-    assert first["payload"]["artifact"] == "h2_confirmatory_result"
+    assert first["payload"]["artifact"] == "feature_effects_result"
     assert ledger.read_bytes() == before
     jsonl_log.verify_entries(tuple(json.loads(line) for line in ledger.read_text().splitlines()))
 
     _h2_result(result, code_hash="9" * 64)
-    with pytest.raises(ValueError, match="冲突"):
+    with pytest.raises(ValueError, match="conflict|already sealed|冲突"):
         seal_confirmatory_result(
-            hypothesis="H2",
+            hypothesis="feature_effects",
             expected_index=5,
-            required_previous_artifact="h1_confirmatory_result",
+            required_previous_artifact="pareto_optimality_result",
             result_path=result,
             ledger_path=ledger,
         )
@@ -88,11 +88,11 @@ def test_h2_seal_refuses_wrong_index_four_predecessor(tmp_path: Path):
     entries[-1] = jsonl_log.entry(4, {"artifact": "wrong"})
     ledger.write_text("".join(json.dumps(entry, sort_keys=True) + "\n" for entry in entries))
     _h2_result(result)
-    with pytest.raises(ValueError, match="前序"):
+    with pytest.raises(ValueError, match="requires|predecessor|前序"):
         seal_confirmatory_result(
-            hypothesis="H2",
+            hypothesis="feature_effects",
             expected_index=5,
-            required_previous_artifact="h1_confirmatory_result",
+            required_previous_artifact="pareto_optimality_result",
             result_path=result,
             ledger_path=ledger,
         )

@@ -62,7 +62,7 @@ def test_selection_protocol_sealing_is_index_two_and_idempotent(tmp_path: Path):
     # 长度不硬编码：后续合法封存（训练执行 index=3 等）不应打破本测试；
     # 结构契约 = 首三条语义固定 + 链验证 + 若有第四条必须是训练封存四哈希。
     assert entries[0]["payload"].get("event") == "cv_assignment_sealed"
-    assert [e["payload"].get("artifact") for e in entries[1:3]] == ["pool_census", "selection_protocol_v1"]
+    assert [e["payload"].get("artifact") for e in entries[1:3]] == ["pool_census", "benchmark_cv_protocol"]
     if len(entries) >= 4:
         assert entries[3]["payload"].get("artifact") == "selection_cv_result"
         assert set(entries[3]["payload"]) >= {"cv_file_sha256", "model_file_sha256", "metadata_file_sha256", "protocol_hash"}

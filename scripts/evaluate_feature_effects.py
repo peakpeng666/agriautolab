@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 
 from agriautolab.evaluation.records import seal_confirmatory_result, sha256_file
-from agriautolab.evaluation.feature_effects import analyze_h2, field_effects, load_offset_front_instances
+from agriautolab.evaluation.feature_effects import evaluate_feature_effects, field_effects, load_offset_front_instances
 from agriautolab.contracts.vehicle import VehicleSpec
 from agriautolab.pipeline.corpus.protocol import CorpusProtocol
 from agriautolab.pipeline.hashing import content_hash
@@ -131,15 +131,15 @@ def main() -> None:
         default=ROOT / "examples" / "corpus" / "corpus_protocol.json",
     )
     parser.add_argument("--manifest", type=Path, default=ROOT / "evidence" / "v7" / "manifest.json")
-    parser.add_argument("--pool-census", type=Path, default=ROOT / "evidence" / "block_d" / "pool_census.json")
+    parser.add_argument("--pool-census", type=Path, default=ROOT / "benchmarks/results/pool_census.json")
     parser.add_argument(
         "--selection-protocol",
         type=Path,
-        default=ROOT / "evidence" / "block_d" / "selection_protocol_v1.json",
+        default=ROOT / "benchmarks/results/benchmark_cv_protocol.json",
     )
-    parser.add_argument("--h1-result", type=Path, default=ROOT / "evidence" / "block_d" / "h1_result.json")
-    parser.add_argument("--output", type=Path, default=ROOT / "evidence" / "block_d" / "h2_result.json")
-    parser.add_argument("--ledger", type=Path, default=ROOT / "evidence" / "block_d" / "ledger.jsonl")
+    parser.add_argument("--h1-result", type=Path, default=ROOT / "benchmarks/results/pareto_optimality_result.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "benchmarks/results/feature_effects_result.json")
+    parser.add_argument("--ledger", type=Path, default=ROOT / "benchmarks/results/benchmark_ledger.jsonl")
     args = parser.parse_args()
 
     entries = tuple(
@@ -167,8 +167,8 @@ def main() -> None:
         raise ValueError("Block D index=1 必须是 D2 pool_census")
     if pool_census_sha256 != entries[1]["payload"].get("file_sha256"):
         raise ValueError("D2 pool census 文件与 ledger index=1 绑定字节不一致")
-    if entries[2]["payload"].get("artifact") != "selection_protocol_v1":
-        raise ValueError("Block D index=2 必须是 D3 selection_protocol_v1")
+    if entries[2]["payload"].get("artifact") != "benchmark_cv_protocol":
+        raise ValueError("Benchmark ledger index=2 must be the benchmark_cv_protocol artifact")
     if selection_protocol_sha256 != entries[2]["payload"].get("file_sha256"):
         raise ValueError("D3 selection protocol 文件与 ledger index=2 绑定字节不一致")
     if runs_sha256 != census["sources"]["runs_parquet_sha256"]:
@@ -237,7 +237,7 @@ def main() -> None:
         raise ValueError("v7 H2 每田必须恰好 20 instances / 5 offset bins")
     _validate_h1_field_reconciliation(h1_document, estimates)
 
-    analysis = analyze_h2(estimates)
+    analysis = evaluate_feature_effects(estimates)
     document = {
         "study_id": "AGRIPLAN-PARETO-001",
         "stage": "D6-H2-confirmatory",

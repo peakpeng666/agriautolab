@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from agriautolab.evaluation.records import sha256_file
-from agriautolab.evaluation.recommender_preflight import verify_h3_preflight
+from agriautolab.evaluation.recommender_preflight import verify_recommender_preflight
 from agriautolab.pipeline import jsonl_log
 
 
@@ -36,7 +36,7 @@ def _fixture(tmp_path: Path) -> dict[str, Path]:
     cv = tmp_path / "cv_assignment.json"
     holdout = tmp_path / "holdout_seal.json"
     census = tmp_path / "pool_census.json"
-    selection_protocol = tmp_path / "selection_protocol_v1.json"
+    selection_protocol = tmp_path / "benchmark_cv_protocol.json"
     h2_result = tmp_path / "h2_result.json"
     model = tmp_path / "recommender.joblib"
     metadata = tmp_path / "recommender_metadata.json"
@@ -125,7 +125,7 @@ def _fixture(tmp_path: Path) -> dict[str, Path]:
     _append(
         entries,
         {
-            "artifact": "selection_protocol_v1",
+            "artifact": "benchmark_cv_protocol",
             "file_sha256": sha256_file(selection_protocol),
             "pool_hash": POOL_HASH,
             "cv_spec_hash": CV_SPEC_HASH,
@@ -140,11 +140,11 @@ def _fixture(tmp_path: Path) -> dict[str, Path]:
             "protocol_hash": SELECTION_PROTOCOL_HASH,
         },
     )
-    _append(entries, {"artifact": "h1_confirmatory_result"})
+    _append(entries, {"artifact": "pareto_optimality_result"})
     _append(
         entries,
         {
-            "artifact": "h2_confirmatory_result",
+            "artifact": "feature_effects_result",
             "result_file_sha256": sha256_file(h2_result),
             "protocol_bundle_hash": PROTOCOL_BUNDLE_HASH,
             "runs_parquet_sha256": sha256_file(runs),
@@ -164,7 +164,7 @@ def _fixture(tmp_path: Path) -> dict[str, Path]:
         "holdout_path": holdout,
         "pool_census_path": census,
         "selection_protocol_path": selection_protocol,
-        "h2_result_path": h2_result,
+        "feature_effects_result_path": h2_result,
         "model_path": model,
         "metadata_path": metadata,
         "ledger_path": ledger,
@@ -172,10 +172,10 @@ def _fixture(tmp_path: Path) -> dict[str, Path]:
 
 
 def _verify(paths: dict[str, Path], *, reject_if_h3_sealed: bool = True):
-    return verify_h3_preflight(
+    return verify_recommender_preflight(
         **paths,
         protocol_bundle_hash=PROTOCOL_BUNDLE_HASH,
-        reject_if_h3_sealed=reject_if_h3_sealed,
+        reject_if_recommender_sealed=reject_if_h3_sealed,
     )
 
 
@@ -196,7 +196,7 @@ def test_existing_h3_rejected_before_any_other_input_is_opened(tmp_path: Path) -
         for line in ledger.read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
-    _append(entries, {"artifact": "h3_confirmatory_result"})
+    _append(entries, {"artifact": "recommender_eval_result"})
     ledger.write_text(
         "".join(json.dumps(entry, ensure_ascii=False, sort_keys=True) + "\n" for entry in entries),
         encoding="utf-8",
@@ -205,14 +205,14 @@ def test_existing_h3_rejected_before_any_other_input_is_opened(tmp_path: Path) -
     # 如果实现错误地继续做输入检查，这两个缺失文件会先抛 FileNotFoundError。
     paths["runs_path"].unlink()
     paths["model_path"].unlink()
-    with pytest.raises(ValueError, match="H3 已封存"):
+    with pytest.raises(ValueError, match="already sealed|sealed|re-executed"):
         _verify(paths)
 
 
 def test_model_bytes_must_match_d4_before_deserialization(tmp_path: Path) -> None:
     paths = _fixture(tmp_path)
     paths["model_path"].write_bytes(b"different-model")
-    with pytest.raises(ValueError, match="模型字节与 D4"):
+    with pytest.raises(ValueError, match="model bytes|index 3"):
         _verify(paths)
 
 
@@ -221,15 +221,15 @@ def test_holdout_file_must_match_d1_genesis(tmp_path: Path) -> None:
     holdout = json.loads(paths["holdout_path"].read_text(encoding="utf-8"))
     holdout["field_ids"][0] = "tampered"
     _write_json(paths["holdout_path"], holdout)
-    with pytest.raises(ValueError, match="冻结输入字节漂移"):
+    with pytest.raises(ValueError, match="bytes.*drift|holdout"):
         _verify(paths)
 
 
 def test_h2_predecessor_must_share_data_and_protocol_identity(tmp_path: Path) -> None:
     paths = _fixture(tmp_path)
-    h2 = json.loads(paths["h2_result_path"].read_text(encoding="utf-8"))
+    h2 = json.loads(paths["feature_effects_result_path"].read_text(encoding="utf-8"))
     h2["identity"]["runs_parquet_sha256"] = "wrong"
-    _write_json(paths["h2_result_path"], h2)
+    _write_json(paths["feature_effects_result_path"], h2)
 
     # 先把 ledger 对 H2 文件的字节绑定同步到这个合成变体，才能命中更深层的
     # predecessor identity gate，而不是停在 result_file_sha256 外层守门。
@@ -243,12 +243,12 @@ def test_h2_predecessor_must_share_data_and_protocol_identity(tmp_path: Path) ->
     for index, old in enumerate(entries):
         payload = dict(old["payload"])
         if index == 5:
-            payload["result_file_sha256"] = sha256_file(paths["h2_result_path"])
+            payload["result_file_sha256"] = sha256_file(paths["feature_effects_result_path"])
         _append(rebuilt, payload)
     ledger.write_text(
         "".join(json.dumps(entry, ensure_ascii=False, sort_keys=True) + "\n" for entry in rebuilt),
         encoding="utf-8",
     )
 
-    with pytest.raises(ValueError, match="H2 前序与 H3"):
+    with pytest.raises(ValueError, match="feature_effects|predecessor"):
         _verify(paths)

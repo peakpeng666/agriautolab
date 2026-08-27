@@ -27,7 +27,7 @@ TSPLIB 的 `nint(x)` 定义为 `(int)(x + 0.5)`——**四舍五入**。Python �
 同理，规范写的是 `sqrt(xd*xd + yd*yd)` 而不是 `hypot`。`hypot` 精度更高，但在
 `.5` 边界上可能与规范舍到不同的整数。为了与文献逐位一致，这里照抄规范式。
 
-## 实测佐证（berlin52，官方最优 tour，公开最优值 7542）
+## Validation (berlin52, known optimum 7542):
 
 用 TSPLIB 官方 `berlin52.opt.tour` 在本模块下复算，三种口径分别是：
 

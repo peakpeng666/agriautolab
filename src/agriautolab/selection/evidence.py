@@ -40,14 +40,14 @@ def seal_selection_protocol(*, protocol_path: str | Path, ledger_path: str | Pat
     entries = jsonl_log.read_entries(ledger_file)
     jsonl_log.verify_entries(entries)
     payload = {
-        "artifact": "selection_protocol_v1",
+        "artifact": "benchmark_cv_protocol",
         "file_sha256": _sha256_file(protocol_file),
         "spec_hash": expected_hash,
         "cv_spec_hash": cv_spec_hash,
         "pool_hash": pool_hash,
         "preference_grid_hash": document["preference_grid"]["hash"],
     }
-    existing = [entry for entry in entries if entry["payload"].get("artifact") == "selection_protocol_v1"]
+    existing = [entry for entry in entries if entry["payload"].get("artifact") == "benchmark_cv_protocol"]
     if existing:
         if len(existing) != 1 or existing[0]["index"] != 2 or existing[0]["payload"] != payload:
             raise ValueError("已封存的 selection protocol 与当前重放冲突")
@@ -96,7 +96,7 @@ def seal_selection_cv_result(
         if len(existing) != 1 or existing[0]["index"] != 3 or existing[0]["payload"] != payload:
             raise ValueError("已封存的 selection CV/model 产物与当前重放冲突")
         return existing[0]
-    if len(entries) != 3 or entries[2]["payload"].get("artifact") != "selection_protocol_v1":
+    if len(entries) != 3 or entries[2]["payload"].get("artifact") != "benchmark_cv_protocol":
         raise ValueError("CV/model 结果只能在已封 selection protocol 之后追加")
     if entries[2]["payload"].get("spec_hash") != protocol_hash:
         raise ValueError("CV/model 结果声明的 protocol_hash 与 ledger index=2 不一致")

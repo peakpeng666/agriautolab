@@ -86,16 +86,16 @@ def main() -> None:
     parser.add_argument("--vehicles", type=Path, default=ROOT / "examples" / "corpus" / "vehicles.json")
     parser.add_argument("--cv", type=Path, default=ROOT / "evidence" / "v7" / "cv_assignment.json")
     parser.add_argument("--holdout", type=Path, default=ROOT / "evidence" / "v7" / "holdout_seal.json")
-    parser.add_argument("--pool-census", type=Path, default=ROOT / "evidence" / "block_d" / "pool_census.json")
+    parser.add_argument("--pool-census", type=Path, default=ROOT / "benchmarks/results/pool_census.json")
     parser.add_argument(
         "--selection-protocol",
         type=Path,
-        default=ROOT / "evidence" / "block_d" / "selection_protocol_v1.json",
+        default=ROOT / "benchmarks/results/benchmark_cv_protocol.json",
     )
-    parser.add_argument("--h2-result", type=Path, default=ROOT / "evidence" / "block_d" / "h2_result.json")
+    parser.add_argument("--h2-result", type=Path, default=ROOT / "benchmarks/results/feature_effects_result.json")
     parser.add_argument("--model-dir", type=Path, default=Path.home() / "agriautolab-data" / "d4")
-    parser.add_argument("--output", type=Path, default=ROOT / "evidence" / "block_d" / "h3_result.json")
-    parser.add_argument("--ledger", type=Path, default=ROOT / "evidence" / "block_d" / "ledger.jsonl")
+    parser.add_argument("--output", type=Path, default=ROOT / "benchmarks/results/recommender_eval_result.json")
+    parser.add_argument("--ledger", type=Path, default=ROOT / "benchmarks/results/benchmark_ledger.jsonl")
     parser.add_argument("--fields", choices=("train", "holdout"), default="holdout")
     args = parser.parse_args()
 
@@ -218,7 +218,7 @@ def main() -> None:
     print(
         f"H3 sealed (index={EXPECTED_LEDGER_INDEX}): fields={track['n_fields']} "
         f"mean_D={track['mean_D']:.5f} p={track['permutation']['pvalue']:.4e} "
-        f"failure_triggered={analysis['preregistered_failure_checks']['any_triggered']}"
+        f"failure_triggered={analysis['failure_thresholds']['any_triggered']}"
     )
 
 

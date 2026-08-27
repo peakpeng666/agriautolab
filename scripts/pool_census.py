@@ -7,8 +7,8 @@
     --configs configs/corpus_13.json \
     --vehicles examples/corpus/vehicles.json \
     --cv evidence/v7/cv_assignment.json \
-    --output evidence/block_d/pool_census.json \
-    --ledger evidence/block_d/ledger.jsonl
+    --output benchmarks/results/pool_census.json \
+    --ledger benchmarks/results/benchmark_ledger.jsonl
 """
 
 from __future__ import annotations

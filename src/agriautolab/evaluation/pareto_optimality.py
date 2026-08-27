@@ -1,4 +1,4 @@
-"""D5/H1：田级 Pareto 前沿中位数的冻结确认性分析。"""
+"""Per-field Pareto front median confirmatory analysis (primary evaluation track)."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ class FrontInstance:
 
 
 @dataclass(frozen=True)
-class H1FieldEstimate:
+class ParetoFrontEstimate:
     field_id: str
     n_instances: int
     n_defined_front_instances: int
@@ -81,7 +81,7 @@ def load_front_instances(
     runs_parquet: str | Path,
     nominal_config_ids: Iterable[str],
 ) -> tuple[FrontInstance, ...]:
-    """只扫描 H1/H2 所需列；状态一律由 ``derive_status`` 决定。"""
+    """Scan only the columns the analysis needs; status always comes from ``derive_status``."""
     import pyarrow.dataset as ds
 
     columns = [
@@ -98,7 +98,7 @@ def load_front_instances(
     dataset = ds.dataset(str(runs_parquet), format="parquet")
     missing = sorted(set(columns) - set(dataset.schema.names))
     if missing:
-        raise ValueError(f"runs.parquet 缺少 H1/H2 所需列：{missing}")
+        raise ValueError(f"Missing required evaluation columns in runs dataset: {missing}")
     grouped: dict[str, list[dict]] = {}
     for batch in dataset.scanner(columns=columns).to_batches():
         for row in batch.to_pylist():
@@ -113,8 +113,8 @@ def field_estimates(
     instances: Sequence[FrontInstance],
     *,
     expected_field_ids: Iterable[str] | None = None,
-) -> tuple[H1FieldEstimate, ...]:
-    """形成修正案 03 的主口径与零记 0 敏感性口径。"""
+) -> tuple[ParetoFrontEstimate, ...]:
+    """Build the primary and zero-as-zero sensitivity estimates per field."""
     by_field: dict[str, list[FrontInstance]] = {}
     seen_instances: set[str] = set()
     for instance in instances:
@@ -134,7 +134,7 @@ def field_estimates(
         rows = by_field[field_id]
         defined = [int(row.front_size) for row in rows if row.front_size is not None]
         zero_as_zero = [0 if row.front_size is None else int(row.front_size) for row in rows]
-        result.append(H1FieldEstimate(
+        result.append(ParetoFrontEstimate(
             field_id=field_id,
             n_instances=len(rows),
             n_defined_front_instances=len(defined),
@@ -145,21 +145,21 @@ def field_estimates(
     return tuple(result)
 
 
-def analyze_h1(
-    estimates: Sequence[H1FieldEstimate],
+def evaluate_pareto_optimality(
+    estimates: Sequence[ParetoFrontEstimate],
     *,
     alpha_family: float = 0.01,
     family_size: int = 3,
 ) -> dict:
-    """执行 H1 主检验；Holm 精确调整明确等待 H2/H3 全部 p 值。"""
+    """Run the primary Pareto front-size test; exact Holm adjustment waits for the other family p-values."""
     if not estimates:
-        raise ValueError("H1 至少需要一块田")
+        raise ValueError("At least one field is required for Pareto front evaluation.")
     if family_size < 1 or not (0.0 < alpha_family < 1.0):
-        raise ValueError("Holm family 参数非法")
+        raise ValueError("Invalid Holm family parameters")
     main_values = [item.median_defined_front_size for item in estimates if item.median_defined_front_size is not None]
     sensitivity_values = [item.median_zero_as_zero_front_size for item in estimates]
     if not main_values:
-        raise ValueError("H1 没有任何可分析田")
+        raise ValueError("No analyzable fields remain for Pareto front evaluation.")
     main = [float(value) for value in main_values]
     zero_fields = sum(item.median_defined_front_size is None for item in estimates)
     test = wilcoxon_greater(main, null_value=1.0)
@@ -183,15 +183,15 @@ def analyze_h1(
         "single_front_field_share_primary": single_front_share,
         "wilcoxon": test,
         "multiplicity": {
-            "family": ["H1", "H2", "H3"],
+            "family": ["pareto_optimality", "feature_effects", "recommender_eval"],
             "family_size": family_size,
             "familywise_alpha": alpha_family,
             "exact_holm_adjusted_p": None,
-            "exact_holm_status": "pending_H2_H3_pvalues_for_final_ordering",
+            "holm_adjusted_p_status": "awaiting_downstream_p_values",
             "bonferroni_upper_bound_on_adjusted_p": conservative_adjusted_upper,
-            "holm_rejection_guaranteed_regardless_pending_pvalues": holm_guaranteed,
+            "holm_guaranteed_rejection": holm_guaranteed,
         },
-        "preregistered_failure_checks": {
+        "failure_thresholds": {
             "primary_field_median_equals_1": main_distribution["median"] == 1.0,
             "more_than_90pct_primary_fields_equal_1": single_front_share > 0.90,
             "zero_ok_field_share_above_30pct_interpretation_limit": zero_field_share > 0.30,
@@ -199,3 +199,7 @@ def analyze_h1(
         "fields": [asdict(item) for item in estimates],
     }
 
+
+
+# Legacy alias
+analyze_h1 = evaluate_pareto_optimality

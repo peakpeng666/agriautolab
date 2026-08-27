@@ -138,7 +138,7 @@ def _projected_extent(source: CRS) -> tuple[float, float, float, float] | None:
 def _verify_declared_crs(geometry: BaseGeometry, declared_crs: str) -> None:
     """声明的 CRS 必须与坐标量程自洽，否则抛 CrsDeclarationError。
 
-    实测事故：F2B wkt.zip 实为 WGS84 经纬度，门户声明
+    # Observed upstream issue: F2B wkt.zip uses WGS84 lat/lon while the portal declares
     EPSG:3301/28992/3346；快速通道把 5.0 米地头当 5.0 度用，地块被内缩吃光。
     那次响了是因为地块归零；把 28992 误报成 3301 则是静默的，
     只让所有长度差几个百分点——正好是当时 path_length 残差的量级。
@@ -153,7 +153,7 @@ def _verify_declared_crs(geometry: BaseGeometry, declared_crs: str) -> None:
     作用域：本函数只能证伪「坐标不可能属于所声明的那个 CRS」这一档。
     把 EPSG:28992 误报成 EPSG:3301 时，如果坐标恰好同时落在两者的有效范围内，
     它抓不出来——那需要与权威边界或已知控制点对账。
-    **这是纪律不是保证**，写在这里以免被当成后者。
+    Coordinate-range validation is a convention check, not a hard guarantee.
     """
     source = CRS.from_user_input(declared_crs)
     min_x, min_y, max_x, max_y = geometry.bounds
@@ -362,8 +362,8 @@ def export_corpus(
 class QuarantinedField:
     """被隔离的地块：几何不合法（如自交），剔除而非修复。
 
-    真实 EuroCrops 数据实测 350 块中 2 块自交（具体 id 与隔离记录见 AUDIT_NOTE，
-    实测如此）。本仓库禁止 make_valid：隐式修复的拓扑会使后续
+    # EuroCrops dataset contains self-intersecting polygons (2 of 350 fields observed);
+    # make_valid is intentionally not applied: implicit topology repair silently alters
     所有面积指标建立在一块没人见过的多边形上；正确的处置是显式剔除并记录，
     剔除本身进入 manifest 与证据链。
     """

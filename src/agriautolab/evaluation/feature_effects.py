@@ -1,4 +1,4 @@
-"""D6/H2：冻结二维农业 CPP 协议下的田内偏移处理效应。"""
+"""Within-field row-angle offset treatment effects under the frozen 2-D agricultural CPP protocol."""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ class OffsetBinEstimate:
 
 
 @dataclass(frozen=True)
-class H2FieldEstimate:
+class RowAngleEffectEstimate:
     field_id: str
     n_instances: int
     n_defined_front_instances: int
@@ -47,7 +47,7 @@ class H2FieldEstimate:
 
 
 def _one_optional_finite_float(rows: Sequence[dict], key: str, instance_id: str) -> float | None:
-    # Failure rows in v7 may carry null feature cells.  Consume the unique recorded
+    # Failure rows in the dataset may carry null feature cells.  Consume the unique recorded
     # value instead of requiring all 13 nominal-config rows to repeat it.
     normalized = [float(value) for row in rows if (value := row.get(key)) is not None]
     if not normalized:
@@ -68,7 +68,7 @@ def _parse_design_cell(instance_id: str, field_id: str, vehicle_index: int) -> t
     if embedded_field != field_id:
         raise ValueError(f"{instance_id}: instance_id 内 field 与列 field_id 不一致")
     if direction_mode != "principal_axis" or vehicle_label != "vehicle":
-        raise ValueError(f"{instance_id}: H2 只接受 principal_axis 冻结场景身份")
+        raise ValueError(f"{instance_id}: only principal_axis frozen scenario identities are accepted")
     try:
         parsed_vehicle = int(vehicle_text)
         offset = float(offset_text)
@@ -107,7 +107,7 @@ def load_offset_front_instances(
     runs_parquet: str | Path,
     nominal_config_ids: Iterable[str],
 ) -> tuple[OffsetFrontInstance, ...]:
-    """Scan only H2 columns and independently recompute every observed-OK front."""
+    """Scan only the analysis columns and independently recompute every observed-OK front."""
     import pyarrow.dataset as ds
 
     columns = [
@@ -125,7 +125,7 @@ def load_offset_front_instances(
     dataset = ds.dataset(str(runs_parquet), format="parquet")
     missing = sorted(set(columns) - set(dataset.schema.names))
     if missing:
-        raise ValueError(f"runs.parquet 缺少 H2 所需列：{missing}")
+        raise ValueError(f"Missing required evaluation columns in runs dataset: {missing}")
     grouped: dict[str, list[dict]] = {}
     for batch in dataset.scanner(columns=columns).to_batches():
         for row in batch.to_pylist():
@@ -153,19 +153,20 @@ def _spearman_nonconstant(x: Sequence[float], y: Sequence[float]) -> float:
     result = spearmanr(x, y)
     rho = float(result.statistic)
     if not math.isfinite(rho):
-        raise ValueError("Spearman rho 非有限；常数响应必须由 Amendment 05 分支处理")
+        raise ValueError("Spearman rho is not finite; constant responses must be handled by the constant-response branch")
     if rho < -1.0 - 1e-12 or rho > 1.0 + 1e-12:
-        raise ValueError(f"Spearman rho 越界：{rho}")
+        raise ValueError(f"Spearman rho out of range: {rho}")
     return min(1.0, max(-1.0, rho))
 
 
 def wilcoxon_greater_pratt(values: Iterable[float], *, null_value: float) -> dict:
-    """One-sided Wilcoxon with Pratt ranking so Amendment-05 zero rhos remain in n.
+    """One-sided Wilcoxon with Pratt ranking so constant-response zero rhos remain in n.
 
-    H1's already-sealed analysis deliberately remains on ``zero_method='wilcox'``.
-    H2 needs a distinct rule: constant within-field responses are defined as rho=0
-    and must enter the signed-rank sample.  Pratt ranks zeros with the full sample,
-    while their own ranks make no positive or negative contribution.
+    The pareto-optimality analysis deliberately remains on ``zero_method='wilcox'``.
+    The row-angle effect analysis needs a distinct rule: constant within-field
+    responses are defined as rho=0 and must enter the signed-rank sample.  Pratt
+    ranks zeros with the full sample, while their own ranks make no positive or
+    negative contribution.
     """
     import numpy as np
     from scipy import __version__ as scipy_version
@@ -182,7 +183,7 @@ def wilcoxon_greater_pratt(values: Iterable[float], *, null_value: float) -> dic
         "alternative": "greater",
         "null_value": float(null_value),
         "zero_method": "pratt",
-        "zero_rule": "Amendment_05_constant_response_rho_zero_retained_in_ranked_sample",
+        "zero_rule": "constant_response_rho_zero_retained_in_ranked_sample",
         "correction": False,
         "method": "approx",
         "scipy_version": scipy_version,
@@ -222,8 +223,8 @@ def field_effects(
     expected_spacings_m: Iterable[float],
     expected_vehicle_indices: Iterable[int] = (0, 1),
     expected_field_ids: Iterable[str] | None = None,
-) -> tuple[H2FieldEstimate, ...]:
-    """Build Amendment 04/05 field effects after enforcing the full 5×2×2 design."""
+) -> tuple[RowAngleEffectEstimate, ...]:
+    """Build field effects after enforcing the full 5x2x2 frozen design."""
     offsets = _strict_finite_grid(expected_offsets_rad, name="offset grid", size=5)
     spacings = _strict_finite_grid(expected_spacings_m, name="spacing grid", size=2)
     vehicles = tuple(int(value) for value in expected_vehicle_indices)
@@ -247,7 +248,7 @@ def field_effects(
                 f"extra={sorted(actual_fields-expected_fields)}"
             )
     if not by_field:
-        raise ValueError("H2 至少需要一块田")
+        raise ValueError("At least one field is required for row-angle effect evaluation.")
 
     expected_cells = frozenset(
         (offset, spacing, vehicle)
@@ -255,7 +256,7 @@ def field_effects(
         for spacing in spacings
         for vehicle in vehicles
     )
-    estimates: list[H2FieldEstimate] = []
+    estimates: list[RowAngleEffectEstimate] = []
     for field_id in sorted(by_field):
         rows = by_field[field_id]
         actual_cells: dict[tuple[float, float, int], OffsetFrontInstance] = {}
@@ -288,7 +289,7 @@ def field_effects(
         if len(analyzable_bins) >= 3:
             responses = [float(item.median_front_size) for item in analyzable_bins]
             constant_response = len(set(responses)) == 1
-            # Amendment 05: a constant response is a genuine zero effect, never a missing rho.
+            # A constant response is a genuine zero effect, never a missing rho.
             rho = 0.0 if constant_response else _spearman_nonconstant(
                 [item.offset_rad for item in analyzable_bins], responses
             )
@@ -304,7 +305,7 @@ def field_effects(
         ]
         if not all(math.isfinite(value) for value in row_angles):
             raise ValueError(f"{field_id}: row_angle_vs_principal 必须有限")
-        estimates.append(H2FieldEstimate(
+        estimates.append(RowAngleEffectEstimate(
             field_id=field_id,
             n_instances=len(rows),
             n_defined_front_instances=len(defined_fronts),
@@ -320,45 +321,6 @@ def field_effects(
             offset_bins=tuple(bins),
         ))
     return tuple(estimates)
-
-
-def _deprecated_cross_field_descriptive(estimates: Sequence[H2FieldEstimate]) -> dict:
-    paired = [
-        item
-        for item in estimates
-        if item.median_defined_front_size is not None
-        and item.median_row_angle_vs_principal is not None
-    ]
-    x = [float(item.median_row_angle_vs_principal) for item in paired]
-    y = [float(item.median_defined_front_size) for item in paired]
-    rho: float | None
-    reason: str | None
-    if len(paired) < 2:
-        rho, reason = None, "fewer_than_2_defined_field_pairs"
-    elif len(set(x)) == 1:
-        rho, reason = None, "constant_field_level_feature"
-    elif len(set(y)) == 1:
-        rho, reason = None, "constant_field_level_response"
-    else:
-        rho, reason = _spearman_nonconstant(x, y), None
-    return {
-        "status": "descriptive_only__not_a_confirmatory_test",
-        "n_field_pairs": len(paired),
-        "n_fields_missing_defined_front_response": sum(
-            item.median_defined_front_size is None for item in estimates
-        ),
-        "n_fields_missing_feature_median": sum(
-            item.median_row_angle_vs_principal is None for item in estimates
-        ),
-        "feature_distribution": None if not x else distribution_summary(x),
-        "response_distribution": None if not y else distribution_summary(y),
-        "spearman_rho": rho,
-        "undefined_reason": reason,
-        "interpretation": (
-            "Amendment 03 cross-field estimand is downgraded: field-level X is a design constant plus "
-            "principal-axis estimation noise and has no cross-field explanatory interpretation."
-        ),
-    }
 
 
 def _sensitivity(values: Sequence[float], *, n_constant: int) -> dict:
@@ -383,28 +345,28 @@ def _sensitivity(values: Sequence[float], *, n_constant: int) -> dict:
     }
 
 
-def analyze_h2(
-    estimates: Sequence[H2FieldEstimate],
+def evaluate_feature_effects(
+    estimates: Sequence[RowAngleEffectEstimate],
     *,
     alpha_family: float = 0.01,
     family_size: int = 3,
 ) -> dict:
-    """Run H2; exact Holm adjustment remains pending until H3 supplies its p-value."""
+    """Run the row-angle effect test; exact Holm adjustment remains pending until the recommender p-value arrives."""
     if not estimates:
-        raise ValueError("H2 至少需要一块田")
+        raise ValueError("At least one field is required for row-angle effect evaluation.")
     if family_size < 1 or not (0.0 < alpha_family < 1.0):
-        raise ValueError("Holm family 参数非法")
+        raise ValueError("Invalid Holm family parameters")
     field_ids = [item.field_id for item in estimates]
     if len(field_ids) != len(set(field_ids)):
-        raise ValueError("H2 field estimates 含重复 field_id")
+        raise ValueError("row-angle field estimates contain a duplicate field_id")
 
     analyzable = [item for item in estimates if item.spearman_rho is not None]
     if not analyzable:
-        raise ValueError("H2 没有 >=3 个定义偏移档的可分析田")
+        raise ValueError("no analyzable fields with >=3 defined offset bins remain")
     if any(item.n_defined_offset_bins not in (3, 4, 5) for item in analyzable):
-        raise ValueError("可分析田的定义偏移档数必须为 3/4/5")
+        raise ValueError("analyzable fields must have 3/4/5 defined offset bins")
     if any(item.constant_response is None for item in analyzable):
-        raise ValueError("可分析田必须明确 constant_response")
+        raise ValueError("analyzable fields must declare constant_response explicitly")
 
     rhos = [float(item.spearman_rho) for item in analyzable]
     test = wilcoxon_greater_pratt(rhos, null_value=0.0)
@@ -442,21 +404,25 @@ def analyze_h2(
             full_five_rhos,
             n_constant=sum(bool(item.constant_response) for item in full_five),
         ),
-        "deprecated_cross_field_descriptive": _deprecated_cross_field_descriptive(estimates),
         "multiplicity": {
-            "family": ["H1", "H2", "H3"],
+            "family": ["pareto_optimality", "feature_effects", "recommender_eval"],
             "family_size": family_size,
             "familywise_alpha": alpha_family,
             "exact_holm_adjusted_p": None,
-            "exact_holm_status": "pending_H3_pvalue_for_final_ordering",
+            "holm_adjusted_p_status": "awaiting_downstream_p_values",
             "bonferroni_upper_bound_on_adjusted_p": conservative_adjusted_upper,
-            "holm_rejection_guaranteed_regardless_pending_pvalue": (
+            "holm_guaranteed_rejection": (
                 conservative_adjusted_upper <= alpha_family
             ),
         },
-        "preregistered_failure_checks": {
+        "failure_thresholds": {
             "median_within_field_rho_le_zero": primary_distribution["median"] <= 0.0,
             "n_analyzable_fields_below_150": len(analyzable) < 150,
         },
         "fields": [asdict(item) for item in estimates],
     }
+
+
+# Aliases
+evaluate_row_angle_effects = evaluate_feature_effects
+analyze_h2 = evaluate_feature_effects  # legacy

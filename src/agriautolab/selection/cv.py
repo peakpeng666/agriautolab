@@ -214,7 +214,7 @@ def write_cv_assignment(evidence: CvAssignmentEvidence, path: str | Path) -> Non
 
 
 def cv_assignment_ledger_payload(evidence: CvAssignmentEvidence, assignment_path: str | Path) -> dict:
-    """把 D1 折表绑定到 Block D 分析链；不修改冻结 v7 语料账本。"""
+    """Bind fold table to the benchmark analysis ledger without modifying the frozen corpus record."""
     path = Path(assignment_path)
     return {
         "event": BLOCK_D_LEDGER_GENESIS_EVENT,
@@ -232,7 +232,7 @@ def cv_assignment_ledger_payload(evidence: CvAssignmentEvidence, assignment_path
     }
 
 
-def seal_cv_assignment_in_block_d_ledger(
+def register_cv_assignment(
     evidence: CvAssignmentEvidence,
     assignment_path: str | Path,
     ledger_path: str | Path,
@@ -250,9 +250,9 @@ def seal_cv_assignment_in_block_d_ledger(
         entries = jsonl_log.read_entries(ledger_file)
         jsonl_log.verify_entries(entries)
         if not entries:
-            raise ValueError("Block D ledger 文件存在但为空；拒绝静默覆盖")
+            raise ValueError("Benchmark ledger file exists but is empty; refusing silent overwrite")
         if entries[0] != expected:
-            raise ValueError("Block D ledger genesis 与当前 D1 折表不一致；拒绝改写分析历史")
+            raise ValueError("Benchmark ledger genesis does not match current fold assignment; refusing history rewrite")
         return entries[0]
 
     ledger_file.parent.mkdir(parents=True, exist_ok=True)

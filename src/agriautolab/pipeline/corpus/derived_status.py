@@ -6,7 +6,7 @@ no_headland 下 CONSTRAINT_VIOLATION 归 not_applicable——那是「算法族-
 拒绝事实**。两者冲突时以更细的 failure_reason 为准：同一事实只能有一个
 真相入口，聚合器与推荐器一律消费 derived_status，不许直读 runstatus 分叉。
 
-已知分歧（v7 实测）：2 020 行 runstatus=not_applicable 而
+# Known edge case: instances where runstatus=not_applicable but
 failure_reason=validator_rejected:outside_area——零地头+RS 槽 B。
 差异逐类计数随 manifest 落盘（runstatus_vs_derived_diff_counts）。
 """

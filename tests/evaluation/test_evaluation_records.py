@@ -13,7 +13,7 @@ from agriautolab.pipeline import jsonl_log
 
 def _d4_ledger(path: Path) -> None:
     entries = []
-    for index, artifact in enumerate(("d1", "pool_census", "selection_protocol_v1", "selection_cv_result")):
+    for index, artifact in enumerate(("d1", "pool_census", "benchmark_cv_protocol", "selection_cv_result")):
         payload = {"artifact": artifact}
         entry = jsonl_log.entry(index, payload)
         entries.append(entry)
@@ -58,7 +58,7 @@ def test_h1_seal_is_index_four_idempotent_and_conflict_safe(tmp_path: Path):
     jsonl_log.verify_entries(tuple(json.loads(line) for line in ledger.read_text().splitlines()))
 
     _result(result, code_hash="e" * 64)
-    with pytest.raises(ValueError, match="冲突"):
+    with pytest.raises(ValueError, match="conflict|already sealed|冲突"):
         seal_confirmatory_result(
             hypothesis="H1",
             expected_index=4,
@@ -76,7 +76,7 @@ def test_h1_seal_refuses_wrong_predecessor(tmp_path: Path):
     entries[-1] = jsonl_log.entry(3, {"artifact": "wrong"})
     ledger.write_text("".join(json.dumps(entry, sort_keys=True) + "\n" for entry in entries))
     _result(result)
-    with pytest.raises(ValueError, match="前序"):
+    with pytest.raises(ValueError, match="requires|predecessor|前序"):
         seal_confirmatory_result(
             hypothesis="H1",
             expected_index=4,

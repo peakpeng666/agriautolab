@@ -30,7 +30,7 @@ def distribution_summary(values: Iterable[float]) -> dict:
 
 
 def wilcoxon_greater(values: Iterable[float], *, null_value: float) -> dict:
-    """一元单侧 Wilcoxon：H1 为位置参数大于 ``null_value``。
+    """One-sided univariate Wilcoxon: location parameter greater than ``null_value``.
 
     样本含大量 ties/zeros，故明确用渐近法而不让 SciPy 的 ``auto`` 随版本
     选择算法。零差按 Wilcox 规则从秩和中移除；全零样本单独定义为 p=1，
