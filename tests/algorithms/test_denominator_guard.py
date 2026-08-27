@@ -242,7 +242,7 @@ def test_mitre_generated_main_field_with_correct_scalar_is_rejected() -> None:
     """生成侧用 mitre 造主田、申报正确的标量 6.0：必须抛。
 
     这条钉的就是 round/mitre 在非凸地块上 0.4%~0.5% 的分家口子，
-    用任务书实跑的缺口 60x30 L 形；矩形测不出（两种 join 同为 3344.000）。
+    L-shaped polygon with a 60x30 cutout.
     """
     problem = task_notch_l_shape_problem()
     field = polygon_from_spec(problem.field)

@@ -1,4 +1,4 @@
-"""先声明一个指标能怎么比，它的数值才允许进入排名。"""
+"""Metric specification and metadata declarations."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ class MetricSpec:
     aggregation_method: str = "arithmetic_mean"
     description: str = ""
     notes: str = ""
-    # 规范名（API/论文层）；None 时规范名即 metric_id。证据身份永远是 metric_id。
+    # Canonical name alias; defaults to metric_id if None.
     canonical_name: str | None = None
 
     @property

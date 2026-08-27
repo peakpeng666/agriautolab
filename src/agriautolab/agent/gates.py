@@ -1,10 +1,4 @@
-"""候选算法的四道闸：契约、校验、确定性、不变性。不过闸即淘汰，不修一下再用。
-
-闸门只承载流程（编译 -> 探针 -> 独立校验 -> 确定性 -> 不变性）与失败记录；
-槽位语义（契约函数名、探针值检查、评估配置构造、不变性变换、复核器集）
-由 CandidateSlot 对象提供（见 slots.py）。不显式传 slot 时解析默认槽位
-swath_angle，单槽位时代的行为因此逐位不变。
-"""
+"""Four-gate candidate filter: contract, validation, determinism, invariance."""
 
 from __future__ import annotations
 
@@ -19,7 +13,7 @@ from agriautolab.pipeline.config import PipelineConfig
 from agriautolab.pipeline.run import run_pipeline
 
 if TYPE_CHECKING:
-    # 仅供类型注解：运行时对 slots 的引用走函数内延迟导入（见 _default_slot），避免模块级环。
+    # Lazy import to avoid circular dependency.
     from agriautolab.agent.slots import CandidateSlot
 
 HeuristicFn = Callable[[Mapping[str, float]], float]

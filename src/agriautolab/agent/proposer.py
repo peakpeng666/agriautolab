@@ -271,7 +271,7 @@ row_angle_vs_principal, turning_ratio, swath_count_at_minwidth。
 
 返回值：相对地块 PCA 主轴的扫掠角偏移（弧度），必须在 [-pi/2, pi/2] 内且有限。
 可用内建：math, len, range, min, max, abs, sum, enumerate, sorted, tuple, list, float, int。
-禁止 import、open、eval、exec、双下划线属性。代码会在受限沙箱里执行并过四道闸。
+Imports, eval/exec, and dunder attributes are forbidden. Code executes in a sandbox.
 目标：让 Pareto 前沿的超体积增大（造互补性，不是造单项冠军）。
 """,
     "route_order": """你在一个农业覆盖路径规划的算法演化循环里担任启发式提议者。
@@ -292,7 +292,7 @@ row_angle_vs_principal, turning_ratio, swath_count_at_minwidth。
 
 返回值：浮点分数，越小优先级越高；必须有限。
 可用内建：math, len, range, min, max, abs, sum, enumerate, sorted, tuple, list, float, int。
-禁止 import、open、eval、exec、双下划线属性。代码会在受限沙箱里执行并过四道闸。
+Imports, eval/exec, and dunder attributes are forbidden. Code executes in a sandbox.
 目标：让 Pareto 前沿的超体积增大（造互补性，不是造单项冠军）。
 """,
 }
@@ -328,12 +328,12 @@ class LLMProposer:
         result = self._client.complete(prompt)
         if result.prompt != prompt:
             # fail closed：后端返回的 provenance 必须对应本次实际发出的请求。
-            # 否则账本记下的是另一次调用的 prompt，离线重放会喂错输入，
+            # Ensure provenance prompt matches the prompt sent to the model.
             # 「哪个请求产生了这个响应」这一主张就无法成立。
             raise ValueError(
-                "模型后端返回的 CompletionResult.prompt 与本次发出的 prompt 不一致："
+                "CompletionResult.prompt does not match sent prompt: "
                 f"request_id={result.request_id!r}，"
-                f"发出 {len(prompt)} 字符、返回 {len(result.prompt)} 字符"
+                f"Sent {len(prompt)} chars, received {len(result.prompt)} chars"
             )
         return _candidate_from_completion(context.round_index, result)
 
@@ -354,7 +354,7 @@ def _candidate_from_completion(round_index: int, result: CompletionResult) -> Pr
 def replay_candidate(round_index: int, result: CompletionResult) -> ProposalCandidate:
     """离线重放：直接委托 _candidate_from_completion，docstring 明言无网络、确定性。
 
-    重放时 result.response 与 result.prompt 必须与在线调用逐位相同；replay 与
+    Deterministic replay requirement: prompt and response must match byte-for-byte.
     在线产生的 ProposalCandidate 在 identity（三元组 algorithm_id/source_code/
     description）上逐位相等。
     """

@@ -1,13 +1,4 @@
-"""对抗式复核子代理：任务是推翻候选，不是给它背书。
-
-默认输出 refuted=True；只有跑完一组具体探针、每条都给出结果，
-才允许 refuted=False——「我认为没问题」不构成复核。
-
-为什么这条复核链有效而「多跑几个模型投票」无效：ICLR 2024 已有结论，
-无外部反馈的自我修正会让结果变差。本项目的每一步复核都有外部反馈
-（解析真值、回归基线、独立复算的重算结果），reviewer 拿到的探针输出
-就是这种反馈——它不是在表达意见，是在读取测量。
-"""
+"""Adversarial candidate reviewers for checking semantic correctness and invariants."""
 
 from __future__ import annotations
 
@@ -24,7 +15,7 @@ from agriautolab.agent.proposer import ProposalCandidate
 class ReviewVerdict:
     refuted: bool
     reasons: tuple[str, ...]
-    # hard=True 的否决不可被投票翻案（正确性类检查）；advisory 检查仍走多数。
+    # hard=True indicates a fatal correctness flaw; advisory checks use majority vote.
     hard: bool = False
 
 
@@ -34,7 +25,7 @@ class AdversarialReviewer(Protocol):
 
 
 class CorrectnessReviewer:
-    """维度一：正确性。探针 = 一组特征向量（正常、全零、缺键、极值）。"""
+    """Correctness reviewer: evaluates candidate against extreme, zero, and missing-key feature vectors."""
 
     PROBES: tuple[dict[str, float], ...] = (
         {"elongation": 1.0, "row_angle_vs_principal": 0.5, "turning_ratio": 0.3},

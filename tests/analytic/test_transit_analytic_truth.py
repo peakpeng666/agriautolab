@@ -123,7 +123,7 @@ def test_bulge_region_lengths_are_pinned(ratio: float, expected_over_radius: flo
     """d < 2R：直线段塌缩，最短解走 CCC 字；这三点把整个鼓包区钉住。
 
     规格给 d/R=1.0 的参考值是 6.032484，实测是 6.032529644843455（相对差 7.6e-6）。
-    规格原话是「实测钉住即可」，故按实测钉。
+    Empirical benchmark reference value.
     """
     radius = 1.0
     goal = (0.0, ratio * radius, math.pi)
