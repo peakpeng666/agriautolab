@@ -14,8 +14,8 @@ from agriautolab.contracts.geometry import Point, PolygonSpec
 from agriautolab.contracts.problem import CoverageProblem
 from agriautolab.contracts.rows import RowStructure
 from agriautolab.contracts.vehicle import VehicleSpec
-from agriautolab.corpus.protocol import CorpusProtocol
-from agriautolab.features.extract import extract_instance_features
+from agriautolab.pipeline.corpus.protocol import CorpusProtocol
+from agriautolab.selection.features.extract import extract_instance_features
 
 
 def _problem(direction_rad: float, spacing_m: float, crossable: bool = True) -> CoverageProblem:

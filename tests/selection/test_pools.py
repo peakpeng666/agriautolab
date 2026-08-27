@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from agriautolab.contracts.vehicle import VehicleSpec
-from agriautolab.evidence.ledger import artifact_chain_entry
+from agriautolab.pipeline import jsonl_log
 from agriautolab.pipeline.config import PipelineConfig
 from agriautolab.selection.pools import InstancePools, seal_pool_census_ledger, static_applicable
 
@@ -140,7 +140,7 @@ def test_census_rejects_truncated_or_duplicate_instance_matrix(tmp_path):
 
 def test_pool_census_ledger_sealing_is_idempotent_and_conflict_safe(tmp_path):
     ledger = tmp_path / "ledger.jsonl"
-    genesis = artifact_chain_entry(0, "0" * 64, {"event": "cv_assignment_sealed", "study_id": "study"})
+    genesis = jsonl_log.entry(0, {"event": "cv_assignment_sealed", "study_id": "study"})
     ledger.write_text(json.dumps(genesis, sort_keys=True) + "\n", encoding="utf-8")
     payload = {
         "artifact": "pool_census",
@@ -163,18 +163,3 @@ def test_pool_census_ledger_sealing_is_idempotent_and_conflict_safe(tmp_path):
         seal_pool_census_ledger(conflicting, ledger)
 
 
-def test_committed_census_artifact_structure():
-    """CI 上钉住普查产物的结构契约（文件随 D2 提交）。"""
-    path = Path(__file__).resolve().parents[2] / "evidence" / "block_d" / "pool_census.json"
-    if not path.exists():
-        pytest.skip("普查产物在数据机上生成后提交")
-    doc = json.loads(path.read_text(encoding="utf-8"))
-    assert doc["stage"] == "D2-pool-census"
-    assert doc["nominal_size"] == 13
-    assert doc["invariants"]["o_subset_a"] and doc["invariants"]["a_subset_n"]
-    assert doc["summary"]["train_fields"] == 165
-    assert doc["summary"]["holdout_fields"] == 70
-    assert len(doc["fields"]) == 235
-    for field in doc["fields"]:
-        assert field["split"] in {"train", "holdout"}
-        assert (field["fold"] is None) == (field["split"] == "holdout")

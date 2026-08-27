@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from agriautolab.corpus.derived_status import (
+from agriautolab.pipeline.corpus.derived_status import (
     DERIVED_STATUS_DEFINITION, derive_status, status_diff_counts,
 )
 
@@ -40,8 +40,8 @@ def test_unknown_validator_class_fails_loud():
 
 def test_vocabulary_stays_in_sync_with_runner():
     # 两处声明、一份词典：漂移当场暴露（runner 侧另有对 validator 源码的结构核对）
-    from agriautolab.corpus.derived_status import _VALIDATOR_REJECTION_CLASSES
-    from agriautolab.corpus import runner
+    from agriautolab.pipeline.corpus.derived_status import _VALIDATOR_REJECTION_CLASSES
+    from agriautolab.pipeline.corpus import runner
     assert _VALIDATOR_REJECTION_CLASSES == runner._VALIDATOR_REJECTION_CLASSES
 
 
@@ -58,7 +58,7 @@ def test_diff_counts_keyed_by_class():
 def test_aggregation_path_branches_only_through_derived_status():
     # 结构性纪律：aggregate.py 不许拿 runstatus 直接与字面量比较分叉——
     # 状态判断必须经过派生层，否则单一真相源在聚合路径上失守。
-    source = (SRC / "corpus" / "aggregate.py").read_text(encoding="utf-8")
+    source = (SRC / "pipeline" / "corpus" / "aggregate.py").read_text(encoding="utf-8")
     forbidden = ['runstatus") ==', "runstatus\"] ==", "runstatus\") !=", "runstatus\"] !="]
     for pattern in forbidden:
         assert pattern not in source, pattern
@@ -67,7 +67,7 @@ def test_aggregation_path_branches_only_through_derived_status():
 
 def test_manifest_carries_derived_status_contract(tmp_path, c_record, c_vehicle, c_configs, c_benchmark, c_corpus_protocol):
     # 未来运行的 manifest 必须自带派生定义与分歧计数（空 dict 也是显式的「无分歧」）
-    from agriautolab.corpus.runner import CodeVersion, CorpusRunner
+    from agriautolab.pipeline.corpus.runner import CodeVersion, CorpusRunner
 
     class ConstantClock:
         def __call__(self):

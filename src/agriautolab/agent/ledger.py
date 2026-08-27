@@ -14,7 +14,7 @@ from collections.abc import Sequence
 from pydantic import BaseModel, ConfigDict, Field
 
 from agriautolab.contracts.errors import EvidenceChainError
-from agriautolab.evidence.hashing import content_hash
+from agriautolab.pipeline.hashing import content_hash
 
 
 class GateRecord(BaseModel):

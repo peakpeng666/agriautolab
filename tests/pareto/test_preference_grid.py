@@ -7,10 +7,10 @@ from pathlib import Path
 import pytest
 
 from agriautolab.contracts.preference import MetricPreference, PreferenceSpec
-from agriautolab.pareto.preference_grid import (
+from agriautolab.pipeline.pareto.preference_grid import (
     PREFERENCE_GRID_V1, grid_to_preference_spec, preference_grid_hash,
 )
-from agriautolab.pareto.scalarize import preference_weights
+from agriautolab.pipeline.pareto.scalarize import preference_weights
 
 EVIDENCE = Path(__file__).resolve().parents[2] / "evidence" / "preference_grid_v1.json"
 

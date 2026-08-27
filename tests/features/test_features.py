@@ -16,8 +16,8 @@ from shapely.affinity import translate as shp_translate
 from agriautolab.contracts.problem import CoverageProblem
 from agriautolab.contracts.rows import RowStructure
 from agriautolab.contracts.vehicle import VehicleSpec
-from agriautolab.features.extract import extract_instance_features, reflex_vertex_count
-from agriautolab.features.invariance import FEATURE_INVARIANCE
+from agriautolab.selection.features.extract import extract_instance_features, reflex_vertex_count
+from agriautolab.selection.features.invariance import FEATURE_INVARIANCE
 from agriautolab.geometry.validate import polygon_to_spec
 
 

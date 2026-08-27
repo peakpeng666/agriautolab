@@ -9,8 +9,8 @@ import html
 import json
 from pathlib import Path
 
-from agriautolab.corpus.derived_status import derive_status
-from agriautolab.pareto.front import ObjectiveVector, pareto_front, pool_hash
+from agriautolab.pipeline.corpus.derived_status import derive_status
+from agriautolab.pipeline.pareto.front import ObjectiveVector, pareto_front, pool_hash
 
 
 def _project(x: float, y: float, z: float) -> tuple[float, float]:

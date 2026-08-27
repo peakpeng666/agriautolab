@@ -17,11 +17,11 @@ from agriautolab.contracts.protocol import (
     ReverseCostSpec,
 )
 from agriautolab.contracts.vehicle import VehicleSpec
-from agriautolab.evidence.hashing import content_hash
-from agriautolab.corpus.protocol import CorpusProtocol
+from agriautolab.pipeline.hashing import content_hash
+from agriautolab.pipeline.corpus.protocol import CorpusProtocol
 from agriautolab.datasets.fields2benchmark import DatasetLicense, FieldRecord
 from agriautolab.geometry.validate import polygon_to_spec
-from agriautolab.metrics.coverage import CoverageTargets, resolve_coverage_targets
+from agriautolab.pipeline.metrics.coverage import CoverageTargets, resolve_coverage_targets
 from agriautolab.pipeline.config import PipelineConfig
 
 

@@ -7,13 +7,13 @@ from pathlib import Path
 
 import pytest
 
-from agriautolab.confirmatory.h2 import (
+from agriautolab.evaluation.h2 import (
     OffsetFrontInstance,
     analyze_h2,
     build_offset_front_instance,
     field_effects,
 )
-from agriautolab.evidence.ledger import artifact_chain_entry
+from agriautolab.pipeline import jsonl_log
 
 
 _SCRIPT_PATH = Path(__file__).resolve().parents[2] / "scripts" / "analyze_h2.py"
@@ -241,16 +241,14 @@ def test_h1_predecessor_sha_tamper_is_rejected(tmp_path: Path):
     import hashlib
 
     entries = []
-    previous = "0" * 64
     for index, artifact in enumerate(("d1", "pool_census", "selection_protocol_v1", "selection_cv_result")):
-        entry = artifact_chain_entry(index, previous, {"artifact": artifact})
+        entry = jsonl_log.entry(index, {"artifact": artifact})
         entries.append(entry)
-        previous = entry["entry_hash"]
     payload = {
         "artifact": "h1_confirmatory_result",
         "result_file_sha256": hashlib.sha256(h1_result.read_bytes()).hexdigest(),
     }
-    entries.append(artifact_chain_entry(4, previous, payload))
+    entries.append(jsonl_log.entry(4, payload))
     assert _validate_predecessor(tuple(entries), h1_result)["hypothesis"] == "H1"
 
     h1_result.write_text(json.dumps({"hypothesis": "H1", "tampered": True}) + "\n", encoding="utf-8")

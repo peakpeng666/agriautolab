@@ -8,11 +8,11 @@ from shapely import Polygon
 from agriautolab.contracts.artifacts import HeadlandArtifact, HeadlandCell, Swath, SwathsArtifact
 from agriautolab.contracts.enums import PathSegmentKind, SwathDirection
 from agriautolab.contracts.geometry import LineStringSpec, Point
-from agriautolab.coverage.stages.decomposition import NoDecomposition
-from agriautolab.coverage.stages.headland import ConstantWidthHeadland
-from agriautolab.coverage.stages.path import DubinsPath
-from agriautolab.coverage.stages.route import SnakeRoute
-from agriautolab.coverage.stages.swath import LongestEdgeSwath
+from agriautolab.algorithms.stages.decomposition import NoDecomposition
+from agriautolab.algorithms.stages.headland import ConstantWidthHeadland
+from agriautolab.algorithms.stages.path import DubinsPath
+from agriautolab.algorithms.stages.route import SnakeRoute
+from agriautolab.algorithms.stages.swath import LongestEdgeSwath
 from agriautolab.geometry.robust import robust_union
 from agriautolab.geometry.validate import line_from_spec, polygon_from_spec
 

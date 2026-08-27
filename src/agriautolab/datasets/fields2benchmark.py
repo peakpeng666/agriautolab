@@ -17,8 +17,8 @@ from shapely.ops import transform
 
 from agriautolab.contracts.errors import GeometryValidationError
 from agriautolab.contracts.geometry import GeometryFrame
-from agriautolab.evidence.hashing import content_hash
-from agriautolab.evidence.ledger import artifact_chain_entry
+from agriautolab.pipeline.hashing import content_hash
+from agriautolab.pipeline import jsonl_log
 from agriautolab.geometry.hashing import geometry_hash
 from agriautolab.geometry.validate import validate_geometry
 
@@ -351,7 +351,7 @@ def export_corpus(
         json.dumps(manifest.as_dict(), ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8"
     )
     ledger_payload = {"artifact": "export_manifest", "manifest_hash": manifest_hash}
-    ledger_entry = artifact_chain_entry(0, "0" * 64, ledger_payload)
+    ledger_entry = jsonl_log.entry(0, ledger_payload)
     (root / "ledger.jsonl").write_text(
         json.dumps(ledger_entry, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8"
     )

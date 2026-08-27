@@ -7,18 +7,16 @@ from pathlib import Path
 
 import pytest
 
-from agriautolab.confirmatory.evidence import seal_confirmatory_result
-from agriautolab.evidence.ledger import artifact_chain_entry, verify_artifact_chain
+from agriautolab.evaluation.evidence import seal_confirmatory_result
+from agriautolab.pipeline import jsonl_log
 
 
 def _d4_ledger(path: Path) -> None:
     entries = []
-    previous = "0" * 64
     for index, artifact in enumerate(("d1", "pool_census", "selection_protocol_v1", "selection_cv_result")):
         payload = {"artifact": artifact}
-        entry = artifact_chain_entry(index, previous, payload)
+        entry = jsonl_log.entry(index, payload)
         entries.append(entry)
-        previous = entry["entry_hash"]
     path.write_text("".join(json.dumps(entry, sort_keys=True) + "\n" for entry in entries), encoding="utf-8")
 
 
@@ -57,7 +55,7 @@ def test_h1_seal_is_index_four_idempotent_and_conflict_safe(tmp_path: Path):
     assert first == second
     assert first["index"] == 4
     assert ledger.read_bytes() == before
-    verify_artifact_chain(tuple(json.loads(line) for line in ledger.read_text().splitlines()))
+    jsonl_log.verify_entries(tuple(json.loads(line) for line in ledger.read_text().splitlines()))
 
     _result(result, code_hash="e" * 64)
     with pytest.raises(ValueError, match="冲突"):
@@ -75,7 +73,7 @@ def test_h1_seal_refuses_wrong_predecessor(tmp_path: Path):
     result = tmp_path / "h1.json"
     _d4_ledger(ledger)
     entries = [json.loads(line) for line in ledger.read_text().splitlines()]
-    entries[-1] = artifact_chain_entry(3, entries[-2]["entry_hash"], {"artifact": "wrong"})
+    entries[-1] = jsonl_log.entry(3, {"artifact": "wrong"})
     ledger.write_text("".join(json.dumps(entry, sort_keys=True) + "\n" for entry in entries))
     _result(result)
     with pytest.raises(ValueError, match="前序"):

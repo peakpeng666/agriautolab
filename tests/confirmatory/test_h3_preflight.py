@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from agriautolab.confirmatory.evidence import sha256_file
-from agriautolab.confirmatory.h3_preflight import verify_h3_preflight
-from agriautolab.evidence.ledger import artifact_chain_entry
+from agriautolab.evaluation.evidence import sha256_file
+from agriautolab.evaluation.h3_preflight import verify_h3_preflight
+from agriautolab.pipeline import jsonl_log
 
 
 PROTOCOL_BUNDLE_HASH = "protocol-bundle"
@@ -26,8 +26,7 @@ def _write_json(path: Path, value: dict) -> None:
 
 
 def _append(entries: list[dict], payload: dict) -> None:
-    previous = entries[-1]["entry_hash"] if entries else "0" * 64
-    entries.append(artifact_chain_entry(len(entries), previous, payload))
+    entries.append(jsonl_log.entry(len(entries), payload))
 
 
 def _fixture(tmp_path: Path) -> dict[str, Path]:

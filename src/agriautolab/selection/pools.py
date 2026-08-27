@@ -18,7 +18,7 @@ from pathlib import Path
 
 from agriautolab.contracts.enums import ProblemKind
 from agriautolab.contracts.vehicle import VehicleSpec
-from agriautolab.evidence.ledger import artifact_chain_entry, verify_artifact_chain
+from agriautolab.pipeline import jsonl_log
 from agriautolab.pipeline.config import PipelineConfig
 
 # 机具能力 × 路径阶段的静态配对表：谁需要倒车是契约，不是运行结果。
@@ -89,7 +89,7 @@ def census_from_runs(
     或同一 instance 内 field/vehicle 身份不一致，都说明输入语料不完整或损坏，
     必须在形成普查统计和证据之前失败。
     """
-    from agriautolab.corpus.derived_status import derive_status
+    from agriautolab.pipeline.corpus.derived_status import derive_status
 
     config_id_list = tuple(config.config_id() for config in configs)
     config_ids = frozenset(config_id_list)
@@ -171,12 +171,8 @@ def seal_pool_census_ledger(payload: dict, ledger_path: str | Path) -> dict:
     ledger_file = Path(ledger_path)
     if not ledger_file.exists():
         raise ValueError("Block D ledger 不存在；D2 不能绕过 D1 genesis")
-    entries = tuple(
-        json.loads(line)
-        for line in ledger_file.read_text(encoding="utf-8").splitlines()
-        if line.strip()
-    )
-    verify_artifact_chain(entries)
+    entries = jsonl_log.read_entries(ledger_file)
+    jsonl_log.verify_entries(entries)
     if not entries or entries[0]["index"] != 0 or entries[0]["payload"].get("event") != _BLOCK_D_GENESIS_EVENT:
         raise ValueError("Block D ledger 缺少合法 D1 genesis")
 
@@ -190,8 +186,8 @@ def seal_pool_census_ledger(payload: dict, ledger_path: str | Path) -> dict:
 
     if len(entries) != 1:
         raise ValueError("D2 尚未封存，但 ledger 已含 D1 之后的其他事件；拒绝重排历史")
-    entry = artifact_chain_entry(1, entries[0]["entry_hash"], payload)
+    entry = jsonl_log.entry(1, payload)
     with ledger_file.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(entry, ensure_ascii=False, sort_keys=True) + "\n")
-    verify_artifact_chain(entries + (entry,))
+    jsonl_log.verify_entries(entries + (entry,))
     return entry

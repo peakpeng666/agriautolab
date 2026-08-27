@@ -2,7 +2,7 @@
 
 from agriautolab.contracts.artifacts import CellsArtifact
 from agriautolab.contracts.enums import CoverageStage, ObjectiveRole
-from agriautolab.coverage.objectives import Artifact, Objective
+from agriautolab.pipeline.objectives import Artifact, Objective
 
 
 class MaxObjective(Objective):

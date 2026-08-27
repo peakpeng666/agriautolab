@@ -3,7 +3,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 
 from agriautolab.contracts.enums import CoverageTarget
-from agriautolab.evidence.hashing import content_hash
+from agriautolab.pipeline.hashing import content_hash
 
 
 class HypervolumeReference(BaseModel):

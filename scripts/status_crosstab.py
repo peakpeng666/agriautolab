@@ -20,7 +20,7 @@ import statistics
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from agriautolab.corpus.derived_status import derive_status
+from agriautolab.pipeline.corpus.derived_status import derive_status
 from agriautolab.pipeline.config import PipelineConfig
 
 

@@ -12,14 +12,14 @@ pyarrow = pytest.importorskip("pyarrow")  # noqa: F841
 
 import pyarrow.parquet as pq
 
-from agriautolab.evidence.hashing import content_hash
-from agriautolab.aslib import export_aslib_scenarios
-from agriautolab.aslib.exporter import _fold
+from agriautolab.pipeline.hashing import content_hash
+from agriautolab.selection.aslib_export import export_aslib_scenarios
+from agriautolab.selection.aslib_export import _fold
 from agriautolab.contracts.protocol import HypervolumeReference
-from agriautolab.corpus.aggregate import summarize_pareto
-from agriautolab.corpus.protocol import CorpusProtocol
-from agriautolab.corpus.runner import CodeVersion, CorpusRunner
-from agriautolab.cross_validation.f2c import SubprocessAdapter
+from agriautolab.pipeline.corpus.aggregate import summarize_pareto
+from agriautolab.pipeline.corpus.protocol import CorpusProtocol
+from agriautolab.pipeline.corpus.runner import CodeVersion, CorpusRunner
+from agriautolab.validation.f2c import SubprocessAdapter
 from agriautolab.contracts.rows import RowStructure
 from agriautolab.contracts.geometry import Point, PolygonSpec
 from agriautolab.contracts.problem import CoverageProblem

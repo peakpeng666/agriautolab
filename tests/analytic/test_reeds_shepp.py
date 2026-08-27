@@ -201,7 +201,7 @@ def test_no_headland_plus_reeds_shepp_is_feasible_where_dubins_is_not() -> None:
     from agriautolab.contracts.problem import CoverageProblem
     from agriautolab.contracts.protocol import BenchmarkProtocol, ReverseCostSpec
     from agriautolab.contracts.vehicle import VehicleSpec
-    from agriautolab.pareto.hypervolume import analytic_reference
+    from agriautolab.pipeline.pareto.hypervolume import analytic_reference
     from agriautolab.pipeline.config import PipelineConfig
     from agriautolab.pipeline.run import run_pipeline
 

@@ -8,7 +8,7 @@ from agriautolab.contracts.artifacts import PathArtifact, PathSegment
 from agriautolab.contracts.enums import PathSegmentKind
 from agriautolab.contracts.errors import TransitDecompositionError
 from agriautolab.contracts.geometry import LineStringSpec, Point
-from agriautolab.metrics.path import headland_turn_count, transit_breakdown
+from agriautolab.pipeline.metrics.path import headland_turn_count, transit_breakdown
 
 
 def segment(sid: str, kind: PathSegmentKind, *points: tuple[float, float]) -> PathSegment:

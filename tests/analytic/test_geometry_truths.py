@@ -6,7 +6,7 @@ import pytest
 from shapely import LineString, Point, box
 
 from agriautolab.geometry.footprint import QUAD_SEGS
-from agriautolab.metrics.coverage import coverage_stats
+from agriautolab.pipeline.metrics.coverage import coverage_stats
 
 
 def test_five_width10_swaths_cover_rectangle_exactly(coverage_targets) -> None:
@@ -50,7 +50,7 @@ def test_primary_metric_algebra_identity_on_saturated_width12_case(coverage_targ
     from agriautolab.contracts.artifacts import PathArtifact, PathSegment
     from agriautolab.contracts.enums import PathSegmentKind
     from agriautolab.contracts.geometry import LineStringSpec, Point as ContractPoint
-    from agriautolab.metrics.coverage import eta_l, l_area
+    from agriautolab.pipeline.metrics.coverage import eta_l, l_area
 
     field = box(0.0, 0.0, 100.0, 50.0)
     ys = (6.0, 18.0, 30.0, 42.0, 44.0)

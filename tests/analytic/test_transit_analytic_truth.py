@@ -21,7 +21,7 @@ from agriautolab.contracts.problem import CoverageProblem
 from agriautolab.contracts.vehicle import VehicleSpec
 from agriautolab.geometry.validate import polygon_to_spec
 from agriautolab.kinematics.dubins import dubins_length, dubins_word
-from agriautolab.metrics.path import transit_breakdown
+from agriautolab.pipeline.metrics.path import transit_breakdown
 
 
 def pi_turn_analytic(radius: float, spacing: float) -> float:

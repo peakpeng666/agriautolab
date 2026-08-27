@@ -2,7 +2,7 @@
 
 import pytest
 
-from agriautolab.evidence.holdout import HoldoutVault
+from agriautolab.selection.holdout_partition import HoldoutVault
 
 
 def test_seal_once_then_verify_accepts_identical_holdout() -> None:
@@ -38,7 +38,7 @@ def test_all_instances_of_one_field_share_the_same_in_holdout_flag() -> None:
     按实例封存 = 同一块地同时进训练与留出 = 泄漏，
     正是折分组泄漏的另一个出口。
     """
-    from agriautolab.evidence.holdout import field_level_holdout, instance_in_holdout
+    from agriautolab.selection.holdout_partition import field_level_holdout, instance_in_holdout
 
     fields = tuple(f"F2B_{index:05d}" for index in range(235))
     holdout = field_level_holdout(fields, fraction=0.3, seed=20260821)
@@ -57,7 +57,7 @@ def test_all_instances_of_one_field_share_the_same_in_holdout_flag() -> None:
 
 def test_field_level_holdout_hits_the_declared_fraction_and_is_deterministic() -> None:
     """预注册参数：field 级 30%、seed 20260821。235 块 -> 70 块（29.79%）。"""
-    from agriautolab.evidence.holdout import field_level_holdout
+    from agriautolab.selection.holdout_partition import field_level_holdout
 
     fields = tuple(f"F2B_{index:05d}" for index in range(235))
     first = field_level_holdout(fields, fraction=0.3, seed=20260821)
@@ -68,7 +68,7 @@ def test_field_level_holdout_hits_the_declared_fraction_and_is_deterministic() -
 
 
 def test_field_level_holdout_refuses_degenerate_fractions() -> None:
-    from agriautolab.evidence.holdout import field_level_holdout
+    from agriautolab.selection.holdout_partition import field_level_holdout
 
     fields = ("a", "b", "c")
     for bad in (0.0, 1.0, -0.1, 1.5):
@@ -80,7 +80,7 @@ def test_field_level_holdout_refuses_degenerate_fractions() -> None:
 
 def test_sealing_field_level_holdout_round_trips_through_the_vault() -> None:
     """封存的是 field_id，不是实例 id——对账也必须在同一粒度上。"""
-    from agriautolab.evidence.holdout import HoldoutVault, field_level_holdout
+    from agriautolab.selection.holdout_partition import HoldoutVault, field_level_holdout
 
     fields = tuple(f"F2B_{index:05d}" for index in range(50))
     holdout = field_level_holdout(fields, fraction=0.3, seed=20260821)

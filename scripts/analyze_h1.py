@@ -8,11 +8,11 @@ import importlib.metadata
 import json
 from pathlib import Path
 
-from agriautolab.confirmatory.evidence import seal_confirmatory_result, sha256_file
-from agriautolab.confirmatory.h1 import analyze_h1, field_estimates, load_front_instances
-from agriautolab.evidence.hashing import content_hash
-from agriautolab.evidence.ledger import verify_artifact_chain
-from agriautolab.pareto.front import pool_hash
+from agriautolab.evaluation.evidence import seal_confirmatory_result, sha256_file
+from agriautolab.evaluation.h1 import analyze_h1, field_estimates, load_front_instances
+from agriautolab.pipeline.hashing import content_hash
+from agriautolab.pipeline import jsonl_log
+from agriautolab.pipeline.pareto.front import pool_hash
 from agriautolab.pipeline.config import PipelineConfig
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -84,7 +84,7 @@ def main() -> None:
     args = parser.parse_args()
 
     entries = tuple(json.loads(line) for line in args.ledger.read_text(encoding="utf-8").splitlines() if line.strip())
-    verify_artifact_chain(entries)
+    jsonl_log.verify_entries(entries)
     if len(entries) < 4 or entries[3]["payload"].get("artifact") != "selection_cv_result":
         raise ValueError("D5 只能在合法 D4 index=3 之后执行/重放")
     if len(entries) >= 5 and entries[4]["payload"].get("artifact") != "h1_confirmatory_result":

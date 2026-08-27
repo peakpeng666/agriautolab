@@ -5,7 +5,7 @@ import math
 import pytest
 
 from agriautolab.contracts.geometry import Point
-from agriautolab.metrics.path import aol, cusp_count, l0_zero_turn_radius, path_length, total_heading_change, tortuosity
+from agriautolab.pipeline.metrics.path import aol, cusp_count, l0_zero_turn_radius, path_length, total_heading_change, tortuosity
 
 
 def pts(*coords: tuple[float, float]) -> tuple[Point, ...]:

@@ -9,13 +9,13 @@ import importlib.metadata
 import json
 from pathlib import Path
 
-from agriautolab.confirmatory.evidence import seal_confirmatory_result, sha256_file
-from agriautolab.confirmatory.h2 import analyze_h2, field_effects, load_offset_front_instances
+from agriautolab.evaluation.evidence import seal_confirmatory_result, sha256_file
+from agriautolab.evaluation.h2 import analyze_h2, field_effects, load_offset_front_instances
 from agriautolab.contracts.vehicle import VehicleSpec
-from agriautolab.corpus.protocol import CorpusProtocol
-from agriautolab.evidence.hashing import content_hash
-from agriautolab.evidence.ledger import verify_artifact_chain
-from agriautolab.pareto.front import pool_hash
+from agriautolab.pipeline.corpus.protocol import CorpusProtocol
+from agriautolab.pipeline.hashing import content_hash
+from agriautolab.pipeline import jsonl_log
+from agriautolab.pipeline.pareto.front import pool_hash
 from agriautolab.pipeline.config import PipelineConfig
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -147,7 +147,7 @@ def main() -> None:
         for line in args.ledger.read_text(encoding="utf-8").splitlines()
         if line.strip()
     )
-    verify_artifact_chain(entries)
+    jsonl_log.verify_entries(entries)
     h1_document = _validate_predecessor(entries, args.h1_result)
 
     protocol_sources, protocol_bundle_hash = _verified_protocol_identity()

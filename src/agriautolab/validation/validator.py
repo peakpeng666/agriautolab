@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict
 from shapely.geometry import GeometryCollection
@@ -10,20 +11,22 @@ from shapely.geometry import GeometryCollection
 from agriautolab.contracts.artifacts import HeadlandArtifact, PathArtifact
 from agriautolab.contracts.enums import RunStatus
 from agriautolab.contracts.problem import CoverageProblem
-from agriautolab.contracts.protocol import BenchmarkProtocol
 from agriautolab.contracts.vehicle import VehicleSpec
 from agriautolab.geometry.kernel import FieldGeometry
 from agriautolab.geometry.robust import robust_union
 from agriautolab.geometry.validate import line_from_spec, polygon_from_spec
-from agriautolab.metrics.constraints import collision_area, max_abs_declared_curvature, outside_area
-from agriautolab.metrics.coverage import (
+from agriautolab.pipeline.metrics.constraints import collision_area, max_abs_declared_curvature, outside_area
+from agriautolab.pipeline.metrics.coverage import (
     coverage_stats, eta_l, l_area, nonwork_normalized, path_length_breakdown,
     path_work_lines, resolve_coverage_targets, swath_count, turning_overhead_ratio,
 )
-from agriautolab.metrics.path import (
+from agriautolab.pipeline.metrics.path import (
     aol, cusp_count, headland_turn_count, path_length, row_crossings,
     total_heading_change, tortuosity, transit_length,
 )
+
+if TYPE_CHECKING:
+    from agriautolab.contracts.protocol import BenchmarkProtocol
 
 
 class MetricValue(BaseModel):

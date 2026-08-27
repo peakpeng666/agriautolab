@@ -8,9 +8,9 @@ from pathlib import Path
 from typing import Iterable, Sequence
 
 from agriautolab.contracts.vehicle import VehicleSpec
-from agriautolab.corpus.derived_status import derive_status
+from agriautolab.pipeline.corpus.derived_status import derive_status
 from agriautolab.pipeline.config import PipelineConfig
-from agriautolab.pareto.preference_grid import PREFERENCE_GRID_V1
+from agriautolab.pipeline.pareto.preference_grid import PREFERENCE_GRID_V1
 from agriautolab.selection.pools import static_applicable
 from agriautolab.selection.protocol import SELECTION_FEATURE_IDS
 

@@ -51,7 +51,7 @@ line-length = 120
 target-version = "py310"
 extend-exclude = [
   # 字节冻结件（r2.zip 基线），任何工具不得改写
-  "src/agriautolab/cross_validation/f2c.py",
+  "src/agriautolab/validation/f2c.py",
   "scripts/f2c_recorder",
 ]
 
@@ -63,7 +63,7 @@ select = ["F", "E9", "B006", "ISC001"]
 [tool.ruff.lint.per-file-ignores]
 # 兼容层的再导出是有意的（docs/NAMING.md：legacy 别名永久保留）
 "__init__.py" = ["F401"]
-"src/agriautolab/coverage/stages/*.py" = ["F401"]
+"src/agriautolab/algorithms/stages/*.py" = ["F401"]
 # legacy 别名行（OldName = NewName）是刻意存在的「未使用赋值」
 "src/agriautolab/algorithms/**/*.py" = ["F841"]
-"src/agriautolab/metrics/path.py" = ["F841"]
+"src/agriautolab/pipeline/metrics/path.py" = ["F841"]

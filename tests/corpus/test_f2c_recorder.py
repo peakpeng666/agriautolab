@@ -10,12 +10,12 @@ import pathlib
 
 import pytest
 
-from agriautolab.cross_validation import f2c_chain
-from agriautolab.cross_validation.f2c import PythonBindingAdapter, SubprocessAdapter
+from agriautolab.validation import f2c_chain
+from agriautolab.validation.f2c import PythonBindingAdapter, SubprocessAdapter
 
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
-CHAIN = REPO_ROOT / "src" / "agriautolab" / "cross_validation" / "f2c_chain.py"
+CHAIN = REPO_ROOT / "src" / "agriautolab" / "validation" / "f2c_chain.py"
 RECORDER_DIR = REPO_ROOT / "scripts" / "f2c_recorder"
 PY310_SENSITIVE = (CHAIN, RECORDER_DIR / "record_golden.py", RECORDER_DIR / "env_probe.py")
 
@@ -69,7 +69,7 @@ def test_recorder_and_adapter_share_one_chain_implementation() -> None:
     录制期有两个一次性壳（/home/peak/f2c_golden_wrapper.py 与
     o2_workspace/record_golden_standalone.py），它们随时可能各自漂移。
     """
-    adapter_source = (REPO_ROOT / "src" / "agriautolab" / "cross_validation" / "f2c.py").read_text(
+    adapter_source = (REPO_ROOT / "src" / "agriautolab" / "validation" / "f2c.py").read_text(
         encoding="utf-8"
     )
     assert "f2c_chain.run_chain" in adapter_source
@@ -84,7 +84,7 @@ def test_recorder_and_adapter_share_one_chain_implementation() -> None:
 
 def test_recorder_csv_columns_match_the_locked_schema() -> None:
     """录制壳写的列必须与 RecordedCsvAdapter 认的列逐位一致，否则录完才发现读不了。"""
-    from agriautolab.cross_validation.f2c import _CSV_COLUMNS
+    from agriautolab.validation.f2c import _CSV_COLUMNS
 
     namespace: dict = {}
     for node in ast.parse((RECORDER_DIR / "record_golden.py").read_text(encoding="utf-8")).body:
@@ -95,8 +95,8 @@ def test_recorder_csv_columns_match_the_locked_schema() -> None:
 
 def test_route_planner_map_is_shared_and_excludes_lookalikes() -> None:
     """只映射语义相同的。我方 skip_one_order 与 RP_Snake 回扫方向不同，不许硬配。"""
-    from agriautolab.cross_validation.f2c import F2C_ROUTE_PLANNERS
-    from agriautolab.cross_validation.ours import OURS_ROUTE_ALGORITHMS
+    from agriautolab.validation.f2c import F2C_ROUTE_PLANNERS
+    from agriautolab.validation.ours import OURS_ROUTE_ALGORITHMS
 
     assert F2C_ROUTE_PLANNERS is f2c_chain.F2C_ROUTE_PLANNERS
     assert F2C_ROUTE_PLANNERS["boustrophedon"] == "RP_Boustrophedon"

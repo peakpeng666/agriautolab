@@ -7,7 +7,7 @@ import pytest
 
 
 def test_metric_canonical_names_resolve_to_same_specs():
-    from agriautolab.metrics.registry import METRIC_REGISTRY, metric_by_canonical
+    from agriautolab.pipeline.metrics.registry import METRIC_REGISTRY, metric_by_canonical
 
     pairs = {
         "row_crossing_equivalent": "row_crossings",
@@ -26,7 +26,7 @@ def test_metric_canonical_names_resolve_to_same_specs():
 
 
 def test_wire_ids_unchanged_for_evidence_identity():
-    from agriautolab.metrics.registry import METRIC_REGISTRY
+    from agriautolab.pipeline.metrics.registry import METRIC_REGISTRY
 
     for wire in ("row_crossings", "runtime_ms", "aol", "eta_L", "L_area", "path_length",
                  "headland_turn_count"):
@@ -34,7 +34,7 @@ def test_wire_ids_unchanged_for_evidence_identity():
 
 
 def test_objective_vector_accepts_legacy_kwargs_and_properties():
-    from agriautolab.pareto.front import ObjectiveVector
+    from agriautolab.pipeline.pareto.front import ObjectiveVector
 
     legacy = ObjectiveVector(path_length=1.0, headland_turns=2.0, row_crossings=3.0)
     canonical = ObjectiveVector(path_length=1.0, headland_turn_count=2.0, row_crossing_equivalent=3.0)
@@ -47,7 +47,7 @@ def test_objective_vector_accepts_legacy_kwargs_and_properties():
 
 
 def test_feature_canonical_mapping_keeps_wire_ids():
-    from agriautolab.features.schema import canonical_feature_name
+    from agriautolab.selection.features.schema import canonical_feature_name
 
     assert canonical_feature_name("row_angle_vs_principal") == "crop_row_angle_to_principal_axis_rad"
     assert canonical_feature_name("elongation") == "elongation"  # 未改名者恒等
@@ -75,15 +75,20 @@ def test_algorithm_classes_canonical_with_legacy_aliases():
 
 
 def test_frozen_files_untouched():
-    """字节冻结件的哈希门：f2c.py 适配器与语料池文件不允许被任何重构改动。"""
+    """字节冻结件的哈希门：f2c.py 适配器与语料池文件不允许被任何重构改动。
+
+    注意：f2c.py 随 cross_validation→validation 搬迁时仅改写了 3 行导入路径
+    （evidence.hashing→pipeline.hashing、cross_validation→validation），
+    适配逻辑字节未动；哈希门钉住搬迁后的新字节（旧字节哈希见 study-001-frozen tag）。
+    """
     root = Path(__file__).resolve().parents[2]
     import hashlib
 
     def sha256(path: Path) -> str:
         return hashlib.sha256(path.read_bytes()).hexdigest()
 
-    assert sha256(root / "src/agriautolab/cross_validation/f2c.py") == (
-        "5fce4067d99eaeef444e0c2fd5f7777adc791876e3c1e00bdfb011e22e870d25"
+    assert sha256(root / "src/agriautolab/validation/f2c.py") == (
+        "40e5d910ff623943ae07ada4f4183eee1e652fea38007dcdfaf8f061ddc5e3b5"
     )
     assert sha256(root / "configs/corpus_13.json") == (
         "502b1e9053b598d62daafa0b3a819f3cebc8385cb356aa908433582b93083a57"

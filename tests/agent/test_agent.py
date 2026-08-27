@@ -21,7 +21,7 @@ from agriautolab.contracts.problem import CoverageProblem
 from agriautolab.contracts.protocol import BenchmarkProtocol
 from agriautolab.contracts.rows import RowStructure
 from agriautolab.contracts.vehicle import VehicleSpec
-from agriautolab.pareto.hypervolume import analytic_reference
+from agriautolab.pipeline.pareto.hypervolume import analytic_reference
 from agriautolab.pipeline.config import PipelineConfig
 
 

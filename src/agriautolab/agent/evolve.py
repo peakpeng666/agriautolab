@@ -30,9 +30,9 @@ from agriautolab.agent.slots import DEFAULT_SLOT_ID, SLOTS, CandidateSlot
 from agriautolab.contracts.problem import CoverageProblem
 from agriautolab.contracts.protocol import BenchmarkProtocol
 from agriautolab.contracts.vehicle import VehicleSpec
-from agriautolab.evidence.hashing import content_hash
-from agriautolab.pareto.front import ObjectiveVector
-from agriautolab.pareto.hypervolume import evaluate_front
+from agriautolab.pipeline.hashing import content_hash
+from agriautolab.pipeline.pareto.front import ObjectiveVector
+from agriautolab.pipeline.pareto.hypervolume import evaluate_front
 from agriautolab.pipeline.config import PipelineConfig
 from agriautolab.pipeline.run import StageMemo, run_pipeline
 

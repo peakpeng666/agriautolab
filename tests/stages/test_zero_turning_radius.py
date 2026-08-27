@@ -16,8 +16,8 @@ from agriautolab.contracts.geometry import LineStringSpec, Point, PolygonSpec
 from agriautolab.contracts.problem import CoverageProblem
 from agriautolab.contracts.protocol import BenchmarkProtocol
 from agriautolab.contracts.vehicle import VehicleSpec
-from agriautolab.coverage.stages.path import DubinsPath
-from agriautolab.coverage.stages.route import SnakeRoute
+from agriautolab.algorithms.stages.path import DubinsPath
+from agriautolab.algorithms.stages.route import SnakeRoute
 from agriautolab.validation.validator import PathValidator
 
 

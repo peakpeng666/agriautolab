@@ -2,7 +2,7 @@
 
 import math
 
-from agriautolab.confirmatory.h3 import (
+from agriautolab.evaluation.h3 import (
     PROBE_FIELDS,
     analyze_h3,
     permutation_sign_flip_test,

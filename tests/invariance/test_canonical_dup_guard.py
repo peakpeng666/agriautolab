@@ -1,7 +1,7 @@
 """canonical_name 查重必须在非空注册表上执行（顺序回归）。"""
 
-from agriautolab.metrics.registry import METRIC_REGISTRY, _check_canonical_uniqueness, register_metric
-from agriautolab.metrics.spec import MetricSpec
+from agriautolab.pipeline.metrics.registry import METRIC_REGISTRY, _check_canonical_uniqueness, register_metric
+from agriautolab.pipeline.metrics.spec import MetricSpec
 from agriautolab.contracts.enums import ComparabilityScope, OptimizationDirection, ScaleBehavior, MetricRole, ProblemKind
 from agriautolab.contracts.enums import CoverageStage
 

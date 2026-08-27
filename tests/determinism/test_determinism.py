@@ -5,12 +5,12 @@ import pytest
 from agriautolab.contracts.geometry import Point, PolygonSpec
 from agriautolab.contracts.problem import CoverageProblem
 from agriautolab.contracts.vehicle import VehicleSpec
-from agriautolab.coverage.config import CoveragePipelineConfig
-from agriautolab.coverage.pipeline import CoveragePipeline
-from agriautolab.evidence.hashing import content_hash
+from agriautolab.pipeline.coverage_config import CoveragePipelineConfig
+from agriautolab.pipeline.executor import CoveragePipeline
+from agriautolab.pipeline.hashing import content_hash
 from agriautolab.geometry.hashing import geometry_hash
 from agriautolab.geometry.kernel import FieldGeometry
-from agriautolab.metrics.path import densify, path_length, resample_uniform
+from agriautolab.pipeline.metrics.path import densify, path_length, resample_uniform
 
 
 def rect(x0: float, y0: float, x1: float, y1: float, geometry_id: str) -> PolygonSpec:

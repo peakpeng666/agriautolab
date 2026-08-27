@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import time
-from typing import Any, Callable, Mapping
+from typing import TYPE_CHECKING, Any, Callable, Mapping
 
 from agriautolab.algorithms.decomposition.boustrophedon_cells import BoustrophedonDecomposition
 from agriautolab.algorithms.headland.no_headland import NoHeadland
@@ -30,16 +30,18 @@ from agriautolab.contracts.artifacts import (
     CellsArtifact, HeadlandArtifact, PathArtifact, RouteArtifact, SwathsArtifact,
 )
 from agriautolab.contracts.problem import CoverageProblem
-from agriautolab.contracts.protocol import BenchmarkProtocol
 from agriautolab.contracts.vehicle import VehicleSpec
-from agriautolab.coverage.stages.decomposition import NoDecomposition
-from agriautolab.evidence.hashing import content_hash
-from agriautolab.metrics.path import TransferBreakdown, transit_breakdown
-from agriautolab.metrics.path import headland_turn_count as headland_turn_count_metric
-from agriautolab.metrics.path import row_crossings as row_crossings_metric
-from agriautolab.pareto.front import ObjectiveVector
+from agriautolab.algorithms.stages.decomposition import NoDecomposition
+from agriautolab.pipeline.hashing import content_hash
+from agriautolab.pipeline.metrics.path import TransferBreakdown, transit_breakdown
+from agriautolab.pipeline.metrics.path import headland_turn_count as headland_turn_count_metric
+from agriautolab.pipeline.metrics.path import row_crossings as row_crossings_metric
+from agriautolab.pipeline.pareto.front import ObjectiveVector
 from agriautolab.pipeline.config import PipelineConfig
 from agriautolab.validation.validator import PathValidator, ValidationResult
+
+if TYPE_CHECKING:
+    from agriautolab.contracts.protocol import BenchmarkProtocol
 
 _DECOMPOSITIONS = {"no_decomposition": NoDecomposition, "boustrophedon_cells": BoustrophedonDecomposition}
 _HEADLANDS = {"no_headland": NoHeadland, "uniform_headland": ConstantWidthHeadland}

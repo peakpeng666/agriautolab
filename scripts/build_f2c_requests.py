@@ -19,7 +19,7 @@ from pathlib import Path
 import numpy as np
 import shapely
 
-from agriautolab.corpus.protocol import DEFAULT_RECONCILIATION_SAMPLING, ReconciliationSamplingSpec
+from agriautolab.pipeline.corpus.protocol import DEFAULT_RECONCILIATION_SAMPLING, ReconciliationSamplingSpec
 
 DEFAULT_PARAMS = {
     "robot_width_m": 2.0,

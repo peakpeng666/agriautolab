@@ -22,7 +22,7 @@ from pathlib import Path
 
 from agriautolab.contracts.vehicle import VehicleSpec
 from agriautolab.pipeline.config import PipelineConfig
-from agriautolab.evidence.atomic import commit_guarded
+from agriautolab.pipeline import jsonl_log
 from agriautolab.selection.pools import census_from_runs, seal_pool_census_ledger
 
 
@@ -102,7 +102,7 @@ def main() -> None:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     tmp = args.output.with_name(args.output.name + ".tmp")
     tmp.write_text(json.dumps(doc, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-    commit_guarded(tmp, args.output, args.ledger, "pool_census", "file_sha256")
+    jsonl_log.commit_guarded(tmp, args.output, args.ledger, "pool_census", "file_sha256")
 
     payload = {
         "artifact": "pool_census",

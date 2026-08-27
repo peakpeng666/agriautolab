@@ -7,7 +7,7 @@
 
 from agriautolab.contracts.artifacts import PathArtifact, RouteArtifact
 from agriautolab.contracts.vehicle import VehicleSpec
-from agriautolab.coverage.stages.path import DubinsPath
+from agriautolab.algorithms.stages.path import DubinsPath
 
 
 class DubinsPathPlanner:

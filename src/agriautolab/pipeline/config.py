@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Mapping
 
-from agriautolab.evidence.hashing import content_hash
+from agriautolab.pipeline.hashing import content_hash
 
 
 @dataclass(frozen=True)

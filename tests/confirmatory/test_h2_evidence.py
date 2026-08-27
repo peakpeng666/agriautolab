@@ -5,13 +5,12 @@ from pathlib import Path
 
 import pytest
 
-from agriautolab.confirmatory.evidence import seal_confirmatory_result
-from agriautolab.evidence.ledger import artifact_chain_entry, verify_artifact_chain
+from agriautolab.evaluation.evidence import seal_confirmatory_result
+from agriautolab.pipeline import jsonl_log
 
 
 def _h1_ledger(path: Path) -> None:
     entries = []
-    previous = "0" * 64
     for index, artifact in enumerate((
         "d1",
         "pool_census",
@@ -19,9 +18,8 @@ def _h1_ledger(path: Path) -> None:
         "selection_cv_result",
         "h1_confirmatory_result",
     )):
-        entry = artifact_chain_entry(index, previous, {"artifact": artifact})
+        entry = jsonl_log.entry(index, {"artifact": artifact})
         entries.append(entry)
-        previous = entry["entry_hash"]
     path.write_text(
         "".join(json.dumps(entry, sort_keys=True) + "\n" for entry in entries),
         encoding="utf-8",
@@ -69,7 +67,7 @@ def test_h2_seal_is_index_five_idempotent_and_conflict_safe(tmp_path: Path):
     assert first["index"] == 5
     assert first["payload"]["artifact"] == "h2_confirmatory_result"
     assert ledger.read_bytes() == before
-    verify_artifact_chain(tuple(json.loads(line) for line in ledger.read_text().splitlines()))
+    jsonl_log.verify_entries(tuple(json.loads(line) for line in ledger.read_text().splitlines()))
 
     _h2_result(result, code_hash="9" * 64)
     with pytest.raises(ValueError, match="冲突"):
@@ -87,7 +85,7 @@ def test_h2_seal_refuses_wrong_index_four_predecessor(tmp_path: Path):
     result = tmp_path / "h2.json"
     _h1_ledger(ledger)
     entries = [json.loads(line) for line in ledger.read_text().splitlines()]
-    entries[-1] = artifact_chain_entry(4, entries[-2]["entry_hash"], {"artifact": "wrong"})
+    entries[-1] = jsonl_log.entry(4, {"artifact": "wrong"})
     ledger.write_text("".join(json.dumps(entry, sort_keys=True) + "\n" for entry in entries))
     _h2_result(result)
     with pytest.raises(ValueError, match="前序"):

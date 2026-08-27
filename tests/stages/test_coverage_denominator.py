@@ -15,13 +15,13 @@ from agriautolab.contracts.geometry import GeometryFrame, Point, PolygonSpec
 from agriautolab.contracts.problem import CoverageProblem
 from agriautolab.contracts.protocol import BenchmarkProtocol
 from agriautolab.contracts.vehicle import VehicleSpec
-from agriautolab.coverage.config import CoveragePipelineConfig
-from agriautolab.coverage.pipeline import CoveragePipeline
-from agriautolab.coverage.stages.decomposition import NoDecomposition
-from agriautolab.coverage.stages.headland import ConstantWidthHeadland
-from agriautolab.coverage.stages.swath import LongestEdgeSwath
+from agriautolab.pipeline.coverage_config import CoveragePipelineConfig
+from agriautolab.pipeline.executor import CoveragePipeline
+from agriautolab.algorithms.stages.decomposition import NoDecomposition
+from agriautolab.algorithms.stages.headland import ConstantWidthHeadland
+from agriautolab.algorithms.stages.swath import LongestEdgeSwath
 from agriautolab.geometry.validate import line_from_spec, polygon_from_spec
-from agriautolab.metrics.coverage import (
+from agriautolab.pipeline.metrics.coverage import (
     _RESOLVED, CoverageTargets, coverage_stats, resolve_coverage_targets,
 )
 

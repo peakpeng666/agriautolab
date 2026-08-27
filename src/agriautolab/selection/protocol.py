@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from agriautolab.evidence.hashing import content_hash
-from agriautolab.pareto.preference_grid import preference_grid_hash
+from agriautolab.pipeline.hashing import content_hash
+from agriautolab.pipeline.pareto.preference_grid import preference_grid_hash
 
 SELECTION_PROTOCOL_VERSION = 1
 SELECTION_STUDY_ID = "AGRIPLAN-PARETO-001"

@@ -6,8 +6,8 @@ import pytest
 
 pytest.importorskip("pyarrow")
 
-from agriautolab.aslib import export_aslib_scenarios
-from agriautolab.corpus.runner import CodeVersion, CorpusRunner
+from agriautolab.selection.aslib_export import export_aslib_scenarios
+from agriautolab.pipeline.corpus.runner import CodeVersion, CorpusRunner
 
 
 class ConstantClock:

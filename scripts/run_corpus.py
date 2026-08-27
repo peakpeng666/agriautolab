@@ -16,9 +16,9 @@ from agriautolab.contracts.protocol import (
     ReverseCostSpec,
 )
 from agriautolab.contracts.vehicle import VehicleSpec
-from agriautolab.evidence.hashing import content_hash
-from agriautolab.corpus.protocol import CorpusProtocol
-from agriautolab.corpus.runner import CodeVersion, CorpusRunner, discover_code_version
+from agriautolab.pipeline.hashing import content_hash
+from agriautolab.pipeline.corpus.protocol import CorpusProtocol
+from agriautolab.pipeline.corpus.runner import CodeVersion, CorpusRunner, discover_code_version
 from agriautolab.datasets.fields2benchmark import DatasetLicense, FieldRecord, load_exported_corpus
 from agriautolab.pipeline.config import PipelineConfig
 
@@ -96,7 +96,7 @@ def _seal_holdout(records, output_dir: Path, *, fraction: float, seed: int) -> N
     顺序不能反：跑完再封存，等于看过结果之后再决定留出谁。
     已存在封存文件则只对账不重封——「重新封存」就是换留出集（HoldoutVault 的既定语义）。
     """
-    from agriautolab.evidence.holdout import HoldoutVault, field_level_holdout
+    from agriautolab.selection.holdout_partition import HoldoutVault, field_level_holdout
 
     field_ids = tuple(record.field_id for record in records)
     holdout = field_level_holdout(field_ids, fraction=fraction, seed=seed)

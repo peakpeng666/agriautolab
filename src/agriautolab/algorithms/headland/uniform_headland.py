@@ -6,7 +6,7 @@
 """
 
 from agriautolab.contracts.artifacts import CellsArtifact, HeadlandArtifact
-from agriautolab.coverage.stages import headland as _headland_stage
+from agriautolab.algorithms.stages import headland as _headland_stage
 
 
 class ConstantWidthHeadland:

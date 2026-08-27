@@ -13,11 +13,9 @@ from agriautolab.contracts.enums import CoverageTarget
 from agriautolab.contracts.errors import CoverageDenominatorError
 from agriautolab.contracts.geometry import GeometryFrame, Point, PolygonSpec
 from agriautolab.contracts.problem import CoverageProblem
-from agriautolab.coverage.stages.decomposition import NoDecomposition
-from agriautolab.coverage.stages.headland import ConstantWidthHeadland
-from agriautolab.coverage.stages.swath import LongestEdgeSwath
-from agriautolab.evidence.hashing import content_hash
-from agriautolab.evidence.record import EvidenceMetric, EvidenceRecord
+from agriautolab.algorithms.stages.decomposition import NoDecomposition
+from agriautolab.algorithms.stages.headland import ConstantWidthHeadland
+from agriautolab.algorithms.stages.swath import LongestEdgeSwath
 from agriautolab.geometry.footprint import QUAD_SEGS
 from agriautolab.geometry.kernel import FieldGeometry
 from agriautolab.geometry.validate import (
@@ -25,7 +23,7 @@ from agriautolab.geometry.validate import (
     polygon_from_spec,
     polygon_parts_to_specs,
 )
-from agriautolab.metrics.coverage import (
+from agriautolab.pipeline.metrics.coverage import (
     _RESOLVED, CoverageTargets, coverage_stats, resolve_coverage_targets,
 )
 
@@ -219,47 +217,6 @@ def test_nonpositive_declared_width_is_rejected(rectangle_problem) -> None:
             rectangle_problem, headland_for(rectangle_problem, 6.0),
             target=CoverageTarget.MAIN_FIELD, headland_width_m=0.0,
         )
-
-
-def record(denominator) -> EvidenceRecord:
-    return EvidenceRecord(
-        record_id="r",
-        problem_hash="0" * 64,
-        algorithm_id="a",
-        config_hash="0" * 64,
-        source_hash="0" * 64,
-        environment_hash="0" * 64,
-        status="ok",
-        metrics=(EvidenceMetric(metric_id="coverage_ratio_field", value=0.5),),
-        denominator=denominator,
-    )
-
-
-@pytest.mark.parametrize("metric_id", ["coverage_ratio_field", "coverage_ratio_main", "overlap_ratio"])
-def test_evidence_record_requires_denominator_for_coverage_metrics(metric_id: str) -> None:
-    with pytest.raises(ValueError):
-        EvidenceRecord(
-            record_id="r",
-            problem_hash="0" * 64,
-            algorithm_id="a",
-            config_hash="0" * 64,
-            source_hash="0" * 64,
-            environment_hash="0" * 64,
-            status="ok",
-            metrics=(EvidenceMetric(metric_id=metric_id, value=0.5),),
-        )
-
-
-def test_evidence_record_carries_denominator_into_the_hash_chain(rectangle_problem) -> None:
-    targets = resolve_coverage_targets(rectangle_problem, None, target=CoverageTarget.ORIGINAL_FIELD)
-    first = record(targets.provenance)
-    second = record(targets.provenance)
-    dumped = first.model_dump(mode="json")
-
-    assert dumped["denominator"]["declared_headland_width_m"] is None
-    assert dumped["denominator"]["target_kind"] == "original_field"
-    assert dumped["denominator"]["headland_ring_hash"] is None
-    assert content_hash(dumped) == content_hash(second.model_dump(mode="json"))
 
 
 def artifact_from_geometry(field, main) -> HeadlandArtifact:

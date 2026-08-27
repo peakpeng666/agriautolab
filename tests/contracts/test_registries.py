@@ -9,8 +9,8 @@ from agriautolab.contracts.enums import (
     OptimizationDirection, ProblemKind, ScaleBehavior,
 )
 from agriautolab.contracts.errors import MetricRegistrationError
-from agriautolab.metrics.registry import register_metric
-from agriautolab.metrics.spec import MetricSpec
+from agriautolab.pipeline.metrics.registry import register_metric
+from agriautolab.pipeline.metrics.spec import MetricSpec
 
 
 def test_algorithm_registry_partitions_by_problem_kind() -> None:
@@ -50,6 +50,6 @@ def test_non_invariant_scope_requires_notes() -> None:
 
 def test_primary_metric_set_is_exactly_two() -> None:
     from agriautolab.contracts.enums import MetricRole
-    from agriautolab.metrics.registry import METRIC_REGISTRY
+    from agriautolab.pipeline.metrics.registry import METRIC_REGISTRY
     primary = {metric_id for metric_id, spec in METRIC_REGISTRY.items() if spec.role is MetricRole.PRIMARY}
     assert primary == {"overlap_ratio", "nonwork_normalized"}

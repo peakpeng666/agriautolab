@@ -4,8 +4,8 @@ import pytest
 
 pyarrow = pytest.importorskip("pyarrow")
 
-from agriautolab.evidence.hashing import content_hash
-from agriautolab.corpus.runner import CodeVersion, CorpusRunner
+from agriautolab.pipeline.hashing import content_hash
+from agriautolab.pipeline.corpus.runner import CodeVersion, CorpusRunner
 
 
 class ConstantClock:
@@ -68,9 +68,9 @@ def test_headland_collapse_is_not_applicable_not_crash(tmp_path, c_benchmark):
 
     from agriautolab.contracts.geometry import Point, PolygonSpec  # noqa: F401  (与下方 Polygon 对照)
     from agriautolab.contracts.vehicle import VehicleSpec
-    from agriautolab.evidence.hashing import content_hash
-    from agriautolab.corpus.protocol import CorpusProtocol
-    from agriautolab.corpus.runner import CodeVersion, CorpusRunner
+    from agriautolab.pipeline.hashing import content_hash
+    from agriautolab.pipeline.corpus.protocol import CorpusProtocol
+    from agriautolab.pipeline.corpus.runner import CodeVersion, CorpusRunner
     from agriautolab.datasets.fields2benchmark import DatasetLicense, FieldRecord
     from agriautolab.pipeline.config import PipelineConfig
 
@@ -113,7 +113,7 @@ def test_corpus_run_status_vocabulary_has_no_other_bucket():
     的结构性防御——兜底桶会把它静默吞掉。
     """
     from agriautolab.contracts.enums import RunStatus
-    from agriautolab.corpus.runner import _VALIDATOR_REJECTION_CLASSES, _corpus_run_status
+    from agriautolab.pipeline.corpus.runner import _VALIDATOR_REJECTION_CLASSES, _corpus_run_status
     from agriautolab.contracts.geometry import Point, PolygonSpec  # noqa: F401 词汇测试不再构造地块
     from agriautolab.pipeline.config import PipelineConfig
     from agriautolab.contracts.vehicle import VehicleSpec
@@ -176,8 +176,8 @@ def test_manifest_counts_zero_ok_instances_from_aggregator(tmp_path, c_benchmark
     from shapely import Polygon
 
     from agriautolab.contracts.vehicle import VehicleSpec
-    from agriautolab.corpus.protocol import CorpusProtocol
-    from agriautolab.corpus.runner import CodeVersion, CorpusRunner
+    from agriautolab.pipeline.corpus.protocol import CorpusProtocol
+    from agriautolab.pipeline.corpus.runner import CodeVersion, CorpusRunner
     from agriautolab.datasets.fields2benchmark import DatasetLicense, FieldRecord
     from agriautolab.pipeline.config import PipelineConfig
 
@@ -218,9 +218,9 @@ def test_second_vehicle_unlocks_reeds_shepp_and_changes_identity(c_record, c_veh
     import pyarrow.parquet as pq
 
     from agriautolab.contracts.vehicle import VehicleSpec
-    from agriautolab.corpus.protocol import CorpusProtocol
-    from agriautolab.corpus.runner import CodeVersion, CorpusRunner
-    from agriautolab.evidence.hashing import content_hash
+    from agriautolab.pipeline.corpus.protocol import CorpusProtocol
+    from agriautolab.pipeline.corpus.runner import CodeVersion, CorpusRunner
+    from agriautolab.pipeline.hashing import content_hash
     from agriautolab.pipeline.config import PipelineConfig
 
     reverse_vehicle = VehicleSpec(working_width_m=10.0, body_width_m=2.0,

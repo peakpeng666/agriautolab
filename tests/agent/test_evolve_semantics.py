@@ -10,7 +10,7 @@ import numpy as np
 from agriautolab.agent.evolve import KeepRule, evolve_pool, hypervolume_delta
 from agriautolab.agent.proposer import MockProposer
 from agriautolab.contracts.protocol import HypervolumeReference
-from agriautolab.pareto.front import ObjectiveVector
+from agriautolab.pipeline.pareto.front import ObjectiveVector
 
 from tests.agent.test_agent import base_pool, make_instance, make_protocol
 

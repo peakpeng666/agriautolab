@@ -2,7 +2,7 @@
 
 import pytest
 
-from agriautolab.cross_validation.f2c import (
+from agriautolab.validation.f2c import (
     CrsMismatchError,
     F2CRequest,
     F2CResult,
@@ -13,7 +13,7 @@ from agriautolab.cross_validation.f2c import (
     RouteAlgorithmMismatchError,
     SubprocessAdapter,
 )
-from agriautolab.cross_validation.report import compare_results
+from agriautolab.validation.report import compare_results
 
 
 COLUMNS = (
@@ -171,7 +171,7 @@ def test_blank_declaration_columns_are_rejected_by_schema(tmp_path, column, blan
 
 def test_ours_side_refuses_a_route_algorithm_it_does_not_implement() -> None:
     """不许拿名字相近的实现顶替：skip_one_order 的回扫方向与 F2C RP_Snake 不同。"""
-    from agriautolab.cross_validation.ours import compute_ours
+    from agriautolab.validation.ours import compute_ours
 
     request = F2CRequest(
         "r1", "POLYGON((0 0,100 0,100 50,0 50,0 0))", 2, 5, 3, 6, 0, CRS, "snake",
@@ -184,7 +184,7 @@ def test_env_f2c_hash_is_required_and_sensitive(tmp_path):
     """§3.1：golden 的录制环境指纹必须进哈希；缺失抛异常，改动任一字段哈希必变。"""
     import json
 
-    from agriautolab.cross_validation.f2c import RecordedCsvAdapter
+    from agriautolab.validation.f2c import RecordedCsvAdapter
 
     env = {
         "fields2cover_source": "HEAD@3613525c241538fa9fd9df3e1209ae8184627958 (2025-04-23)",
@@ -208,13 +208,3 @@ def test_env_f2c_hash_is_required_and_sensitive(tmp_path):
     (tmp_path / "env_f2c.json").write_text(json.dumps(env, sort_keys=True), encoding="utf-8")
     second = adapter.env_hash()
     assert second != first
-
-    # EvidenceRecord 携带该哈希的通道畅通
-    from agriautolab.contracts.enums import RunStatus
-    from agriautolab.evidence.record import EvidenceRecord
-    record = EvidenceRecord(
-        record_id="f2c-seal", problem_hash="0" * 64, algorithm_id="golden",
-        config_hash="0" * 64, source_hash="0" * 64, environment_hash=first,
-        status=RunStatus.OK, f2c_env_hash=second,
-    )
-    assert record.f2c_env_hash == second

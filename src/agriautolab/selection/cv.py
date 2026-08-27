@@ -15,8 +15,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from agriautolab.evidence.hashing import content_hash
-from agriautolab.evidence.ledger import artifact_chain_entry, verify_artifact_chain
+from agriautolab.pipeline.hashing import content_hash
+from agriautolab.pipeline import jsonl_log
 
 CV_ASSIGNMENT_SCHEMA_VERSION = 1
 CV_ASSIGNMENT_ALGORITHM = "sha256-seeded-round-robin-v1"
@@ -244,15 +244,11 @@ def seal_cv_assignment_in_block_d_ledger(
     """
     ledger_file = Path(ledger_path)
     payload = cv_assignment_ledger_payload(evidence, assignment_path)
-    expected = artifact_chain_entry(0, "0" * 64, payload)
+    expected = jsonl_log.entry(0, payload)
 
     if ledger_file.exists():
-        entries = tuple(
-            json.loads(line)
-            for line in ledger_file.read_text(encoding="utf-8").splitlines()
-            if line.strip()
-        )
-        verify_artifact_chain(entries)
+        entries = jsonl_log.read_entries(ledger_file)
+        jsonl_log.verify_entries(entries)
         if not entries:
             raise ValueError("Block D ledger 文件存在但为空；拒绝静默覆盖")
         if entries[0] != expected:
@@ -261,5 +257,5 @@ def seal_cv_assignment_in_block_d_ledger(
 
     ledger_file.parent.mkdir(parents=True, exist_ok=True)
     ledger_file.write_text(json.dumps(expected, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
-    verify_artifact_chain((expected,))
+    jsonl_log.verify_entries((expected,))
     return expected

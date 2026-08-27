@@ -27,7 +27,7 @@ from agriautolab.agent.sandbox import SandboxViolation, run_sandboxed
 from agriautolab.contracts.enums import CoverageStage
 from agriautolab.contracts.problem import CoverageProblem
 from agriautolab.contracts.vehicle import VehicleSpec
-from agriautolab.features.extract import extract_instance_features
+from agriautolab.selection.features.extract import extract_instance_features
 from agriautolab.pipeline.config import PipelineConfig
 
 

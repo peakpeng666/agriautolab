@@ -4,8 +4,8 @@ import math
 
 import pytest
 
-from agriautolab.confirmatory.h1 import FrontInstance, analyze_h1, build_front_instance, field_estimates
-from agriautolab.confirmatory.stats import wilcoxon_greater
+from agriautolab.evaluation.h1 import FrontInstance, analyze_h1, build_front_instance, field_estimates
+from agriautolab.evaluation.stats import wilcoxon_greater
 
 
 def _row(config_id: str, objectives, *, raw="ok", reason=None):

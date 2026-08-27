@@ -16,8 +16,8 @@ import csv
 import json
 from pathlib import Path
 
-from agriautolab.cross_validation import PythonBindingAdapter
-from agriautolab.cross_validation.f2c import F2CRequest
+from agriautolab.validation import PythonBindingAdapter
+from agriautolab.validation.f2c import F2CRequest
 
 CSV_COLUMNS = ("request_id", "path_length", "swath_count", "swath_length_sum", "main_field_area", "working_crs")
 

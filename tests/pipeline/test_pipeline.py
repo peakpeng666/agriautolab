@@ -15,7 +15,7 @@ from agriautolab.algorithms.swath.longest_edge import longest_edge_direction
 from agriautolab.contracts.geometry import Point, PolygonSpec
 from agriautolab.contracts.problem import CoverageProblem
 from agriautolab.contracts.vehicle import VehicleSpec
-from agriautolab.pareto.hypervolume import analytic_reference
+from agriautolab.pipeline.pareto.hypervolume import analytic_reference
 from agriautolab.pipeline.config import PipelineConfig
 from agriautolab.pipeline.run import StageMemo, run_pipeline
 from agriautolab.geometry.validate import polygon_from_spec
@@ -127,7 +127,7 @@ def test_row_aligned_objective_tradeoff_is_visible() -> None:
 
 def test_row_aligned_without_row_structure_is_rejected() -> None:
     from agriautolab.algorithms.swath.row_aligned import RowAlignedSwath
-    from agriautolab.coverage.stages.decomposition import NoDecomposition
+    from agriautolab.algorithms.stages.decomposition import NoDecomposition
 
     problem = CoverageProblem(problem_id="p", field=rect_field())
     cells = NoDecomposition().run(problem)

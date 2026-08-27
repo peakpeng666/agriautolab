@@ -13,16 +13,16 @@ from conftest import targets_from_geometry
 from agriautolab.contracts.artifacts import PathArtifact, PathSegment
 from agriautolab.contracts.enums import PathSegmentKind, ScaleBehavior
 from agriautolab.contracts.geometry import LineStringSpec, Point
-from agriautolab.metrics.constraints import collision_area, outside_area
-from agriautolab.metrics.coverage import (
+from agriautolab.pipeline.metrics.constraints import collision_area, outside_area
+from agriautolab.pipeline.metrics.coverage import (
     coverage_stats, eta_l, headland_area_ratio, l_area, nonwork_normalized,
     path_length_breakdown, swath_count, turning_overhead_ratio,
 )
-from agriautolab.metrics.path import (
+from agriautolab.pipeline.metrics.path import (
     aol, cusp_count, headland_turn_count, median_clearance, min_clearance, path_length,
     row_crossings, total_heading_change, tortuosity, transit_length,
 )
-from agriautolab.metrics.registry import METRIC_REGISTRY
+from agriautolab.pipeline.metrics.registry import METRIC_REGISTRY
 
 
 def _transform_point(point: Point, *, theta: float, scale: float, tx: float, ty: float) -> Point:

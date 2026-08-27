@@ -13,11 +13,11 @@ import importlib.metadata
 import json
 from pathlib import Path
 
-from agriautolab.confirmatory.evidence import seal_confirmatory_result, sha256_file
-from agriautolab.confirmatory.h3 import analyze_h3
-from agriautolab.confirmatory.h3_preflight import ensure_h3_holdout_unsealed, verify_h3_preflight
+from agriautolab.evaluation.evidence import seal_confirmatory_result, sha256_file
+from agriautolab.evaluation.h3 import analyze_h3
+from agriautolab.evaluation.h3_preflight import ensure_h3_holdout_unsealed, verify_h3_preflight
 from agriautolab.contracts.vehicle import VehicleSpec
-from agriautolab.evidence.hashing import content_hash
+from agriautolab.pipeline.hashing import content_hash
 from agriautolab.pipeline.config import PipelineConfig
 from agriautolab.selection.evaluation import load_selection_instances
 
