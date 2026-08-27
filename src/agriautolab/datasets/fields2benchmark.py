@@ -351,7 +351,7 @@ def export_corpus(
         json.dumps(manifest.as_dict(), ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8"
     )
     ledger_payload = {"artifact": "export_manifest", "manifest_hash": manifest_hash}
-    ledger_entry = jsonl_log.entry(0, ledger_payload, None)
+    ledger_entry = jsonl_log.build_entry(0, ledger_payload, None)
     (root / "ledger.jsonl").write_text(
         json.dumps(ledger_entry, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8"
     )

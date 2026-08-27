@@ -108,9 +108,9 @@ def main() -> None:
     # 三个产物先过封存守卫再落位：与已封存字节不一致时在覆盖前拒绝
     model_path = args.output_dir / "recommender.joblib"
     metadata_path = args.output_dir / "recommender_metadata.json"
-    jsonl_log.commit_guarded(tmp_result, result_path, args.ledger, "selection_cv_result", "cv_file_sha256")
-    jsonl_log.commit_guarded(tmp_model, model_path, args.ledger, "selection_cv_result", "model_file_sha256")
-    jsonl_log.commit_guarded(tmp_metadata, metadata_path, args.ledger, "selection_cv_result", "metadata_file_sha256")
+    jsonl_log.replace_unless_sealed(tmp_result, result_path, args.ledger, "selection_cv_result", "cv_file_sha256")
+    jsonl_log.replace_unless_sealed(tmp_model, model_path, args.ledger, "selection_cv_result", "model_file_sha256")
+    jsonl_log.replace_unless_sealed(tmp_metadata, metadata_path, args.ledger, "selection_cv_result", "metadata_file_sha256")
     entry = seal_selection_cv_result(
         result_path=result_path,
         model_path=model_path,

@@ -22,8 +22,8 @@ from agriautolab.selection.protocol import (
 
 
 def _ledger_with_d1_d2(path: Path) -> None:
-    first = jsonl_log.entry(0, {"event": "cv_assignment_sealed"}, None)
-    second = jsonl_log.entry(1, {"artifact": "pool_census"}, first["entry_hash"])
+    first = jsonl_log.build_entry(0, {"event": "cv_assignment_sealed"}, None)
+    second = jsonl_log.build_entry(1, {"artifact": "pool_census"}, first["entry_hash"])
     path.write_text(
         json.dumps(first, sort_keys=True) + "\n" + json.dumps(second, sort_keys=True) + "\n",
         encoding="utf-8",

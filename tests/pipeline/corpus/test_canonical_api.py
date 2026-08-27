@@ -75,7 +75,8 @@ def test_algorithm_classes_canonical_with_legacy_aliases():
 
 
 def test_frozen_files_untouched():
-    """字节冻结件的哈希门：f2c.py 适配器与语料池文件不允许被任何重构改动。
+    """字节冻结件的哈希门：逐字节钉住当前基线。任何改动必须显式重钉此处的期望哈希，
+    并在提交信息中说明改了什么、为什么。
 
     注意：f2c.py 随 cross_validation→validation 搬迁时仅改写了 3 行导入路径
     （evidence.hashing→pipeline.hashing、cross_validation→validation），本轮又

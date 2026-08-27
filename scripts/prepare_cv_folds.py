@@ -37,10 +37,10 @@ def main() -> None:
         # 已封存重跑：先在临时位置渲染，与封存哈希不一致时覆盖前拒绝
         from agriautolab.pipeline import jsonl_log
 
-        if jsonl_log.sealed_sha_for(args.ledger, "cv_assignment", "cv_assignment_file_sha256") is not None:
+        if jsonl_log.read_sealed_sha256(args.ledger, "cv_assignment", "cv_assignment_file_sha256") is not None:
             tmp = args.output.with_name(args.output.name + ".tmp")
             write_cv_assignment(evidence, tmp)
-            jsonl_log.commit_guarded(tmp, args.output, args.ledger, "cv_assignment", "cv_assignment_file_sha256")
+            jsonl_log.replace_unless_sealed(tmp, args.output, args.ledger, "cv_assignment", "cv_assignment_file_sha256")
         else:
             write_cv_assignment(evidence, args.output)
     else:

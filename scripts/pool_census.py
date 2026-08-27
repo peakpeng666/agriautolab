@@ -102,7 +102,7 @@ def main() -> None:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     tmp = args.output.with_name(args.output.name + ".tmp")
     tmp.write_text(json.dumps(doc, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-    jsonl_log.commit_guarded(tmp, args.output, args.ledger, "pool_census", "file_sha256")
+    jsonl_log.replace_unless_sealed(tmp, args.output, args.ledger, "pool_census", "file_sha256")
 
     payload = {
         "artifact": "pool_census",

@@ -54,7 +54,7 @@ def seal_selection_protocol(*, protocol_path: str | Path, ledger_path: str | Pat
         return existing[0]
     if len(entries) != 2:
         raise ValueError("selection protocol 必须紧接 genesis/pool census，拒绝重排基准结果历史")
-    entry = jsonl_log.entry_after(entries, payload)
+    entry = jsonl_log.build_next_entry(entries, payload)
     with ledger_file.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(entry, ensure_ascii=False, sort_keys=True) + "\n")
     jsonl_log.verify_entries(entries + (entry,))
@@ -100,7 +100,7 @@ def seal_selection_cv_result(
         raise ValueError("CV/model 结果只能在已封 selection protocol 之后追加")
     if entries[2]["payload"].get("spec_hash") != protocol_hash:
         raise ValueError("CV/model 结果声明的 protocol_hash 与 ledger index=2 不一致")
-    entry = jsonl_log.entry_after(entries, payload)
+    entry = jsonl_log.build_next_entry(entries, payload)
     with ledger_file.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(entry, ensure_ascii=False, sort_keys=True) + "\n")
     jsonl_log.verify_entries(entries + (entry,))

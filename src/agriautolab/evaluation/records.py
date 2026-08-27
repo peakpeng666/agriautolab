@@ -65,7 +65,7 @@ def seal_confirmatory_result(
         )
     if not entries or entries[-1]["payload"].get("artifact") != required_previous_artifact:
         raise ValueError(f"{hypothesis} requires {required_previous_artifact} as its predecessor")
-    entry = jsonl_log.entry_after(entries, payload)
+    entry = jsonl_log.build_next_entry(entries, payload)
     with ledger_file.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(entry, ensure_ascii=False, sort_keys=True) + "\n")
     jsonl_log.verify_entries(entries + (entry,))

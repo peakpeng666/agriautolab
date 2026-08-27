@@ -1,11 +1,9 @@
 """Append-only JSONL experiment log.
 
-The previous hash-chained ledger (prev_hash chain + verify_artifact_chain) was
-removed in the flattening refactor; this module is its replacement and keeps
-the predecessor binding. Each line carries an index, a payload, a digest of
-both, and the previous entry's digest. The prev-hash link binds the ordered
-history: editing an earlier payload invalidates every later entry, which is
-what `commit_guarded`'s sealed-artifact check relies on. The "artifact" key
+Each line carries an index, a payload, a digest of both, and the previous
+entry's digest. The prev-hash link binds the ordered history: editing an
+earlier payload invalidates every later entry, which is what
+`replace_unless_sealed`'s sealed-artifact check relies on. The "artifact" key
 inside payloads keeps the sealed-artifact guard for overwrite protection.
 """
 
@@ -19,13 +17,13 @@ from pathlib import Path
 from agriautolab.pipeline.hashing import content_hash
 
 
-def entry(index: int, payload: dict, prev_hash: str | None = None) -> dict:
+def build_entry(index: int, payload: dict, prev_hash: str | None = None) -> dict:
     """Build one log entry: index + payload + previous entry digest.
 
     `prev_hash` binds this entry to the one before it (None at index 0), so
     editing an earlier payload invalidates every later entry. Without it, a
     rewritten history verifies clean and the sealed-artifact guard in
-    `commit_guarded` can be defeated by editing the log it reads from.
+    `replace_unless_sealed` can be defeated by editing the log it reads from.
     """
     return {
         "index": index,
@@ -35,9 +33,9 @@ def entry(index: int, payload: dict, prev_hash: str | None = None) -> dict:
     }
 
 
-def entry_after(entries: tuple[dict, ...], payload: dict) -> dict:
+def build_next_entry(entries: tuple[dict, ...], payload: dict) -> dict:
     """Build the next entry for an existing log: index and prev_hash both derived."""
-    return entry(len(entries), payload, entries[-1]["entry_hash"] if entries else None)
+    return build_entry(len(entries), payload, entries[-1]["entry_hash"] if entries else None)
 
 
 def append_entry(path: str | Path, payload: dict) -> dict:
@@ -48,7 +46,7 @@ def append_entry(path: str | Path, payload: dict) -> dict:
     """
     log = Path(path)
     log.parent.mkdir(parents=True, exist_ok=True)
-    item = entry_after(read_entries(log), payload)
+    item = build_next_entry(read_entries(log), payload)
     with log.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(item, ensure_ascii=False, sort_keys=True) + "\n")
     return item
@@ -73,12 +71,12 @@ def verify_entries(entries: tuple[dict, ...]) -> None:
     """
     prev_hash = None
     for index, item in enumerate(entries):
-        if item != entry(index, item.get("payload", {}), prev_hash):
+        if item != build_entry(index, item.get("payload", {}), prev_hash):
             raise ValueError(f"experiment log entry mismatch at index={index}")
         prev_hash = item["entry_hash"]
 
 
-def sealed_sha_for(path: str | Path, artifact: str, key: str) -> str | None:
+def read_sealed_sha256(path: str | Path, artifact: str, key: str) -> str | None:
     """Return the recorded payload[key] for the first entry of `artifact`, if any.
 
     The log is chain-verified before any value is read: the sealed-artifact
@@ -94,15 +92,15 @@ def sealed_sha_for(path: str | Path, artifact: str, key: str) -> str | None:
     return None
 
 
-def commit_guarded(tmp: Path, final: Path, log_path: str | Path, artifact: str, key: str) -> None:
-    """Commit tmp to final, honoring the sealed-artifact guard.
+def replace_unless_sealed(tmp: Path, final: Path, log_path: str | Path, artifact: str, key: str) -> None:
+    """Replace tmp onto final, honoring the sealed-artifact guard.
 
-    Replaces the removed evidence/atomic.py: if the artifact has a sealed
-    digest and the new bytes differ, refuse before touching final; identical
-    bytes are an idempotent replace; unsealed artifacts get an atomic replace.
-    The log is chain-verified before the sealed digest is consulted.
+    If the artifact has a sealed digest and the new bytes differ, refuse
+    before touching final; identical bytes are an idempotent replace; unsealed
+    artifacts get an atomic replace. The log is chain-verified before the
+    sealed digest is consulted.
     """
-    sealed = sealed_sha_for(log_path, artifact, key)
+    sealed = read_sealed_sha256(log_path, artifact, key)
     actual = hashlib.sha256(tmp.read_bytes()).hexdigest()
     if sealed is not None and actual != sealed:
         raise ValueError(

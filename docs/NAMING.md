@@ -136,6 +136,14 @@ identity 仍由三元组（algorithm_id/source_code/description）决定，prove
 作 evidence 链附加字段。`ModelClient` 协议改 `complete(prompt) -> CompletionResult`，
 本模块仍然零网络（注入由调用方接入）。
 
+实验日志的行结构同样是证据身份：`agriautolab.pipeline.jsonl_log` 每行 JSON 的四个键
+`index` / `payload` / `prev_hash` / `entry_hash` 直接进入 `content_hash`
+（`json.dumps(..., sort_keys=True)` 连键名一起哈希），与 `EvolutionRecord.slot_id`
+同理——日志一旦落盘，这四个键名即为 wire ID 永不改；增删键同理，任何改动都会让
+既有日志的 `verify_entries()` 全部失配。函数名（`build_entry` /
+`build_next_entry` / `read_sealed_sha256` / `replace_unless_sealed`）不进哈希，
+属于 API 层，按 §1 的动词规则命名与演进。
+
 ## 4. 包结构命名
 
 当前真实包名就是文档事实，不再维护“计划中的 canonical 幽灵目录”：

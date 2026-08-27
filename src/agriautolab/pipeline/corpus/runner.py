@@ -203,7 +203,7 @@ def _write_artifact_ledger(path: Path, manifest_hash: str, run_rows: Sequence[di
     entries: list[dict] = []
     prev_hash: str | None = None
     for index, payload in enumerate(payloads):
-        entries.append(jsonl_log.entry(index, payload, prev_hash))
+        entries.append(jsonl_log.build_entry(index, payload, prev_hash))
         prev_hash = entries[-1]["entry_hash"]
     path.write_text("".join(json.dumps(item, ensure_ascii=False, sort_keys=True) + "\n" for item in entries), encoding="utf-8")
 

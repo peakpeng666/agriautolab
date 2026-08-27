@@ -18,7 +18,7 @@ def _h1_ledger(path: Path) -> None:
         "selection_cv_result",
         "pareto_optimality_result",
     ):
-        entries.append(jsonl_log.entry_after(tuple(entries), {"artifact": artifact}))
+        entries.append(jsonl_log.build_next_entry(tuple(entries), {"artifact": artifact}))
     path.write_text(
         "".join(json.dumps(entry, sort_keys=True) + "\n" for entry in entries),
         encoding="utf-8",
@@ -84,7 +84,7 @@ def test_h2_seal_refuses_wrong_index_four_predecessor(tmp_path: Path):
     result = tmp_path / "h2.json"
     _h1_ledger(ledger)
     entries = [json.loads(line) for line in ledger.read_text().splitlines()]
-    entries[-1] = jsonl_log.entry(4, {"artifact": "wrong"}, entries[3]["entry_hash"])
+    entries[-1] = jsonl_log.build_entry(4, {"artifact": "wrong"}, entries[3]["entry_hash"])
     ledger.write_text("".join(json.dumps(entry, sort_keys=True) + "\n" for entry in entries))
     _h2_result(result)
     with pytest.raises(ValueError, match="requires|predecessor|前序"):
