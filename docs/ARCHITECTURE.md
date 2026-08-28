@@ -107,17 +107,16 @@ TSPLIB/CVRPLIB corpus、EoH reproduction、真实 LLM provenance 或农业迁移
 标准问题的目的不是把项目改造成通用运筹库，而是给“基本算法复现 → 自动算法设计
 方法验证 → 农业迁移”提供已知语义和可复核 reference tasks。
 
-TSPLIB/CVRPLIB 数据适配、EoH reproduction、真实模型 provenance 与自动算法设计
-实验属于后续增量；在代码和证据真正存在前不得写成“已实现”。
+TSPLIB/CVRPLIB 标准实例适配已合入（`datasets/tsplib.py` 提供标准格式解析、逐边 nint 距离与 gap 计算）；EoH reproduction、真实模型 provenance 与自动算法设计实验属于后续增量，在代码和证据真正存在前不得写成“已实现”。
 
 ## 5. Agent 层的准确能力边界
 
-当前 `agent/` 是**农业 swath 方向启发式演化骨架**，不是完整 EoH reproduction：
+当前 `agent/` 是**农业 swath 方向与条带访问序启发式演化骨架**，不是完整 EoH reproduction：
 
 - 候选槽位已抽象为可登记的 `CandidateSlot` 协议（`agent/slots.py` 的 `SLOTS`
   注册表），闸门与演化循环按槽位对象分派契约函数、探针值检查、评估配置构造、
-  不变性检查与对抗复核器集；当前唯一登记的槽位仍是受限的 swath-angle
-  heuristic（`swath_angle`），尚未新增其他槽位；
+  不变性检查与对抗复核器集；当前登记的槽位包括 `swath_angle`（swath 行向角偏置）
+  与 `route_order`（条带访问序列）；
 - 有 AST 扫描、验证/确定性/几何不变性闸门、对抗探针和演化账本；
 - LLM backend 通过接口注入，默认测试使用 hermetic mock；
 - 候选适应度基于农业三目标 hypervolume contribution。
@@ -146,7 +145,17 @@ TSPLIB/CVRPLIB 数据适配、EoH reproduction、真实模型 provenance 与自�
 表达十进制定点容量，应在未来问题契约中显式增加相应数据类型/单位，而不是用浮点容差
 暗中改变 hard constraint。
 
-## 7. 范围边界
+## 7. 覆盖率门槛与语料评估语义
+
+路径验证器（`validation/validator.py`）提供可配置的覆盖率硬门槛（`protocol.coverage_threshold`，契约默认值为 0.99，按 `coverage_ratio_field` 判定）。
+然而，语料基准运行协议（`examples/corpus/benchmark_protocol.json` 与历史语料运行）显式设置 `coverage_threshold: 0.0`。
+
+这意味着：
+1. **覆盖率是被记录的指标，而非准入门槛**：语料运行计算并落盘 `metric__coverage_ratio_field` 与 `metric__coverage_ratio_main`，但不因覆盖率不足而拒绝路径；
+2. **`runstatus == ok` 的准确含义**：路径在几何与运动学上可行（无碰撞、不越界、曲率与换向合法），不代表达到了 99% 或任意特定覆盖率；
+3. **引用事实要求**：任何引用历史语料 `ok` 数量或比例的地方，均应结合实际覆盖率分布报告（见 `reports/coverage_distribution.md`）进行阐述。
+
+## 8. 范围边界
 
 以下能力明确不在当前范围：动态重规划、真实车辆动力学、滑移、能耗、电池、质量与
 摩擦、硬件在环、ROS/Gazebo/Isaac 级机器人仿真。
@@ -157,7 +166,7 @@ TSPLIB/CVRPLIB 数据适配、EoH reproduction、真实模型 provenance 与自�
 2. 能作为农业规划算法设计的明确方法学对照；
 3. 有标准 benchmark，可形成可复核实验而非展示性 demo。
 
-## 8. 工程纪律
+## 9. 工程纪律
 
 1. **强类型优先**：不要用 `dict[str, Any]` 抹平 TSP/CVRP/CPP 的真实差异。
 2. **硬约束属于问题**：heuristic 只排序可行动作，不能自行放宽约束。
@@ -173,7 +182,7 @@ TSPLIB/CVRPLIB 数据适配、EoH reproduction、真实模型 provenance 与自�
 9. **硬约束不得用数值容差偷改语义**：若需要容差，必须属于被明确定义的测量/几何
    判定协议，而不是用来把已经大于上界的输入重新解释为可行。
 
-## 9. 安装与测试
+## 10. 安装与测试
 
 ```bash
 python -m pip install -e ".[dev]"

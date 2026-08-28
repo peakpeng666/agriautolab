@@ -36,6 +36,11 @@ def _self_check() -> None:
     benchmark = BenchmarkProtocol(
         protocol_id="self-check",
         coverage_target="original_field",
+        # coverage_threshold=0.0: The corpus benchmark protocol records coverage ratios
+        # (coverage_ratio_field, coverage_ratio_main) as evaluation metrics without gating
+        # path validity on a coverage threshold. Under this protocol, runstatus=OK indicates
+        # geometric and kinematic feasibility (no collision, no boundary violation, valid turns),
+        # not complete area coverage.
         coverage_threshold=0.0,
         hypervolume_reference=HypervolumeReference(
             path_length=1e6, headland_turns=1e5, row_crossings=1e6,
