@@ -9,7 +9,7 @@ import pytest
 
 from agriautolab.evaluation.feature_effects import (
     OffsetFrontInstance,
-    evaluate_row_angle_effects,
+    evaluate_feature_effects,
     build_offset_front_instance,
     field_effects,
 )
@@ -21,7 +21,7 @@ _SCRIPT_SPEC = importlib.util.spec_from_file_location("agriautolab_test_evaluate
 assert _SCRIPT_SPEC is not None and _SCRIPT_SPEC.loader is not None
 _SCRIPT_MODULE = importlib.util.module_from_spec(_SCRIPT_SPEC)
 _SCRIPT_SPEC.loader.exec_module(_SCRIPT_MODULE)
-_validate_h1_field_reconciliation = _SCRIPT_MODULE._validate_h1_field_reconciliation
+_validate_field_reconciliation = _SCRIPT_MODULE._validate_field_reconciliation
 _validate_predecessor = _SCRIPT_MODULE._validate_predecessor
 
 
@@ -156,17 +156,17 @@ def test_field_effects_enforce_design_and_report_3_4_5_bins_constant_zero_and_se
     estimates = _estimate(increasing, constant, three_decreasing, four_increasing, only_two, zero)
     by_field = {item.field_id: item for item in estimates}
 
-    assert by_field["a"].offset_bins[0].n_defined_front_instances == 3
+    assert by_field["a"].offset_bins[0].n_front_instances == 3
     assert by_field["a"].offset_bins[0].median_front_size == 1.0
     assert by_field["a"].spearman_rho == pytest.approx(1.0)
     assert by_field["b"].constant_response is True
     assert by_field["b"].spearman_rho == 0.0
-    assert by_field["c"].n_defined_offset_bins == 3
+    assert by_field["c"].n_offset_bins == 3
     assert by_field["c"].spearman_rho == pytest.approx(-1.0)
     assert by_field["e"].spearman_rho is None
-    assert by_field["z"].median_row_angle_vs_principal is None
+    assert by_field["z"].median_row_angle_offset is None
 
-    result = evaluate_row_angle_effects(estimates)
+    result = evaluate_feature_effects(estimates)
     assert result["n_analyzable_fields"] == 4
     assert result["n_fewer_than_3_defined_offset_bins"] == 2
     assert (result["n_3_bins"], result["n_4_bins"], result["n_5_bins"]) == (1, 1, 2)
@@ -187,7 +187,7 @@ def test_field_effects_reject_missing_or_duplicate_frozen_design_cells():
         _estimate(complete[:-1])
     with pytest.raises(ValueError, match="重复设计单元"):
         _estimate(complete + (replace(complete[0], instance_id="different-instance"),))
-    with pytest.raises(ValueError, match="5 个"):
+    with pytest.raises(ValueError, match="5 distinct levels"):
         field_effects(
             complete,
             expected_offsets_rad=OFFSETS[:-1],
@@ -197,7 +197,7 @@ def test_field_effects_reject_missing_or_duplicate_frozen_design_cells():
 
 def test_all_constant_responses_are_included_as_zero_not_dropped():
     estimates = _estimate(_field("a", tuple(([2] * 4) for _ in OFFSETS)))
-    result = evaluate_row_angle_effects(estimates)
+    result = evaluate_feature_effects(estimates)
     assert result["n_analyzable_fields"] == 1
     assert result["n_constant_response_fields"] == 1
     assert result["primary_rho_distribution"]["median"] == 0.0
@@ -207,16 +207,16 @@ def test_all_constant_responses_are_included_as_zero_not_dropped():
     assert result["wilcoxon"]["n_nonzero_differences"] == 0
 
 
-def _h1_document(estimates):
+def _pareto_document(estimates):
     return {
-        "hypothesis": "H1",
+        "hypothesis": "pareto_optimality",
         "analysis": {
             "fields": [
                 {
                     "field_id": item.field_id,
                     "n_instances": item.n_instances,
-                    "n_defined_front_instances": item.n_defined_front_instances,
-                    "median_defined_front_size": item.median_defined_front_size,
+                    "n_front_instances": item.n_front_instances,
+                    "median_front_size": item.median_front_size,
                 }
                 for item in estimates
             ]
@@ -224,31 +224,33 @@ def _h1_document(estimates):
     }
 
 
-def test_h1_field_reconciliation_detects_front_drift():
+def test_field_reconciliation_detects_front_drift():
     estimates = _estimate(_field("a", tuple(([2] * 4) for _ in OFFSETS)))
-    document = _h1_document(estimates)
-    _validate_h1_field_reconciliation(document, estimates)
-    document["analysis"]["fields"][0]["median_defined_front_size"] = 99.0
-    with pytest.raises(ValueError, match="前沿.*漂移"):
-        _validate_h1_field_reconciliation(document, estimates)
+    document = _pareto_document(estimates)
+    _validate_field_reconciliation(document, estimates)
+    document["analysis"]["fields"][0]["median_front_size"] = 99.0
+    with pytest.raises(ValueError, match="drift"):
+        _validate_field_reconciliation(document, estimates)
 
 
-def test_h1_predecessor_sha_tamper_is_rejected(tmp_path: Path):
-    h1_result = tmp_path / "h1_result.json"
-    h1_result.write_text(json.dumps({"hypothesis": "H1"}) + "\n", encoding="utf-8")
+def test_predecessor_sha_tamper_is_rejected(tmp_path: Path):
+    pareto_result = tmp_path / "pareto_optimality_result.json"
+    pareto_result.write_text(json.dumps({"hypothesis": "pareto_optimality"}) + "\n", encoding="utf-8")
     import hashlib
 
     entries = []
-    for index, artifact in enumerate(("d1", "pool_census", "benchmark_cv_protocol", "selection_cv_result")):
+    for index, artifact in enumerate(("cv_assignment", "pool_census", "benchmark_cv_protocol", "selection_cv_result")):
         entry = jsonl_log.entry(index, {"artifact": artifact})
         entries.append(entry)
     payload = {
-        "artifact": "h1_confirmatory_result",
-        "result_file_sha256": hashlib.sha256(h1_result.read_bytes()).hexdigest(),
+        "artifact": "pareto_optimality_result",
+        "result_file_sha256": hashlib.sha256(pareto_result.read_bytes()).hexdigest(),
     }
     entries.append(jsonl_log.entry(4, payload))
-    assert _validate_predecessor(tuple(entries), h1_result)["hypothesis"] == "H1"
+    assert _validate_predecessor(tuple(entries), pareto_result)["hypothesis"] == "pareto_optimality"
 
-    h1_result.write_text(json.dumps({"hypothesis": "H1", "tampered": True}) + "\n", encoding="utf-8")
-    with pytest.raises(ValueError, match="index=4"):
-        _validate_predecessor(tuple(entries), h1_result)
+    pareto_result.write_text(
+        json.dumps({"hypothesis": "pareto_optimality", "tampered": True}) + "\n", encoding="utf-8"
+    )
+    with pytest.raises(ValueError, match="byte binding at log index 4"):
+        _validate_predecessor(tuple(entries), pareto_result)

@@ -138,4 +138,3 @@ def evaluate_recommender(recommender, training_instances, holdout_instances) -> 
 
 
 # Legacy aliases
-analyze_h3 = evaluate_recommender

@@ -128,7 +128,7 @@ def verify_recommender_preflight(
     sources = census.get("sources", {})
     expected_inputs = {
         "runs.parquet": (sha256_file(runs_path), sources.get("runs_parquet_sha256")),
-        "corpus_13.json": (sha256_file(configs_path), sources.get("configs_sha256")),
+        "standard_configs.json": (sha256_file(configs_path), sources.get("configs_sha256")),
         "vehicles.json": (sha256_file(vehicles_path), sources.get("vehicles_sha256")),
         "cv_assignment.json": (sha256_file(cv_path), genesis["payload"].get("cv_assignment_file_sha256")),
         "holdout_partition.json": (sha256_file(holdout_path), genesis["payload"].get("holdout_file_sha256")),
@@ -181,7 +181,7 @@ def verify_recommender_preflight(
     predecessor_identity = feature_effects_result.get("identity", {})
     predecessor_expected = {
         "runs_parquet_sha256": expected_inputs["runs.parquet"][0],
-        "configs_sha256": expected_inputs["corpus_13.json"][0],
+        "configs_sha256": expected_inputs["standard_configs.json"][0],
         "vehicles_sha256": expected_inputs["vehicles.json"][0],
         "pool_hash": selection_protocol_doc.get("pool_hash"),
         "protocol_bundle_hash": protocol_bundle_hash,

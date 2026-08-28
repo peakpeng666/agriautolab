@@ -34,11 +34,11 @@ def _h2_result(path: Path, *, code_hash: str = "a" * 64) -> None:
             "protocol_bundle_hash": "b" * 64,
             "runs_parquet_sha256": "c" * 64,
             "pool_hash": "d" * 64,
-            # D6 additionally binds these inputs; the generic sealer preserves the
+            # the feature-effects sealer additionally binds these inputs; the generic sealer preserves the
             # complete result file through result_file_sha256.
             "pool_census_sha256": "e" * 64,
             "selection_protocol_sha256": "f" * 64,
-            "h1_result_sha256": "1" * 64,
+            "pareto_result_sha256": "1" * 64,
         },
     }) + "\n", encoding="utf-8")
 

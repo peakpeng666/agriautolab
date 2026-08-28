@@ -1,4 +1,4 @@
-"""H3 preflight：用合成证据链证明身份硬门先于 holdout 消费。"""
+"""Recommender preflight: synthetic evidence chain proves identity gates precede holdout consumption."""
 
 from __future__ import annotations
 
@@ -31,13 +31,13 @@ def _append(entries: list[dict], payload: dict) -> None:
 
 def _fixture(tmp_path: Path) -> dict[str, Path]:
     runs = tmp_path / "runs.parquet"
-    configs = tmp_path / "corpus_13.json"
+    configs = tmp_path / "standard_configs.json"
     vehicles = tmp_path / "vehicles.json"
     cv = tmp_path / "cv_assignment.json"
-    holdout = tmp_path / "holdout_seal.json"
+    holdout = tmp_path / "holdout_partition.json"
     census = tmp_path / "pool_census.json"
     selection_protocol = tmp_path / "benchmark_cv_protocol.json"
-    h2_result = tmp_path / "h2_result.json"
+    feature_effects_result = tmp_path / "feature_effects_result.json"
     model = tmp_path / "recommender.joblib"
     metadata = tmp_path / "recommender_metadata.json"
     ledger = tmp_path / "ledger.jsonl"
@@ -91,9 +91,9 @@ def _fixture(tmp_path: Path) -> dict[str, Path]:
         },
     )
     _write_json(
-        h2_result,
+        feature_effects_result,
         {
-            "hypothesis": "H2",
+            "hypothesis": "feature_effects",
             "identity": {
                 "runs_parquet_sha256": sha256_file(runs),
                 "configs_sha256": sha256_file(configs),
@@ -145,7 +145,7 @@ def _fixture(tmp_path: Path) -> dict[str, Path]:
         entries,
         {
             "artifact": "feature_effects_result",
-            "result_file_sha256": sha256_file(h2_result),
+            "result_file_sha256": sha256_file(feature_effects_result),
             "protocol_bundle_hash": PROTOCOL_BUNDLE_HASH,
             "runs_parquet_sha256": sha256_file(runs),
             "pool_hash": POOL_HASH,
@@ -164,18 +164,18 @@ def _fixture(tmp_path: Path) -> dict[str, Path]:
         "holdout_path": holdout,
         "pool_census_path": census,
         "selection_protocol_path": selection_protocol,
-        "feature_effects_result_path": h2_result,
+        "feature_effects_result_path": feature_effects_result,
         "model_path": model,
         "metadata_path": metadata,
         "ledger_path": ledger,
     }
 
 
-def _verify(paths: dict[str, Path], *, reject_if_h3_sealed: bool = True):
+def _verify(paths: dict[str, Path], *, reject_if_recommender_sealed: bool = True):
     return verify_recommender_preflight(
         **paths,
         protocol_bundle_hash=PROTOCOL_BUNDLE_HASH,
-        reject_if_recommender_sealed=reject_if_h3_sealed,
+        reject_if_recommender_sealed=reject_if_recommender_sealed,
     )
 
 
@@ -188,7 +188,7 @@ def test_preflight_accepts_fully_bound_synthetic_chain(tmp_path: Path) -> None:
     assert len(result.cv["assignments"]) == 165
 
 
-def test_existing_h3_rejected_before_any_other_input_is_opened(tmp_path: Path) -> None:
+def test_existing_recommender_rejected_before_any_other_input_is_opened(tmp_path: Path) -> None:
     paths = _fixture(tmp_path)
     ledger = paths["ledger_path"]
     entries = [
@@ -209,14 +209,14 @@ def test_existing_h3_rejected_before_any_other_input_is_opened(tmp_path: Path) -
         _verify(paths)
 
 
-def test_model_bytes_must_match_d4_before_deserialization(tmp_path: Path) -> None:
+def test_model_bytes_must_match_sealed_model_before_deserialization(tmp_path: Path) -> None:
     paths = _fixture(tmp_path)
     paths["model_path"].write_bytes(b"different-model")
     with pytest.raises(ValueError, match="model bytes|index 3"):
         _verify(paths)
 
 
-def test_holdout_file_must_match_d1_genesis(tmp_path: Path) -> None:
+def test_holdout_file_must_match_genesis(tmp_path: Path) -> None:
     paths = _fixture(tmp_path)
     holdout = json.loads(paths["holdout_path"].read_text(encoding="utf-8"))
     holdout["field_ids"][0] = "tampered"
@@ -225,13 +225,13 @@ def test_holdout_file_must_match_d1_genesis(tmp_path: Path) -> None:
         _verify(paths)
 
 
-def test_h2_predecessor_must_share_data_and_protocol_identity(tmp_path: Path) -> None:
+def test_feature_effects_predecessor_must_share_data_and_protocol_identity(tmp_path: Path) -> None:
     paths = _fixture(tmp_path)
     h2 = json.loads(paths["feature_effects_result_path"].read_text(encoding="utf-8"))
     h2["identity"]["runs_parquet_sha256"] = "wrong"
     _write_json(paths["feature_effects_result_path"], h2)
 
-    # 先把 ledger 对 H2 文件的字节绑定同步到这个合成变体，才能命中更深层的
+    # 先把 ledger 对 feature-effects 文件的字节绑定同步到这个合成变体，才能命中更深层的
     # predecessor identity gate，而不是停在 result_file_sha256 外层守门。
     ledger = paths["ledger_path"]
     entries = [

@@ -4,7 +4,7 @@ import math
 
 import pytest
 
-from agriautolab.evaluation.pareto_optimality import FrontInstance, evaluate_pareto_optimality as analyze_h1, build_front_instance, field_estimates
+from agriautolab.evaluation.pareto_optimality import FrontInstance, evaluate_pareto_optimality, build_front_instance, field_estimates
 from agriautolab.evaluation.stats import wilcoxon_greater
 
 
@@ -41,7 +41,7 @@ def test_front_recomputation_rejects_incomplete_duplicate_or_invalid_ok_rows():
         build_front_instance([_row("a", (1, 2, 3)), _row("a", (2, 3, 4))], ("a",))
     with pytest.raises(ValueError, match="主目标缺失"):
         build_front_instance([_row("a", (None, 2, 3))], ("a",))
-    with pytest.raises(ValueError, match="有限"):
+    with pytest.raises(ValueError, match="finite"):
         build_front_instance([_row("a", (math.inf, 2, 3))], ("a",))
 
 
@@ -54,12 +54,12 @@ def test_field_estimands_keep_main_and_zero_as_zero_sensitivity_separate():
         FrontInstance("b", "b-2", 0, None),
     )
     estimates = field_estimates(instances, expected_field_ids=("a", "b"))
-    assert estimates[0].median_defined_front_size == 2.0
+    assert estimates[0].median_front_size == 2.0
     assert estimates[0].median_zero_as_zero_front_size == 1.0
-    assert estimates[1].median_defined_front_size is None
+    assert estimates[1].median_front_size is None
     assert estimates[1].median_zero_as_zero_front_size == 0.0
 
-    result = analyze_h1(estimates)
+    result = evaluate_pareto_optimality(estimates)
     assert result["n_analyzable_fields"] == 1
     assert result["n_zero_ok_fields"] == 1
     assert result["primary_distribution"]["median"] == 2.0

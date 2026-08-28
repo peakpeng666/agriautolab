@@ -29,7 +29,7 @@ class OffsetFrontInstance:
 class OffsetBinEstimate:
     offset_rad: float
     n_instances: int
-    n_defined_front_instances: int
+    n_front_instances: int
     median_front_size: float | None
 
 
@@ -37,12 +37,12 @@ class OffsetBinEstimate:
 class RowAngleEffectEstimate:
     field_id: str
     n_instances: int
-    n_defined_front_instances: int
-    n_defined_offset_bins: int
+    n_front_instances: int
+    n_offset_bins: int
     constant_response: bool | None
     spearman_rho: float | None
-    median_row_angle_vs_principal: float | None
-    median_defined_front_size: float | None
+    median_row_angle_offset: float | None
+    median_front_size: float | None
     offset_bins: tuple[OffsetBinEstimate, ...]
 
 
@@ -53,7 +53,7 @@ def _one_optional_finite_float(rows: Sequence[dict], key: str, instance_id: str)
     if not normalized:
         return None
     if not all(math.isfinite(value) for value in normalized):
-        raise ValueError(f"{instance_id}: {key} 必须有限")
+        raise ValueError(f"{instance_id}: {key} must be finite")
     if any(value != normalized[0] for value in normalized[1:]):
         raise ValueError(f"{instance_id}: 同一 instance 的 {key} 不一致")
     return normalized[0]
@@ -78,7 +78,7 @@ def _parse_design_cell(instance_id: str, field_id: str, vehicle_index: int) -> t
     if parsed_vehicle != vehicle_index:
         raise ValueError(f"{instance_id}: instance_id 内 vehicle 与列 vehicle_index 不一致")
     if not math.isfinite(offset) or not math.isfinite(spacing):
-        raise ValueError(f"{instance_id}: offset/spacing 必须有限")
+        raise ValueError(f"{instance_id}: offset/spacing must be finite")
     return offset, spacing
 
 
@@ -139,11 +139,11 @@ def load_offset_front_instances(
 def _strict_finite_grid(values: Iterable[float], *, name: str, size: int) -> tuple[float, ...]:
     grid = tuple(float(value) for value in values)
     if len(grid) != size or len(set(grid)) != size:
-        raise ValueError(f"{name} 必须是 {size} 个不重复档位")
+        raise ValueError(f"{name} must be {size} distinct levels")
     if not all(math.isfinite(value) for value in grid):
-        raise ValueError(f"{name} 必须全部有限")
+        raise ValueError(f"{name} must be all finite")
     if grid != tuple(sorted(grid)):
-        raise ValueError(f"{name} 必须按冻结的升序给出")
+        raise ValueError(f"{name} must be given in frozen ascending order")
     return grid
 
 
@@ -229,7 +229,7 @@ def field_effects(
     spacings = _strict_finite_grid(expected_spacings_m, name="spacing grid", size=2)
     vehicles = tuple(int(value) for value in expected_vehicle_indices)
     if len(vehicles) != 2 or len(set(vehicles)) != 2:
-        raise ValueError("vehicle grid 必须是 2 个不重复索引")
+        raise ValueError("vehicle grid must be 2 distinct indices")
 
     by_field: dict[str, list[OffsetFrontInstance]] = {}
     seen_instances: set[str] = set()
@@ -281,7 +281,7 @@ def field_effects(
             bins.append(OffsetBinEstimate(
                 offset_rad=offset,
                 n_instances=len(bin_rows),
-                n_defined_front_instances=len(defined),
+                n_front_instances=len(defined),
                 median_front_size=None if not defined else float(statistics.median(defined)),
             ))
 
@@ -304,18 +304,18 @@ def field_effects(
             if row.row_angle_vs_principal is not None
         ]
         if not all(math.isfinite(value) for value in row_angles):
-            raise ValueError(f"{field_id}: row_angle_vs_principal 必须有限")
+            raise ValueError(f"{field_id}: row_angle_vs_principal must be finite")
         estimates.append(RowAngleEffectEstimate(
             field_id=field_id,
             n_instances=len(rows),
-            n_defined_front_instances=len(defined_fronts),
-            n_defined_offset_bins=len(analyzable_bins),
+            n_front_instances=len(defined_fronts),
+            n_offset_bins=len(analyzable_bins),
             constant_response=constant_response,
             spearman_rho=rho,
-            median_row_angle_vs_principal=(
+            median_row_angle_offset=(
                 None if not row_angles else float(statistics.median(row_angles))
             ),
-            median_defined_front_size=(
+            median_front_size=(
                 None if not defined_fronts else float(statistics.median(defined_fronts))
             ),
             offset_bins=tuple(bins),
@@ -363,7 +363,7 @@ def evaluate_feature_effects(
     analyzable = [item for item in estimates if item.spearman_rho is not None]
     if not analyzable:
         raise ValueError("no analyzable fields with >=3 defined offset bins remain")
-    if any(item.n_defined_offset_bins not in (3, 4, 5) for item in analyzable):
+    if any(item.n_offset_bins not in (3, 4, 5) for item in analyzable):
         raise ValueError("analyzable fields must have 3/4/5 defined offset bins")
     if any(item.constant_response is None for item in analyzable):
         raise ValueError("analyzable fields must declare constant_response explicitly")
@@ -373,12 +373,12 @@ def evaluate_feature_effects(
     raw_p = float(test["pvalue"])
     conservative_adjusted_upper = min(1.0, family_size * raw_p)
     counts = {
-        bins: sum(item.n_defined_offset_bins == bins for item in analyzable)
+        bins: sum(item.n_offset_bins == bins for item in analyzable)
         for bins in (3, 4, 5)
     }
-    full_five = [item for item in analyzable if item.n_defined_offset_bins == 5]
+    full_five = [item for item in analyzable if item.n_offset_bins == 5]
     full_five_rhos = [float(item.spearman_rho) for item in full_five]
-    zero_ok_fields = sum(item.n_defined_front_instances == 0 for item in estimates)
+    zero_ok_fields = sum(item.n_front_instances == 0 for item in estimates)
     primary_distribution = distribution_summary(rhos)
     return {
         "estimand": (
@@ -424,5 +424,3 @@ def evaluate_feature_effects(
 
 
 # Aliases
-evaluate_row_angle_effects = evaluate_feature_effects
-analyze_h2 = evaluate_feature_effects  # legacy

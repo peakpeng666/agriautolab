@@ -4,7 +4,7 @@ import math
 
 from agriautolab.evaluation.recommender_eval import (
     PROBE_FIELDS,
-    analyze_h3,
+    evaluate_recommender,
     permutation_sign_flip_test,
 )
 from agriautolab.selection.evaluation import SelectionInstance
@@ -83,7 +83,7 @@ def test_permutation_deterministic_and_add_one():
     assert 0.0 < first["pvalue"] <= 1.0
 
 
-def test_analyze_h3_dual_track_and_math():
+def test_evaluate_recommender_dual_track_and_math():
     holdout = _make("h", 6) + [
         _instance(
             "ee_field_37",
@@ -95,7 +95,7 @@ def test_analyze_h3_dual_track_and_math():
         ),
     ]
     training = _make("t", 4)
-    result = analyze_h3(_OracleRecommender(), training, holdout)
+    result = evaluate_recommender(_OracleRecommender(), training, holdout)
     assert result["track_70"]["n_fields"] == 7
     assert result["track_68_excluding_probe_fields"]["n_fields"] == 6
     assert "ee_field_37" in PROBE_FIELDS
@@ -121,7 +121,7 @@ def test_even_field_median_uses_conventional_definition():
             )
         )
 
-    result = analyze_h3(_OracleRecommender(), training, holdout)
+    result = evaluate_recommender(_OracleRecommender(), training, holdout)
     # D = (-0.1, -0.2, -0.3, -0.4)，偶数样本中位数应取中间两项均值。
     assert math.isclose(result["track_70"]["median_D"], -0.25, abs_tol=1e-12)
 
@@ -129,7 +129,7 @@ def test_even_field_median_uses_conventional_definition():
 def test_failure_criterion_triggers_when_recommender_bad():
     holdout = _make("h", 5)
     training = _make("t", 3)
-    result = analyze_h3(_BadRecommender(), training, holdout)
+    result = evaluate_recommender(_BadRecommender(), training, holdout)
     # 恒选 b（悔值 1）> 0.5*0.4=0.2 → D=+0.8 → 失效判据 1 触发
     assert result["failure_thresholds"][
         "criterion_1_mean_regret_not_below_half_random"
@@ -150,7 +150,7 @@ def test_zero_ok_instances_counted_not_consumed():
         random_applicable=None,
         random_nominal=None,
     )
-    result = analyze_h3(
+    result = evaluate_recommender(
         _OracleRecommender(),
         _make("t", 3),
         _make("h", 4) + [zero],
@@ -171,5 +171,5 @@ def test_random_infeasible_rate_reflects_applicable_gap():
         rn=_zeros_22(0.6),
         ok_b=False,
     )
-    result = analyze_h3(_OracleRecommender(), _make("t", 3), [gap])
+    result = evaluate_recommender(_OracleRecommender(), _make("t", 3), [gap])
     assert math.isclose(result["random_applicable_infeasible_rate"], 0.5)  # 1/2 of A_x

@@ -25,9 +25,9 @@ class FrontInstance:
 class ParetoFrontEstimate:
     field_id: str
     n_instances: int
-    n_defined_front_instances: int
+    n_front_instances: int
     n_zero_ok_instances: int
-    median_defined_front_size: float | None
+    median_front_size: float | None
     median_zero_as_zero_front_size: float
 
 
@@ -70,7 +70,7 @@ def build_front_instance(rows: Sequence[dict], nominal_config_ids: Iterable[str]
             raise ValueError(f"{instance_id}/{config_id}: derived_status=ok 但主目标缺失")
         values = tuple(float(value) for value in raw)
         if any(not math.isfinite(value) for value in values):
-            raise ValueError(f"{instance_id}/{config_id}: 主目标必须有限")
+            raise ValueError(f"{instance_id}/{config_id}: primary objectives must be finite")
         points[config_id] = ObjectiveVector(*values)
 
     front_size = len(pareto_front(points)) if points else None
@@ -137,9 +137,9 @@ def field_estimates(
         result.append(ParetoFrontEstimate(
             field_id=field_id,
             n_instances=len(rows),
-            n_defined_front_instances=len(defined),
+            n_front_instances=len(defined),
             n_zero_ok_instances=len(rows) - len(defined),
-            median_defined_front_size=None if not defined else float(statistics.median(defined)),
+            median_front_size=None if not defined else float(statistics.median(defined)),
             median_zero_as_zero_front_size=float(statistics.median(zero_as_zero)),
         ))
     return tuple(result)
@@ -156,12 +156,12 @@ def evaluate_pareto_optimality(
         raise ValueError("At least one field is required for Pareto front evaluation.")
     if family_size < 1 or not (0.0 < alpha_family < 1.0):
         raise ValueError("Invalid Holm family parameters")
-    main_values = [item.median_defined_front_size for item in estimates if item.median_defined_front_size is not None]
+    main_values = [item.median_front_size for item in estimates if item.median_front_size is not None]
     sensitivity_values = [item.median_zero_as_zero_front_size for item in estimates]
     if not main_values:
         raise ValueError("No analyzable fields remain for Pareto front evaluation.")
     main = [float(value) for value in main_values]
-    zero_fields = sum(item.median_defined_front_size is None for item in estimates)
+    zero_fields = sum(item.median_front_size is None for item in estimates)
     test = wilcoxon_greater(main, null_value=1.0)
     raw_p = float(test["pvalue"])
     conservative_adjusted_upper = min(1.0, family_size * raw_p)
@@ -202,4 +202,3 @@ def evaluate_pareto_optimality(
 
 
 # Legacy alias
-analyze_h1 = evaluate_pareto_optimality
