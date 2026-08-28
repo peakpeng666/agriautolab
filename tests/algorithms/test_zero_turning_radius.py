@@ -1,4 +1,4 @@
-"""零转弯半径必须能表达，而且必须在 Dubins 阶段入口被挡住。
+"""零转弯半径需能表达，而且需在 Dubins 阶段入口被挡住。
 
 Dubins 曲线在 R=0 处无定义：归一化距离 d = distance / R 与曲率 1/R 同时发散。
 以前靠 schema 的 gt=0 顺手挡住，代价是差速车和履带车根本进不了系统。
@@ -55,7 +55,7 @@ def test_dubins_refuses_zero_radius_with_an_explanatory_message() -> None:
 
 
 def test_dubins_refusal_precedes_any_nan_or_division_by_zero() -> None:
-    """回归点：错误必须在入口抛出，而不是让 d = distance / 0 先产生 inf/NaN 坐标。"""
+    """回归点：错误需在入口抛出，而不是让 d = distance / 0 先产生 inf/NaN 坐标。"""
     route = SnakeRoute().run(two_swaths())
     with pytest.raises(KinematicModelError):
         DubinsPath(sample_step_m=0.5).run(route, VehicleSpec(

@@ -24,7 +24,7 @@ def _area_bounds_ok(result: BaseGeometry, pieces: tuple[BaseGeometry, ...], tole
 
 def robust_union(pieces: tuple[BaseGeometry, ...], *, scale_hint: float) -> BaseGeometry:
     if scale_hint <= 0.0:
-        raise ValueError("scale_hint 必须大于 0")
+        raise ValueError("scale_hint must be greater than 0")
     if not pieces:
         return GeometryCollection()
 
@@ -36,7 +36,7 @@ def robust_union(pieces: tuple[BaseGeometry, ...], *, scale_hint: float) -> Base
     tolerance = max(1.0, sum(piece.area for piece in ordered)) * 1e-12
     snapped_ok = _area_bounds_ok(snapped, ordered, tolerance)
 
-    # 平衡树归约（性能修复，留痕见 AUDIT_NOTE）：左结合 reduce 在
+    # 平衡树归约（性能修复）：左结合 reduce 在
     # Naive sequential union accumulates large geometry; tree reduction exploits associativity
     # 与左结合完全一致（集合与面积），作为面积交叉校验的职责不变。
     layer = list(ordered)

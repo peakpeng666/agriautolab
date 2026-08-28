@@ -4,7 +4,7 @@
 若参考点取自「观测到的最差值」，换一个算法池，同一前沿的超体积就变了，
 跨池不可比——Dolan-Moré 性能剖面在 solver 集合变化下不稳定是同一个病。
 所以 HypervolumeReference 由 BenchmarkProtocol 必填声明（进入 spec_hash），
-由解析上界导出（见 analytic_reference），绝不从观测数据取。
+由解析上界导出（见 analytic_reference），不从观测数据取。
 """
 
 from __future__ import annotations
@@ -71,7 +71,7 @@ def _union_area_2d(rectangles: tuple[tuple[float, float, float, float], ...]) ->
 def hypervolume(points: Mapping[ConfigId, ObjectiveVector], *, reference: HypervolumeReference) -> float:
     """前沿相对参考点的精确超体积（三目标，全部最小化）。
 
-    越过参考点的解贡献 0（箱退化为空）；调用方必须同时记录
+    越过参考点的解贡献 0（箱退化为空）；调用方需同时记录
     beyond_reference 的标记集，否则就是静默截断。
     x 扫掠 + 2D 压缩求并，对前沿规模（<= 池大小）精确且确定性。
     """

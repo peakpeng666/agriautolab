@@ -61,7 +61,7 @@ def dominates(left: ObjectiveVector, right: ObjectiveVector, *, rtol: float = 1e
     """left 是否支配 right（最小化）。严格不等式 + 相对容差，不用绝对 eps。
 
     容差取 rtol * max(|a_i|, |b_i|)：两位有效数字相当的值视为并列，
-    避免浮点尾差制造假支配；并列时 any(...) 的严格劣必须有超出容差的维度。
+    避免浮点尾差制造假支配；并列时 any(...) 的严格劣需有超出容差的维度。
     """
     better_somewhere = False
     for a, b in zip(left.as_tuple(), right.as_tuple()):
@@ -78,7 +78,7 @@ def pareto_front(points: Mapping[ConfigId, ObjectiveVector], *, rtol: float = 1e
 
     **前沿大小不可跨算法池比较。** 往池子里加配置只会让前沿单调变大或不变。
     报告"前沿有 6 个配置"而不说池子是哪 12 个，等于没说。
-    任何前沿相关的量都必须与产生它的 `pool_hash` 一起记录。
+    任何前沿相关的量都需与产生它的 `pool_hash` 一起记录。
     """
     return frozenset(
         config_id
@@ -88,5 +88,5 @@ def pareto_front(points: Mapping[ConfigId, ObjectiveVector], *, rtol: float = 1e
 
 
 def pool_hash(config_ids: Iterable[ConfigId]) -> str:
-    """池身份：池中全部 config_id 排序后的内容哈希。前沿量必须与它一起记录。"""
+    """池身份：池中全部 config_id 排序后的内容哈希。前沿量需与它一起记录。"""
     return content_hash({"config_ids": sorted(config_ids)})

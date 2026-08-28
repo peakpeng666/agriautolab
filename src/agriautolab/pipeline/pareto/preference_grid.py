@@ -8,7 +8,7 @@
 - 10 个内部点：严格内部整数格点 {(i, j, k)/6 : i,j,k ≥ 1, i+j+k = 6}。
 
 共 22 个，顺序即下述枚举顺序（顶点 → 棱按维对序 → 内部按字典序）。
-任何改动 = 换网格 = 换协议，必须升版本号 V2 并重新封存。
+任何改动 = 换网格 = 换协议，需升版本号 V2 并重新封存。
 """
 
 from __future__ import annotations
@@ -50,7 +50,7 @@ def preference_grid_hash(grid: tuple[tuple[float, float, float], ...] = PREFEREN
 
 
 def grid_to_preference_spec(w: tuple[float, float, float]) -> PreferenceSpec:
-    """网格点 → PreferenceSpec：三维全部显式声明（零权重必须显式，不靠缺省）。"""
+    """网格点 → PreferenceSpec：三维全部显式声明（零权重需显式，不靠缺省）。"""
     return PreferenceSpec(preferences=tuple(
         MetricPreference(metric_id=metric_id, weight=weight)
         for metric_id, weight in zip(_DIMENSION_METRIC_IDS, w)

@@ -177,7 +177,7 @@ def test_ledger_verify_passes_with_provenance_records() -> None:
 
 
 def test_ledger_provenance_mirrors_completion_validation() -> None:
-    """账本里的 ProvenanceRecord 必须与 CompletionResult 同样严格。
+    """账本里的 ProvenanceRecord 需与 CompletionResult 同样严格。
 
     【证伪力】不加约束时，直接构造或从 JSON 还原的记录可以携带 top_p=1.5、
     负 token 数、负成本——`append()` 照样对这些有限值算哈希、`verify()` 照样通过，
@@ -209,7 +209,7 @@ def test_ledger_provenance_mirrors_completion_validation() -> None:
 def test_ledger_provenance_cannot_be_mutated_through_records() -> None:
     """账本里的 provenance 深度不可变——嵌套赋值不能悄悄破坏 entry hash。
 
-    【证伪力】修复前 provenance 是普通 dict，而 pydantic 的 frozen=True 只禁止
+    【证伪力】修复前 provenance 是普通 dict，而 pydantic 的 frozen=True 只不得
     属性赋值、不阻止嵌套容器被改。调用方拿到 ledger.records 后写
     record.provenance["prompt"] = ... 就能改掉已经参与 entry hash 计算的内容，
     于是账本在寻常嵌套赋值之后**自发 verify() 失败**——与同一条记录里
@@ -231,7 +231,7 @@ def test_ledger_provenance_cannot_be_mutated_through_records() -> None:
 
 
 def test_provenance_must_match_the_candidate_source() -> None:
-    """入账前必须校验 provenance.response 与候选源码一致。
+    """入账前需校验 provenance.response 与候选源码一致。
 
     【证伪力】`HeuristicProposer` 是公开协议，任何注入实现都能构造
     `ProposalCandidate`。此前 `evolve.py` 直接把 provenance 投影入账、不校验关系，

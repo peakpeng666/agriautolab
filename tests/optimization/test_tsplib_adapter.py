@@ -1,6 +1,6 @@
 """TSPLIB / CVRPLIB 接入的真值测试。
 
-每条都必须在"错误实现"下失败——不是覆盖率测试。本文件钉住的核心是**可比性**：
+每条都需在"错误实现"下失败——不是覆盖率测试。本文件钉住的核心是**可比性**：
 接入标准实例的唯一价值是能与文献同表比较，而这只有在距离语义与文献一致时才成立。
 """
 
@@ -79,7 +79,7 @@ EOF
 """
 
 
-# ---------- 核心：距离语义必须与 TSPLIB 一致 ----------
+# ---------- 核心：距离语义需与 TSPLIB 一致 ----------
 
 def test_nint_is_round_half_up_not_bankers() -> None:
     """TSPLIB 的 nint 是四舍五入 `(int)(x+0.5)`，不是 Python 的银行家舍入。
@@ -114,7 +114,7 @@ def test_tsplib_distance_differs_from_exact_euclidean() -> None:
 
 
 def test_unsupported_edge_weight_types_are_rejected_by_name() -> None:
-    """GEO / ATT / EXPLICIT 等必须拒绝并点名，不能按欧氏静默降级。
+    """GEO / ATT / EXPLICIT 等需拒绝并点名，不能按欧氏静默降级。
 
     【证伪力】静默降级的实现会返回一个可用的距离函数，本测试的 raises 变红——
     而那种实现产出的数看着合理，实则与文献不可比。
@@ -284,7 +284,7 @@ def test_nearest_neighbour_tour_is_scored_under_tsplib_semantics() -> None:
 
 
 def test_tour_length_rejects_non_permutation() -> None:
-    """漏访问或重复访问都必须拒绝——否则"更短的 tour"可能只是没走完。"""
+    """漏访问或重复访问都需拒绝——否则"更短的 tour"可能只是没走完。"""
     problem, _ = load_tsplib_tsp(SQUARE_TSP)
     nodes_by_id = {node.node_id: node for node in problem.nodes}
     with pytest.raises(TSPLIBFormatError, match="精确置换"):
@@ -297,7 +297,7 @@ def test_tour_length_rejects_non_permutation() -> None:
 
 
 def test_tour_length_of_validates_the_closed_tour_before_stripping() -> None:
-    """剥掉末位之前必须先校验回路，否则非法末位会被静默丢掉。
+    """剥掉末位之前需先校验回路，否则非法末位会被静默丢掉。
 
     【证伪力】`TSPTour` 是无校验 dataclass。构造"前 n 项是合法置换、末位是任意
     节点"的序列时，直接 `[:-1]` 的实现会算出一个看着合法的长度与 gap，
@@ -346,7 +346,7 @@ def test_duplicate_demand_row_is_rejected() -> None:
 def test_optimality_gap_rejects_degenerate_optimum() -> None:
     assert optimality_gap(44.0, 40.0) == pytest.approx(0.1)
     for bad in (0.0, -1.0):
-        with pytest.raises(TSPLIBFormatError, match="必须为正"):
+        with pytest.raises(TSPLIBFormatError, match="must be positive"):
             optimality_gap(40.0, bad)
 
 
@@ -370,7 +370,7 @@ def _tsplib_dir():
     reason="需要真实 TSPLIB 文件；设 AGRIAUTOLAB_TSPLIB_DIR 指向含 berlin52.tsp/.opt.tour 的目录",
 )
 def test_berlin52_optimal_tour_reproduces_the_published_optimum() -> None:
-    """官方最优 tour 在本模块下必须复算出**恰好** 7542。
+    """官方最优 tour 在本模块下需复算出**恰好** 7542。
 
     这是距离语义唯一的决定性验证：三种口径各自对应文献里的一种典型错法——
 

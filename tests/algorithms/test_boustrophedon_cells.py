@@ -4,7 +4,7 @@
 截面分析是 [左,1 区间] / [障碍带,2 区间] / [右,1 区间]，任何两个相邻截面连通性
 都不同，无可合并。合并两个通道中的任意一个需要任意的非对称规则（另一侧会被
 障碍围成环形），不是经典 BCD。本测试按实测的 4 固化，并保住规格的防护意图：
-无合并的朴素切分显著更多（菱形障碍下 8 > 4）。完整推导见 AUDIT_NOTE（算法层异议段）。
+无合并的朴素切分显著更多（菱形障碍下 8 > 4）。完整推导见历史留痕（study-001-frozen tag）。
 """
 
 import pytest
@@ -71,7 +71,7 @@ def test_diamond_obstacle_merge_protects_against_naive_explosion() -> None:
 
 
 def test_l_shape_without_obstacle_stays_one_cell() -> None:
-    """无障碍 L 形：截面连通性全程一致，必须合并成 1 个 cell（不切）。"""
+    """无障碍 L 形：截面连通性全程一致，需合并成 1 个 cell（不切）。"""
     lshape = PolygonSpec(geometry_id="field", exterior=(
         Point(x=0, y=0), Point(x=100, y=0), Point(x=100, y=20), Point(x=60, y=20),
         Point(x=60, y=50), Point(x=0, y=50), Point(x=0, y=0)))

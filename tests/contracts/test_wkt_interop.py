@@ -73,7 +73,7 @@ def test_normalize_makes_ring_start_vertex_irrelevant() -> None:
 
 
 def test_self_intersecting_wkt_is_rejected_not_repaired() -> None:
-    """禁止 make_valid：自交地块必须退回数据准备环节，不能被偷偷改成另一块地。"""
+    """不得 make_valid：自交地块需退回数据准备环节，不能被偷偷改成另一块地。"""
     with pytest.raises(GeometryValidationError):
         PolygonSpec.from_wkt("POLYGON ((0 0, 10 10, 10 0, 0 10, 0 0))", geometry_id="bowtie")
 

@@ -1,6 +1,6 @@
 """把每个 cell 内缩成主田，外圈保留为地头环带。
 
-陷阱：主田面积随地头宽度剧烈变化，绝不能拿它当覆盖率分母。
+陷阱：主田面积随地头宽度剧烈变化，不能拿它当覆盖率分母。
 100x50 田块地头开到 18 米时主田只剩 896 m^2，对主田覆盖率满分而实际只覆盖了原田的 17.9%。
 分母一律走 metrics.coverage.resolve_coverage_targets。
 """
@@ -15,7 +15,7 @@ class ConstantWidthHeadland:
 
     def __init__(self, width_m: float) -> None:
         if width_m <= 0.0:
-            raise ValueError("地头宽度必须大于 0")
+            raise ValueError("headland width must be greater than 0")
         self.width_m = width_m
 
     def run(self, cells: CellsArtifact) -> HeadlandArtifact:

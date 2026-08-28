@@ -1,4 +1,4 @@
-"""校验器的拒绝必须是结构化数据，不能被伪装成一次零代价的成功运行。"""
+"""校验器的拒绝需是结构化数据，不能被伪装成一次零代价的成功运行。"""
 
 from conftest import HYPERVOLUME_TEST_REFERENCE, REVERSE_COST_TEST_SPEC
 from agriautolab.contracts.artifacts import PathArtifact, PathSegment

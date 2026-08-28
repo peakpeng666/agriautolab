@@ -42,7 +42,7 @@ class MBRDirectionSwath:
 
     def run(self, headland: HeadlandArtifact, *, working_width_m: float) -> SwathsArtifact:
         if working_width_m <= 0.0:
-            raise ValueError("幅宽必须大于 0")
+            raise ValueError("working width must be greater than 0")
         output: list[Swath] = []
         serial = 0
         # 主田可能被障碍夹断成多片：逐片扫掠，每片各自定方向、各自排条数。

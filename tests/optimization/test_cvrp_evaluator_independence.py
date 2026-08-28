@@ -1,4 +1,4 @@
-"""CVRP evaluator 必须以独立计算路径复核 hard capacity。"""
+"""CVRP evaluator 需以独立计算路径复核 hard capacity。"""
 
 import pytest
 
@@ -32,7 +32,7 @@ def test_evaluator_rejects_overload_even_if_constructor_capacity_path_is_broken(
     overloaded = CVRPSolution(routes=(("D", "A", "B", "D"),))
 
     # 故意破坏 constructor 的可行性函数：即使构造器会错误放行任意客户，evaluator
-    # 仍必须用自己的 Fraction 精确路线求和拒绝 1.2 倍超载。
+    # 仍需用自己的 Fraction 精确路线求和拒绝 1.2 倍超载。
     monkeypatch.setattr(
         CVRPConstructiveProblem,
         "_customer_fits",

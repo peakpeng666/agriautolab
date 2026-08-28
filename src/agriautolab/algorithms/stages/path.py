@@ -201,7 +201,7 @@ class DubinsPath:
 
     def __init__(self, sample_step_m: float = 0.25) -> None:
         if sample_step_m <= 0.0:
-            raise ValueError("Dubins 采样步长必须大于 0")
+            raise ValueError("Dubins sample step must be greater than 0")
         self.sample_step_m = sample_step_m
 
     def run(self, route: RouteArtifact, robot: VehicleSpec) -> PathArtifact:

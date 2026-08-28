@@ -1,4 +1,4 @@
-"""问题 schema 必须在构造时拒绝跨任务字段和不安全的坐标系。"""
+"""问题 schema 需在构造时拒绝跨任务字段和不安全的坐标系。"""
 
 import pytest
 from pydantic import ValidationError

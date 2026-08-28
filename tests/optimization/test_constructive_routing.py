@@ -1,7 +1,7 @@
 """TSP/CVRP 构造式求解的语义真值。
 
 这些测试不只检查“能运行”或“同 seed 可重复”，而是固定手算小实例，要求构造顺序、
-闭合路线、容量约束和独立复算目标都符合明确真值；公共协议还必须拒绝非有限评分，
+闭合路线、容量约束和独立复算目标都符合明确真值；公共协议还需拒绝非有限评分，
 且不能偷偷要求领域动作实现比较运算。
 """
 
@@ -61,7 +61,7 @@ def test_tsp_tie_break_follows_stable_action_order() -> None:
 
 
 def test_tsp_contract_rejects_duplicate_node_identity() -> None:
-    with pytest.raises(ValidationError, match="node_id 必须唯一"):
+    with pytest.raises(ValidationError, match="must be unique"):
         TSPProblem(
             problem_id="duplicate-id",
             nodes=(node("A", 0.0, 0.0), node("A", 1.0, 0.0)),

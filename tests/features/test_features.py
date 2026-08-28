@@ -42,7 +42,7 @@ def build_problem(theta: float = 0.0, scale: float = 1.0, tx: float = 0.0, ty: f
 
 
 def vehicle(scale: float = 1.0) -> VehicleSpec:
-    # 幅宽取 9.7： swath_count = ceil(span/width) 在整比处不连续，测试几何必须避开边界
+    # 幅宽取 9.7： swath_count = ceil(span/width) 在整比处不连续，测试几何需避开边界
     return VehicleSpec(working_width_m=9.7 * scale, body_width_m=2.0 * scale, min_turning_radius_m=3.0 * scale)
 
 

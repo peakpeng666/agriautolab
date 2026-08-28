@@ -32,7 +32,7 @@ def scalarize(vector: ObjectiveVector, *, preference: PreferenceSpec, reference:
     用切比雪夫而不是加权和的理由：加权和只能找到 Pareto 前沿**凸包**上的点，
     非凸区域的解永远选不出来；切比雪夫能覆盖整个前沿。
     见 Miettinen, Nonlinear Multiobjective Optimization (1999), Thm 3.4.5。
-    归一化必须用协议参考点，不用观测极值——理由同 hypervolume：浮动的尺子
+    归一化需用协议参考点，不用观测极值——理由同 hypervolume：浮动的尺子
     量不出可比较的偏好次序。
     """
     weights = preference_weights(preference)

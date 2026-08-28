@@ -1,7 +1,7 @@
 """作物行结构：覆盖规划里唯一与长度族正交的目标维度的来源。
 
 通用移动机器人规划把自由空间当各向同性的；农业不是。
-果园与温室里沿行走是自由的，横穿行被禁止或有代价。
+果园与温室里沿行走是自由的，横穿行被不得或有代价。
 参数化而不是存折线，是为了让穿行次数与各向异性代价都**可解析计算**——
 # crossings and path_length have low rank correlation (≈ −0.10 over the benchmark corpus),
 与 turns 是 −0.448：拿掉这个维度，目标空间塌成一根轴。
@@ -25,9 +25,9 @@ class RowStructure(BaseModel):
     @model_validator(mode="after")
     def uncrossable_rows_have_infinite_penalty(self) -> "RowStructure":
         # 有限罚金 + 不可横穿是自相矛盾的申报：解析公式会据此给出有限的穿行代价，
-        # 与「禁止」语义冲突，必须在构造点拒绝而不是留给下游解释。
+        # 与「不得」语义冲突，需在构造点拒绝而不是留给下游解释。
         if not self.crossable and math.isfinite(self.crossing_penalty):
-            raise ValueError("crossable=False 时 crossing_penalty 必须为 inf：不可横穿就是无穷代价")
+            raise ValueError("crossing_penalty must be inf when crossable=False: non-crossable rows cost infinity")
         return self
 
     def crossings_between(self, p: tuple[float, float], q: tuple[float, float]) -> float:
@@ -88,5 +88,5 @@ class RowScenario:
 
     def __post_init__(self) -> None:
         if self.spacing_m <= 0.0:
-            raise ValueError("spacing_m 必须为正")
+            raise ValueError("spacing_m must be positive")
 

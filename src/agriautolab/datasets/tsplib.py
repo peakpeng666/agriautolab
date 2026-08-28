@@ -4,7 +4,7 @@ TSP/CVRP 在本项目里是自动算法设计之前的**方法学验证参考问
 主线。接入标准实例的唯一目的，是让本仓库的 constructive 结果能与文献同表比较——
 而这件事只有在**距离语义与文献一致**时才成立。
 
-## 为什么必须单独提供距离函数
+## 为什么需单独提供距离函数
 
 TSPLIB 的 `EUC_2D` 距离**是取整的**：
 
@@ -113,7 +113,7 @@ def nint(value: float) -> int:
     而 TSPLIB 要求 `nint(2.5) == 3`。
     """
     if not math.isfinite(value):
-        raise TSPLIBFormatError(f"nint 的输入必须有限：{value!r}")
+        raise TSPLIBFormatError(f"nint input must be finite: {value!r}")
     return int(value + 0.5)
 
 
@@ -156,7 +156,7 @@ def tsplib_tour_length(
     expected = set(nodes_by_id)
     if sorted(visit_order) != sorted(expected):
         raise TSPLIBFormatError(
-            f"访问序必须是全部节点的精确置换：给了 {len(visit_order)} 个"
+            f"访问序需是全部节点的精确置换：给了 {len(visit_order)} 个"
             f"（去重后 {len(set(visit_order))}），实例有 {len(expected)} 个"
         )
     distance = tsplib_distance(edge_weight_type)
@@ -174,7 +174,7 @@ def tsplib_tour_length_of(problem: TSPProblem, tour, edge_weight_type: str) -> f
     直接把 `tour.node_ids` 传给 `tsplib_tour_length` 会因重复起点被判为非置换。
     提供这个入口是为了让"正确用法"比"错误用法"更顺手。
 
-    **剥掉末位之前必须先校验回路本身**：`TSPTour` 是无校验的 dataclass，调用方
+    **剥掉末位之前需先校验回路本身**：`TSPTour` 是无校验的 dataclass，调用方
     完全可以构造一个"前 n 项是合法置换、末位是任意节点"的序列。若直接 `[:-1]`，
     那个非法末位会被静默丢掉，本函数照样算出一个看着合法的长度与 gap——而同一个
     回路在 `evaluate_tsp_tour` 那里会因"没回到 start_node_id"被拒。两条评估路径
@@ -183,11 +183,11 @@ def tsplib_tour_length_of(problem: TSPProblem, tour, edge_weight_type: str) -> f
     expected_length = len(problem.nodes) + 1
     if len(tour.node_ids) != expected_length:
         raise TSPLIBFormatError(
-            f"闭合回路长度必须是节点数+1={expected_length}，实际 {len(tour.node_ids)}"
+            f"闭合回路长度需是节点数+1={expected_length}，实际 {len(tour.node_ids)}"
         )
     if tour.node_ids[0] != problem.start_node_id or tour.node_ids[-1] != problem.start_node_id:
         raise TSPLIBFormatError(
-            f"闭合回路必须从 {problem.start_node_id!r} 出发并回到该节点，"
+            f"闭合回路需从 {problem.start_node_id!r} 出发并回到该节点，"
             f"实际首尾为 {tour.node_ids[0]!r} / {tour.node_ids[-1]!r}"
         )
     nodes_by_id = {node.node_id: node for node in problem.nodes}
@@ -198,9 +198,9 @@ def tsplib_tour_length_of(problem: TSPProblem, tour, edge_weight_type: str) -> f
 def optimality_gap(value: float, optimum: float) -> float:
     """相对最优值的 gap，与文献口径一致：(value - optimum) / optimum。"""
     if not math.isfinite(value) or not math.isfinite(optimum):
-        raise TSPLIBFormatError(f"gap 的输入必须有限：value={value!r} optimum={optimum!r}")
+        raise TSPLIBFormatError(f"gap inputs must be finite: value={value!r} optimum={optimum!r}")
     if optimum <= 0.0:
-        raise TSPLIBFormatError(f"最优值必须为正才能算相对 gap：{optimum!r}")
+        raise TSPLIBFormatError(f"optimum must be positive to compute a relative gap: {optimum!r}")
     return (value - optimum) / optimum
 
 
@@ -278,7 +278,7 @@ def _parse_metadata(keywords: Mapping[str, str], expected_type: str) -> TSPLIBIn
     except ValueError as error:
         raise TSPLIBFormatError(f"DIMENSION 不是整数：{keywords.get('DIMENSION')!r}") from error
     if dimension < 2:
-        raise TSPLIBFormatError(f"DIMENSION 必须 >= 2：{dimension}")
+        raise TSPLIBFormatError(f"DIMENSION must be >= 2: {dimension}")
 
     comment = keywords.get("COMMENT", "")
     optimum_match = _OPTIMUM.search(comment)
@@ -346,7 +346,7 @@ def load_tsplib_cvrp(
 ) -> tuple[CVRPProblem, TSPLIBInstance]:
     """读 CVRPLIB `.vrp` 实例。
 
-    `max_vehicles` 显式给定时与 `COMMENT` 里的 `No of trucks` **必须一致**，
+    `max_vehicles` 显式给定时与 `COMMENT` 里的 `No of trucks` **需一致**，
     不一致即 fail-closed——两个都写了却对不上，说明调用方与文件有分歧，
     这时静默采信任何一方都是错的。两者都没有则为 `None`（车辆数不设上限）。
     """

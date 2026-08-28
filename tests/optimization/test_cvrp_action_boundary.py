@@ -31,7 +31,7 @@ def test_cvrp_problem_exposes_early_return_when_customer_still_fits() -> None:
     adapter = CVRPConstructiveProblem(_problem())
     state = adapter.apply_action(adapter.initial_state(), "A")
 
-    # B 仍可装载，但提前回仓也满足所有硬约束；Problem 必须同时暴露两者。
+    # B 仍可装载，但提前回仓也满足所有硬约束；Problem 需同时暴露两者。
     assert adapter.feasible_actions(state) == ("B", "D")
 
 

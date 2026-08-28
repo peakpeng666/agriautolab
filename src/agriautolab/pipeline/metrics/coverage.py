@@ -76,21 +76,21 @@ class CoverageTargets:
                 "CoverageTargets 只能由 resolve_coverage_targets 构造；"
                 "手拼一个分母正是分母漂移实际发生的方式"
             )
-        # frame 必须随几何走：hash 把坐标系一并记进去，两条记录只有同尺才能对账。
+        # frame 需随几何走：hash 把坐标系一并记进去，两条记录只有同尺才能对账。
         original_hash = geometry_hash(self.original_field, self.frame)
         main_hash = geometry_hash(self.main_field, self.frame)
         selected_hash = geometry_hash(self.selected, self.frame)
 
         if self.original_field.area <= 0.0:
-            raise CoverageDenominatorError(f"original_field 面积必须大于 0，实际 {self.original_field.area!r}")
+            raise CoverageDenominatorError(f"original_field area must be greater than 0, got {self.original_field.area!r}")
         if self.main_field.area <= 0.0:
-            # coverage_ratio_main 的分母就是它；地头或障碍把主田吃光必须当场报，不能留给下游除出 inf。
-            raise CoverageDenominatorError(f"main_field 面积必须大于 0，实际 {self.main_field.area!r}")
+            # coverage_ratio_main 的分母就是它；地头或障碍把主田吃光需当场报，不能留给下游除出 inf。
+            raise CoverageDenominatorError(f"main_field area must be greater than 0, got {self.main_field.area!r}")
         spill = self.main_field.difference(self.original_field).area
         tolerance = 1e-12 * max(self.original_field.area, 1.0)
         if spill > tolerance:
             raise CoverageDenominatorError(
-                f"main_field 必须含于 original_field：越界面积 {spill!r} 超过相对容差 {tolerance!r}"
+                f"main_field 需含于 original_field：越界面积 {spill!r} 超过相对容差 {tolerance!r}"
                 f"（original_field.area={self.original_field.area!r}），否则两个比值不同域、不可并列解读"
             )
         on_main = self.target_kind is CoverageTarget.MAIN_FIELD
@@ -105,7 +105,7 @@ class CoverageTargets:
             if main_hash != original_hash:
                 # 没有地头，主田即原田，两个覆盖率必然相等；不允许「没设地头但主田比原田小」这种状态。
                 raise CoverageDenominatorError(
-                    "headland_width_m 为 None 时 main_field 必须与 original_field 几何等价，"
+                    "headland_width_m 为 None 时 main_field 需与 original_field 几何等价，"
                     f"实际 main_hash={main_hash} != original_hash={original_hash}"
                 )
             ring_hash = None
@@ -143,11 +143,11 @@ def resolve_coverage_targets(
 
     headland 传 None 表示本次运行没跑地头阶段，此时主田就是原田——
     这是事实陈述，不是回退默认值：没有地头就没有被扣掉的环带。
-    传了 headland 产物就必须同时申报 headland_width_m：产物本身不带宽度，
+    传了 headland 产物就需同时申报 headland_width_m：产物本身不带宽度，
     而 provenance 里少记这一项，两条记录就没法按地头配置对账。
     申报不是自由填写：它会被逐 cell 重算对账（见下方循环注释），对不上就抛。
 
-    陷阱：地头阶段的 cell 来自未扣障碍的原始地块，所以主田必须再减一次障碍，
+    陷阱：地头阶段的 cell 来自未扣障碍的原始地块，所以主田需再减一次障碍，
     否则障碍面积会同时算进分子域和分母。
     """
     if headland is None and headland_width_m is not None:
@@ -157,7 +157,7 @@ def resolve_coverage_targets(
     if headland is not None and headland_width_m is None:
         raise CoverageDenominatorError("有地头产物却没申报 headland_width_m：provenance 会变成无法对账的记录")
     if headland_width_m is not None and headland_width_m <= 0.0:
-        raise CoverageDenominatorError(f"headland_width_m 必须大于 0，实际 {headland_width_m!r}")
+        raise CoverageDenominatorError(f"headland_width_m must be greater than 0, got {headland_width_m!r}")
 
     field = polygon_from_spec(problem.field)
     scale_hint = max(field.bounds[2] - field.bounds[0], field.bounds[3] - field.bounds[1], 1.0)
@@ -165,7 +165,7 @@ def resolve_coverage_targets(
         (spec.geometry_id, polygon_from_spec(spec))
         for spec in sorted(problem.obstacles, key=lambda item: item.geometry_id)
     )
-    # 越界障碍必须报错而不是被 difference 静默裁掉：裁掉之后分母看着正常，
+    # 越界障碍需报错而不是被 difference 静默裁掉：裁掉之后分母看着正常，
     # 少掉的那块面积再也查不出来自哪里。
     validate_obstacles_within_field(field, obstacle_items)
     obstacles = tuple(item[1] for item in obstacle_items)
@@ -174,7 +174,7 @@ def resolve_coverage_targets(
     if headland is None:
         main_field = original_field
     else:
-        # 申报的地头宽度必须可证伪。口径：**不绕损耗环**。
+        # 申报的地头宽度需可证伪。口径：**不绕损耗环**。
         # 备选口径 buffer(main∪ring, -W) 与 main 对账，在 UTM 大坐标真实地块上的
         # buffer->difference->union->buffer round-trip induces up to rel 4.5e-04 area loss;
         # w=12、残差 4.9 m²），与 mitre 信号（rel ~3e-03）只差一个量级，噪声地板太高。
@@ -275,7 +275,7 @@ def coverage_stats(
     clipped = tuple(sweep_piece(line, working_width_m).intersection(original) for line in lines)
     clipped_nonempty = tuple(piece for piece in clipped if not piece.is_empty)
     union = robust_union(clipped_nonempty, scale_hint=scale_hint)
-    # 分子和分母必须同域；这里即使上游 footprint 越界，分子也只认对应分母域内的面积。
+    # 分子和分母需同域；这里即使上游 footprint 越界，分子也只认对应分母域内的面积。
     covered_field = union.intersection(original).area
     covered_main = union.intersection(targets.main_field).area
     overlap = max(0.0, sum(piece.area for piece in clipped_nonempty) - covered_field)
@@ -297,7 +297,7 @@ def path_work_lines(path: PathArtifact) -> tuple[BaseGeometry, ...]:
 
 def nonwork_normalized(path: PathArtifact, *, working_width_m: float, work_area_m2: float) -> float:
     if work_area_m2 <= 0.0:
-        raise ValueError("work_area_m2 必须大于 0")
+        raise ValueError("work_area_m2 must be greater than 0")
     nonwork_length = sum(
         line_from_spec(segment.line).length
         for segment in path.segments
@@ -331,7 +331,7 @@ def path_length_breakdown(path: PathArtifact) -> PathLengthBreakdown:
 
 def l_area(path: PathArtifact, *, working_width_m: float, work_area_m2: float) -> float:
     if work_area_m2 <= 0.0:
-        raise ValueError("work_area_m2 必须大于 0")
+        raise ValueError("work_area_m2 must be greater than 0")
     return path_length_breakdown(path).total_m * working_width_m / work_area_m2
 
 
@@ -352,5 +352,5 @@ def swath_count(path: PathArtifact) -> int:
 def headland_area_ratio(main_field: BaseGeometry, headland: BaseGeometry) -> float:
     total = main_field.area + headland.area
     if total <= 0.0:
-        raise ValueError("main_field + headland 面积必须大于 0")
+        raise ValueError("main_field + headland area must be greater than 0")
     return headland.area / total

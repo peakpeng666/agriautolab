@@ -129,7 +129,7 @@ class SwathAngleSlot:
         namespace = run_sandboxed(source)
         function = namespace.get(self.contract_function)
         if not callable(function):
-            raise SandboxViolation(f"候选代码必须定义顶层函数 {self.contract_function}(features)")
+            raise SandboxViolation(f"candidate code must define a top-level function {self.contract_function}(features)")
         try:
             function({"elongation": 1.0})
         except TypeError as error:
@@ -187,7 +187,7 @@ class RouteOrderSlot:
 
     与 SwathAngleSlot 的语义区别：
     - 契约函数是**双参** (state, candidate)，不是单参 (features)；
-    - probe_value / invariance_check 的形态必须适配"双参 + 离散序贯"——不设 |v|≤π/2 界；
+    - probe_value / invariance_check 的形态需适配"双参 + 离散序贯"——不设 |v|≤π/2 界；
     - build_config **不**调用 run_pipeline（会污染任务 1 的评估计数），
       直接调上游阶段类拿 swaths，用 construct_solution 求访问序，把
       排名烘焙进 params 即可；
@@ -199,8 +199,8 @@ class RouteOrderSlot:
     contract_function: str = "next_swath_score"
     reviewers: tuple[AdversarialReviewer, ...] = ROUTE_REVIEWERS
 
-    # 试调用输入的**模板**。每次调用都必须传新副本（见 _probe_inputs）：
-    # 沙箱不禁止候选改写入参，`candidate.pop("distance_norm")` 会永久污染类级常量，
+    # 试调用输入的**模板**。每次调用都需传新副本（见 _probe_inputs）：
+    # 沙箱不不得候选改写入参，`candidate.pop("distance_norm")` 会永久污染类级常量，
     # 之后所有候选都收到被掏空的映射——于是「候选能否通过」取决于它在提议序列里
     # 排第几，而不是它自己写得对不对。
     _PROBE_STATE_TEMPLATE: dict[str, float] = {"visited_count": 1.0, "remaining_count": 3.0}
@@ -220,12 +220,12 @@ class RouteOrderSlot:
         于是候选跑出别的异常时会穿透 compile 与 contract_gate，**在写任何账本记录
         之前终止整个 evolve_pool**。最小复现：探针的 `axis_offset_norm` 恰为 0.0，
         候选写 `1.0 / candidate["axis_offset_norm"]` 就抛 ZeroDivisionError。
-        候选的运行期失败必须是"这个候选被淘汰"，不能是"实验崩了"。
+        候选的运行期失败需是"这个候选被淘汰"，不能是"实验崩了"。
         """
         namespace = run_sandboxed(source)
         function = namespace.get(self.contract_function)
         if not callable(function):
-            raise SandboxViolation(f"候选代码必须定义顶层函数 {self.contract_function}(state, candidate)")
+            raise SandboxViolation(f"candidate code must define a top-level function {self.contract_function}(state, candidate)")
         state, candidate = self._probe_inputs()
         try:
             function(state, candidate)
@@ -243,7 +243,7 @@ class RouteOrderSlot:
                     vehicle: VehicleSpec) -> float:
         """在参考输入上取一次分数并收敛为有限 float。
 
-        **求值与 float 转换必须在同一个保护块里。** 此前 `float(value)` 在 try 之外，
+        **求值与 float 转换需在同一个保护块里。** 此前 `float(value)` 在 try 之外，
         于是候选返回 `10 ** 10000` 时两次函数调用都成功，却在转换处抛 OverflowError；
         而 `contract_gate` 只捕 SandboxViolation / ValueError / TypeError，
         该异常仍会穿透 `evolve_pool` 并在写账本记录之前终止实验。
@@ -271,7 +271,7 @@ class RouteOrderSlot:
         from agriautolab.geometry.robust import robust_union
         from agriautolab.algorithms.swath.principal_axis import principal_axis
 
-        # 上游分解必须与返回的 PipelineConfig 声明的 decomposition 一致。
+        # 上游分解需与返回的 PipelineConfig 声明的 decomposition 一致。
         # 曾用 BoustrophedonDecomposition 烘焙 rank 却返回 no_decomposition：
         # 有障碍的田上 BCD 会切出不同 cell 布局，重放时条带数量与序号 id 都变，
         # 于是 RankedSwathOrderPlanner 要么报缺 rank 键，要么把 rank 套到
@@ -307,7 +307,7 @@ class RouteOrderSlot:
         # （REVERSE 从 points[0] 出，不是 points[-1]）。
         # 返回**主轴**而非法向：法向由主轴派生，而主轴的符号规范化
         # （canonical_direction，principal_axis 内部已做）是 invariance_check
-        # 必须复现的语义，把它留在调用方才能忠实模拟真实构建路径。
+        # 需复现的语义，把它留在调用方才能忠实模拟真实构建路径。
         endpoints = {s.swath_id: endpoints_of(s) for s in swaths.swaths}
         return endpoints, (cx, cy), (ux, uy)
 
@@ -498,7 +498,7 @@ class RouteOrderSlot:
             }
             # 质心随几何平移+旋转；法向只旋转（方向量不平移）。
             #
-            # 法向必须再过一次 canonical_direction，复现真实构建路径：
+            # 法向需再过一次 canonical_direction，复现真实构建路径：
             # _geometry_for 的法向来自 principal_axis，而后者 return 的就是
             # canonical_direction(...)——方向被强制进右半平面（ux>0）。当旋转把主轴
             # 带过该边界，真实构建拿到的是 -R·axis 因而是 -R·normal，而不是 R·normal。

@@ -144,7 +144,7 @@ def test_gear_shift_penalty_is_not_expressible_by_the_length_multiplier() -> Non
 
 
 def test_truth_17_generator_reaches_the_full_48_word_set() -> None:
-    """真值 #17：8 个基础式 x 2^3 对称变换，随机位姿上必须命中 48 个不同带符号字形。
+    """真值 #17：8 个基础式 x 2^3 对称变换，随机位姿上需命中 48 个不同带符号字形。
 
     这是「48 字」这个可数事实的落点。旧断言钉的是候选个数 > 15000，
     那是过量生成的产物：去重后同样位姿只有 3841 个候选，而字形恰好 48 个。
@@ -159,7 +159,7 @@ def test_truth_17_generator_reaches_the_full_48_word_set() -> None:
 
 
 def test_truth_21_huge_reverse_penalty_degenerates_to_the_dubins_solution() -> None:
-    """真值 #21：倒车罚极大时最优解必须退化为纯前进解，长度等于 Dubins。
+    """真值 #21：倒车罚极大时最优解需退化为纯前进解，长度等于 Dubins。
 
     与真值 #18（RS <= Dubins）成对：#18 说 RS 不会更差，#21 说这个「更好」
     确实来自倒车这个新自由度——把倒车罚到极大，好处就该消失得干干净净。

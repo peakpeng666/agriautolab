@@ -1,6 +1,6 @@
 """分母守卫的三层：构造令牌、语义不变量、provenance 证据链。
 
-第二层的非凸回归必须用 L 形地块：凸多边形的内偏置角点是尖的，join_style 不起作用，
+第二层的非凸回归需用 L 形地块：凸多边形的内偏置角点是尖的，join_style 不起作用，
 矩形上 round 与 mitre 给出完全相同的结果（100x50、h=6 时同为 3344.000），
 测不出两套实现分家的口子。Fields2Benchmark 的 350 块真实地块没有一块是矩形。
 """
@@ -47,7 +47,7 @@ def task_notch_l_shape_problem() -> CoverageProblem:
     """勘误结案用的形状：任务书实际跑的多边形，缺口 60x30（塔腿 40x30）。
 
     任务书文字把缺口误写成 40x30；两个 L 各自正确，绝对差一致（7.771064），
-    见 AUDIT_NOTE「已封口的分母旁路」一节的结案表。
+    结案表见历史留痕（study-001-frozen tag）。
     """
     return CoverageProblem(
         problem_id="lshape-task",
@@ -139,7 +139,7 @@ def test_selected_mismatching_target_kind_is_rejected(target: CoverageTarget, se
 
 
 def test_none_width_with_shrunk_main_field_is_rejected() -> None:
-    """没有地头，主田即原田：main_field 比 original_field 小的状态必须在构造点被拒。"""
+    """没有地头，主田即原田：main_field 比 original_field 小的状态需在构造点被拒。"""
     with pytest.raises(CoverageDenominatorError):
         forced_targets(headland_width_m=None)
 
@@ -229,7 +229,7 @@ def artifact_from_geometry(field, main) -> HeadlandArtifact:
 
 
 def test_declared_width_mismatching_generated_main_field_is_rejected(rectangle_problem) -> None:
-    """用 h=6 生成产物、却申报 12.0：重算对不上，异常消息必须带实测残差。"""
+    """用 h=6 生成产物、却申报 12.0：重算对不上，异常消息需带实测残差。"""
     artifact = headland_for(rectangle_problem, 6.0)
     with pytest.raises(CoverageDenominatorError) as excinfo:
         resolve_coverage_targets(
@@ -239,7 +239,7 @@ def test_declared_width_mismatching_generated_main_field_is_rejected(rectangle_p
 
 
 def test_mitre_generated_main_field_with_correct_scalar_is_rejected() -> None:
-    """生成侧用 mitre 造主田、申报正确的标量 6.0：必须抛。
+    """生成侧用 mitre 造主田、申报正确的标量 6.0：需抛。
 
     这条钉的就是 round/mitre 在非凸地块上 0.4%~0.5% 的分家口子，
     L-shaped polygon with a 60x30 cutout.
@@ -302,7 +302,7 @@ def test_frame_comes_from_problem_not_the_caller(rectangle_problem) -> None:
 
     projected = rectangle_problem.model_copy(update={"frame": GeometryFrame(crs="EPSG:32650")})
     other = resolve_coverage_targets(projected, None, target=CoverageTarget.MAIN_FIELD)
-    # 几何完全相同、只有坐标系不同：三个哈希必须全变，否则 frame 成了自由参数
+    # 几何完全相同、只有坐标系不同：三个哈希需全变，否则 frame 成了自由参数
     assert other.provenance.original_field_hash != first.provenance.original_field_hash
     assert other.provenance.main_field_hash != first.provenance.main_field_hash
     assert other.provenance.selected_hash != first.provenance.selected_hash

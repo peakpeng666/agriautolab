@@ -23,7 +23,7 @@ def test_all_six_words_close_on_5000_random_poses() -> None:
     """真值 1：六字各自正演闭合，终点误差 < 1e-12。
 
     用 numpy Generator（种子显式注入）生成位姿，不用全局随机——
-    任何随机都必须可复现，这是仓库的确定性纪律。
+    任何随机都需可复现，这是仓库的确定性纪律。
     """
     rng = np.random.default_rng(20260821)
     worst = 0.0
@@ -79,7 +79,7 @@ def test_straight_ahead_truth_is_d() -> None:
 
 
 def test_zero_radius_is_rejected_with_kinematic_model_error() -> None:
-    """真值 5：R=0 交给 Dubins 必须抛 KinematicModelError（契约既定裁决）。"""
+    """真值 5：R=0 交给 Dubins 需抛 KinematicModelError（契约既定裁决）。"""
     with pytest.raises(KinematicModelError):
         dubins_length((0.0, 0.0, 0.0), (5.0, 5.0, 1.0), 0.0)
     with pytest.raises(KinematicModelError):

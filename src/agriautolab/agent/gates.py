@@ -73,7 +73,7 @@ def contract_gate(source_code: str, *, slot: CandidateSlot | None = None) -> tup
 def validation_gate(function: HeuristicFn, problem: CoverageProblem, vehicle: VehicleSpec,
                     protocol: BenchmarkProtocol, *, slot: CandidateSlot | None = None,
                     run: Callable = run_pipeline) -> GateOutcome:
-    """第二道：产出路径必须过独立 PathValidator。不通过即淘汰，不做就地修补。
+    """第二道：产出路径需过独立 PathValidator。不通过即淘汰，不做就地修补。
 
     run 是 keyword-only 的运行函数（默认 run_pipeline），用于在评估计数场景下
     注入打点过的执行器；旧调用不传 run 时行为逐位不变。

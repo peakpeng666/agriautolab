@@ -62,7 +62,7 @@ class PathSegment(BaseModel):
     line: LineStringSpec
     signed_curvature_m_inv: float = 0.0
     # True = 倒车行驶该段（Reeds-Shepp 带来的自由度）。几何与曲率不受影响；
-    # 校验器用它拒绝不可倒车机具的路径。默认 False 保持前向-only 语义不变。
+    # 校验器用它拒不可倒车机具的路径。默认 False 保持前向-only 语义不变。
     reversing: bool = False
 
 

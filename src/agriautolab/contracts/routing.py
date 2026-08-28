@@ -40,9 +40,9 @@ class TSPProblem(BaseProblemSpec):
         node_ids = tuple(node.node_id for node in self.nodes)
         unique_ids = set(node_ids)
         if len(unique_ids) != len(node_ids):
-            raise ValueError("TSP 节点 node_id 必须唯一")
+            raise ValueError("TSP node_id values must be unique")
         if self.start_node_id not in unique_ids:
-            raise ValueError("TSP start_node_id 必须引用已有节点")
+            raise ValueError("TSP start_node_id must reference an existing node")
         return self
 
 
@@ -76,7 +76,7 @@ class CVRPProblem(BaseProblemSpec):
     def customer_identity_and_capacity_must_be_well_formed(self) -> "CVRPProblem":
         node_ids = (self.depot.node_id,) + tuple(customer.node_id for customer in self.customers)
         if len(set(node_ids)) != len(node_ids):
-            raise ValueError("CVRP 仓库与客户 node_id 必须全局唯一")
+            raise ValueError("CVRP depot and customer node_id values must be globally unique")
 
         oversized = [
             customer.node_id

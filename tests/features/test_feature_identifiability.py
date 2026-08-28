@@ -1,9 +1,9 @@
-"""常设检查：进入实例定义、且影响目标或可行性的场景参数，必须至少被一个特征看见。
+"""常设检查：进入实例定义、且影响目标或可行性的场景参数，需至少被一个特征看见。
 
 由「行距缺口」确立的缺陷类——**映射欠定**：两个实例特征向量完全相同
 而最优配置不同，推荐器在数学上不可辨识。这与前五轮的「同一事实两处住」「跨作用域
-使用」不同族，是第三类。任何新增场景参数都必须在本表登记并接受检查；
-`crossable` 例外地走分层（协议级变量）而非特征，理由见表内注释与 AUDIT_NOTE。
+使用」不同族，是第三类。任何新增场景参数都需在本表登记并接受检查；
+`crossable` 例外地走分层（协议级变量）而非特征，理由见表内注释。
 """
 
 import math
@@ -49,7 +49,7 @@ def _features(**overrides) -> dict[str, float]:
     ("min turning radius", {}, {"radius": 1.0}, "turning_ratio"),
 ])
 def test_every_objective_relevant_scenario_dof_is_visible_in_features(dof, base, variant, witness):
-    """仅在该自由度上不同的两个实例，特征向量必须不同，且见证特征必须就是不同的那个。"""
+    """仅在该自由度上不同的两个实例，特征向量需不同，且见证特征需就是不同的那个。"""
     left = _features(**base)
     right = _features(**variant)
     assert left != right, f"{dof}：特征向量完全相同——映射欠定"
@@ -57,7 +57,7 @@ def test_every_objective_relevant_scenario_dof_is_visible_in_features(dof, base,
 
 
 def test_spacing_variants_differ_in_both_new_features():
-    """行距双特征都必须对 spacing 敏感（一个标定穿行量纲，一个标定幅宽-行距比）。"""
+    """行距双特征都需对 spacing 敏感（一个标定穿行量纲，一个标定幅宽-行距比）。"""
     base = _features(spacing_m=2.5)
     wider = _features(spacing_m=5.0)
     assert wider["crossing_density"] == pytest.approx(0.5 * base["crossing_density"], rel=1e-12)
@@ -73,7 +73,7 @@ def test_crossable_is_handled_by_stratification_not_features():
     """
     left = _features(crossable=True)
     right = _features(crossable=False)
-    assert left == right   # 特征确实看不见它——这正是必须分层的原因
+    assert left == right   # 特征确实看不见它——这正是需分层的原因
 
     protocol_kwargs = dict(
         protocol_id="stratification-check",
@@ -85,7 +85,7 @@ def test_crossable_is_handled_by_stratification_not_features():
     crossable_run = CorpusProtocol(row_crossable=True, **protocol_kwargs)
     uncrossable_run = CorpusProtocol(row_crossable=False, **protocol_kwargs)
     assert crossable_run.spec_hash() != uncrossable_run.spec_hash(), (
-        "crossable 必须进入协议哈希：这是分层的载体，翻层而哈希不变等于跨层混训不留痕"
+        "crossable 需进入协议哈希：这是分层的载体，翻层而哈希不变等于跨层混训不留痕"
     )
 
 
@@ -97,7 +97,7 @@ def test_feature_set_has_no_other_blind_scenario_dofs():
     body_width 通过 swath_count_at_minwidth 间接可见吗——不：swath_count 只吃
     working_width。但 body_width 不影响三维目标（只影响车体扫掠硬约束的裕量），
     按「影响目标或可行性」的登记标准，它属于裕量参数而非场景自由度；
-    若未来把它接进场景扫描，必须回来给它登记特征。
+    若未来把它接进场景扫描，需回来给它登记特征。
     """
     base = _features()
     thinner_body = extract_instance_features(

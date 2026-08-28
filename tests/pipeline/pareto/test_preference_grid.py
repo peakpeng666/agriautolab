@@ -21,7 +21,7 @@ def test_grid_is_on_simplex_and_unique():
         assert all(x >= 0.0 for x in w)
         assert math.isclose(sum(w), 1.0, abs_tol=1e-12)
     assert len(set(PREFERENCE_GRID_V1)) == 22
-    # 三个顶点与三棱中点必须在场（偏好条件评估的极端与对称探针）
+    # 三个顶点与三棱中点需在场（偏好条件评估的极端与对称探针）
     for vertex in ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)):
         assert vertex in PREFERENCE_GRID_V1
     for midpoint in ((0.5, 0.5, 0.0), (0.5, 0.0, 0.5), (0.0, 0.5, 0.5)):
@@ -48,7 +48,7 @@ def test_all_grid_points_roundtrip_through_contract():
 
 
 def test_all_zero_weights_rejected_but_zero_mixture_accepted():
-    with pytest.raises(ValueError, match="大于 0"):
+    with pytest.raises(ValueError, match="positive"):
         PreferenceSpec(preferences=(
             MetricPreference(metric_id="path_length", weight=0.0),
             MetricPreference(metric_id="headland_turn_count", weight=0.0),

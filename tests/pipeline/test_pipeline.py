@@ -44,7 +44,7 @@ def make_protocol(problem, vehicle) -> BenchmarkProtocol:
 
 def feasible_config(**overrides) -> PipelineConfig:
     # 地头 8 米：前进 Dubins 掉头向 swath 端点外鼓出约 2R（R=3），地头 6 米在
-    # L 形的窄段零余量、数值上必越界——掉头空间必须大于鼓包量，这是物理不是容差问题。
+    # L 形的窄段零余量、数值上必越界——掉头空间需大于鼓包量，这是物理不是容差问题。
     values = dict(
         decomposition="no_decomposition", headland="uniform_headland", swath="min_width",
         route="boustrophedon_order", path="dubins_transit", params={"headland_width_m": 8.0},

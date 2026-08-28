@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-# typing_extensions.Self：3.10 兼容（见 AUDIT_NOTE 留痕）；pydantic 硬依赖，必然在场
+# typing_extensions.Self：3.10 兼容；pydantic 硬依赖，必然在场
 from typing_extensions import Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -29,7 +29,7 @@ class Point(BaseModel):
     @classmethod
     def finite_coordinate(cls, value: float) -> float:
         if not math.isfinite(value):
-            raise ValueError("坐标必须是有限数")
+            raise ValueError("coordinates must be finite numbers")
         return value
 
     def as_tuple(self) -> tuple[float, float]:
@@ -47,7 +47,7 @@ class Pose2D(BaseModel):
     @classmethod
     def finite_value(cls, value: float) -> float:
         if not math.isfinite(value):
-            raise ValueError("位姿必须由有限数构成")
+            raise ValueError("pose must consist of finite numbers")
         return value
 
     def point(self) -> Point:
@@ -75,7 +75,7 @@ class PolygonSpec(BaseModel):
         存在的理由：Fields2Benchmark 的 350 块真实地块（Zenodo 14524735，wkt.zip 211 KB）
         和 Fields2Cover 都以 WKT 交换，而本仓库的 PolygonSpec 用点列。
 
-        陷阱：这里绝不能调 make_valid。自交地块必须报错退回给数据准备环节，
+        陷阱：这里不能调 make_valid。自交地块需报错退回给数据准备环节，
         隐式修复的拓扑会使后续面积指标基于一块未经记录的多边形。
         """
         import shapely
@@ -97,7 +97,7 @@ class PolygonSpec(BaseModel):
     def to_wkt(self) -> str:
         """导出 WKT。经 shapely.normalize 规范化，保证同一几何得到同一字符串。
 
-        陷阱：必须显式传 rounding_precision=-1。shapely 默认按 6 位小数四舍五入，
+        陷阱：需显式传 rounding_precision=-1。shapely 默认按 6 位小数四舍五入，
         那会让 to_wkt 变成有损操作，往返后 geometry_hash 对不上。
         """
         import shapely

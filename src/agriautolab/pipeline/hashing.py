@@ -1,6 +1,6 @@
 """为证据记录生成确定的内容、源码树与环境指纹。
 
-陷阱：content_hash 必须 sort_keys 且 allow_nan=False。
+陷阱：content_hash 需 sort_keys 且 allow_nan=False。
 键序不同要得到同一哈希；而 NaN 一旦被序列化进 JSON，两条实际不同的记录会撞成同一个哈希。
 """
 

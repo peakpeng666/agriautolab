@@ -1,6 +1,6 @@
 """非法几何在计算前直接拒绝，不做静默拓扑修复。
 
-约束：此处禁止 make_valid。隐式修复的地块会使后续所有面积指标
+约束：此处不得 make_valid。隐式修复的地块会使后续所有面积指标
 建立在一块没人见过的多边形上，而且从结果里看不出来。
 """
 
@@ -28,7 +28,7 @@ def line_from_spec(spec: LineStringSpec) -> LineString:
     line = LineString([point.as_tuple() for point in spec.points])
     validate_geometry(line, geometry_id=spec.geometry_id)
     if line.length == 0.0:
-        raise GeometryValidationError(f"{spec.geometry_id}: 线长度必须大于 0")
+        raise GeometryValidationError(f"{spec.geometry_id}: line length must be greater than 0")
     return line
 
 

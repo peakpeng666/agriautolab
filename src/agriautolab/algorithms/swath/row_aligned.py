@@ -1,7 +1,7 @@
 """行对齐 swath：扫掠方向对齐作物行。
 
 这是唯一用到 CoverageProblem 语义（而不只是几何）的 swath 算法；
-problem.row_structure 为 None 时必须在入口拒绝——静默退化成别的方向，
+problem.row_structure 为 None 时需在入口拒绝——静默退化成别的方向，
 会让 row_crossings 目标悄悄变成常数 0，恰是分母漂移那类错误的目标空间版本。
 """
 

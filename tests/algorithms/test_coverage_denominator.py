@@ -73,7 +73,7 @@ def test_main_field_ratio_stays_perfect_while_field_ratio_collapses(
 
 
 def test_denominators_do_not_depend_on_declared_target() -> None:
-    """target 只决定 selected 指向哪一个；两个比值本身必须一模一样。"""
+    """target 只决定 selected 指向哪一个；两个比值本身需一模一样。"""
     problem = rectangle_problem()
     headland = headland_for(problem, 12.0)
     swaths = LongestEdgeSwath().run(headland, working_width_m=WORKING_WIDTH_M)
@@ -97,7 +97,7 @@ def test_missing_headland_makes_main_field_equal_original_field() -> None:
 
 
 def test_hard_gate_uses_field_ratio_even_when_protocol_selects_main_field() -> None:
-    """地头 18 米、tau=0.9：协议即使声明按主田报数，门槛也必须按原田判不可行。"""
+    """地头 18 米、tau=0.9：协议即使声明按主田报数，门槛也需按原田判不可行。"""
     problem = rectangle_problem()
     vehicle = robot()
     path = CoveragePipeline(CoveragePipelineConfig(headland_width_m=18.0, dubins_sample_step_m=0.5)).run(problem, vehicle)
@@ -137,7 +137,7 @@ def test_hand_built_targets_cannot_place_main_field_outside_original_field() -> 
     """构造令牌挡的是「顺手构造」；这里带着令牌越过第一层，验证第二层语义不变量仍在岗。
 
     期望的异常类型随 G-1 轮从 ValueError 改为 CoverageDenominatorError，
-    留痕见 AUDIT_NOTE「被改动的既有断言」一节。
+    历史留痕见 study-001-frozen tag。
     """
     with pytest.raises(CoverageDenominatorError):
         CoverageTargets(
@@ -152,7 +152,7 @@ def test_hand_built_targets_cannot_place_main_field_outside_original_field() -> 
 
 
 def test_main_field_excludes_obstacles_that_headland_stage_never_saw() -> None:
-    """陷阱回归：地头阶段的 cell 没扣障碍，主田分母必须自己再扣一次。"""
+    """陷阱回归：地头阶段的 cell 没扣障碍，主田分母需自己再扣一次。"""
     problem = rectangle_problem()
     obstacle = PolygonSpec(
         geometry_id="obs",

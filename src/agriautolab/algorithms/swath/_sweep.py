@@ -1,6 +1,6 @@
 """按给定方向生成 swath 中心线的公共扫掠逻辑。
 
-五个 swath 算法只在「方向怎么选」上不同，扫掠本身必须同一份实现——
+五个 swath 算法只在「方向怎么选」上不同，扫掠本身需同一份实现——
 两份扫掠代码会像两份地头代码一样，在某个非凸地块上分家。
 中心线取与主田的交线；条数 = ceil(法向跨度 / 幅宽)，首条贴边、末条回收，
 这些都是 MBRDirectionSwath 基线被既有测试约束住的语义。
@@ -46,7 +46,7 @@ def canonical_direction(ux: float, uy: float) -> tuple[float, float]:
 
 def swaths_along_direction(mains: tuple[PolygonSpec, ...], ux: float, uy: float, *, working_width_m: float) -> SwathsArtifact:
     if working_width_m <= 0.0:
-        raise ValueError("幅宽必须大于 0")
+        raise ValueError("working width must be greater than 0")
     ux, uy = canonical_direction(ux, uy)
     nx, ny = -uy, ux
     output: list[Swath] = []

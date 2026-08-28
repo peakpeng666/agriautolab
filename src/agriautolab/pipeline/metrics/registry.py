@@ -31,7 +31,7 @@ def register_metric(spec: MetricSpec) -> MetricSpec:
     if spec.metric_id in METRIC_REGISTRY:
         raise MetricRegistrationError(f"重复指标：{spec.metric_id}")
     if spec.comparability_scope is not ComparabilityScope.IMPL_INVARIANT and not spec.notes.strip():
-        raise MetricRegistrationError("非 IMPL_INVARIANT 指标必须说明可比性边界")
+        raise MetricRegistrationError("non-IMPL_INVARIANT metrics must declare their comparability boundary")
     if spec.aggregation_method not in {"arithmetic_mean", "geometric_mean", "median"}:
         raise MetricRegistrationError(f"不支持的聚合方法：{spec.aggregation_method}")
     METRIC_REGISTRY[spec.metric_id] = spec
@@ -73,7 +73,7 @@ def _install_defaults() -> None:
                    notes="分母随 headland 配置变化：100x50 田块幅宽 10，地头 2/6/12/18 米对应主田 "
                          "4416/3344/1976/896 m^2，四种配置该比值全是 1.0000，而对原田分别只有 "
                          "0.8832/0.6688/0.3952/0.1792。只能在 headland 配置完全相同的运行之间比较，"
-                         "禁止用作硬门槛，禁止进入跨协议排名"),
+                         "不得用作硬门槛，不得进入跨协议排名"),
         MetricSpec("overlap_ratio", "1", OptimizationDirection.MINIMIZE, ComparabilityScope.IMPL_INVARIANT,
                    ScaleBehavior.INVARIANT, True, MetricRole.PRIMARY, coverage, CoverageStage.PATH,
                    description="裁剪后各作业带面积和减并集面积，再除以作业域面积"),
@@ -135,11 +135,11 @@ def _install_defaults() -> None:
                    ScaleBehavior.LINEAR, True, MetricRole.DIAGNOSTIC, common, CoverageStage.PATH,
                    protocol_parameters={"clearance_sample_step_m": 0.25},
                    description="沿弧长密化采样点到障碍物的中位距离",
-                   notes="采样步长属于 BenchmarkProtocol；缩放不变性测试必须同步缩放该步长"),
+                   notes="采样步长属于 BenchmarkProtocol；缩放不变性测试需同步缩放该步长"),
         MetricSpec("collision_checks", "count", OptimizationDirection.MINIMIZE, ComparabilityScope.IMPL_BOUND,
                    ScaleBehavior.UNDEFINED, False, MetricRole.DIAGNOSTIC, common, CoverageStage.PATH,
                    description="实现执行的碰撞检测次数",
-                   notes="由未来 benchmark harness 计数；契约层禁止 benchmark runner，因此这里只声明契约"),
+                   notes="由未来 benchmark harness 计数；契约层不得 benchmark runner，因此这里只声明契约"),
         MetricSpec("objective_evaluations", "count", OptimizationDirection.MINIMIZE, ComparabilityScope.IMPL_BOUND,
                    ScaleBehavior.UNDEFINED, False, MetricRole.DIAGNOSTIC, common, None,
                    description="搜索过程中目标函数求值次数",
@@ -148,7 +148,7 @@ def _install_defaults() -> None:
                    ScaleBehavior.UNDEFINED, False, MetricRole.DIAGNOSTIC, common, None,
                    protocol_parameters={"clock": "monotonic"},
                    description="运行时长；ID 保留 runtime_ms，但规范值在证据层换算为 SI 秒",
-                   notes="依赖硬件、系统负载和计时协议，禁止进入跨协议主排名",
+                   notes="依赖硬件、系统负载和计时协议，不得进入跨协议主排名",
                    canonical_name="runtime_s"),
     )
     for spec in specs:

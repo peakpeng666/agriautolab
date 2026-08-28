@@ -65,7 +65,7 @@ _PATHS = {"dubins_transit": DubinsPathPlanner, "reeds_shepp_transit": ReedsShepp
 class StageMemo:
     """中间产物记忆化：key = (阶段, 输入哈希, 算法, 参数) 的内容哈希。
 
-    命中计数是审计证据的一部分（「组合体乘性」不是修辞，是可以被看到的数字）。
+    命中计数是审计证据的一部分（组合体乘性可以直接从数字看到）。
     """
 
     store: dict[str, Any] = field(default_factory=dict)

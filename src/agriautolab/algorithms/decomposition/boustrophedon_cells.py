@@ -135,7 +135,7 @@ class BoustrophedonDecomposition:
                         y_low, y_high = mid_iv[channel]
                         for x_probe in (events[i] + epsilon, events[i + 1] - epsilon):
                             column = _cross_section(component, x_probe)
-                            # 端点列的通道配置必须与中点一致才能用来细化边界：
+                            # 端点列的通道配置需与中点一致才能用来细化边界：
                             # When a hole vertex lies inside a sweep band, only one channel endpoint is visible;
                             # 把整带 y 界灌进通道 0 会与通道 1 重叠 1357 m^2（cells 并集
                             # 正确而两两重叠）。配置不一致就跳过该列：宁欠勿重，
@@ -148,7 +148,7 @@ class BoustrophedonDecomposition:
                         continue
                     cells.append(robust_union(tuple(pieces), scale_hint=scale_hint))
         # 真实地块实测在回转阶段暴露三类数值伪影，处置原则：归一化只作用于
-        # **我们自己的箱并集**（无洞、面积良定义），绝不作用于带洞自由空间的交——
+        # **我们自己的箱并集**（无洞、面积良定义），不作用于带洞自由空间的交——
         # buffer(0) on a holed cell merges the hole into the outer ring, inflating area;
         # 恰等于洞面积。因此顺序是：箱并集转回原 frame -> （必要时）归一化并面积对账
         # -> 与原始 free 求交，洞由求交天然保留。

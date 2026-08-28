@@ -72,7 +72,7 @@ def cusp_count(path: tuple[Point, ...], *, angle_tolerance_rad: float = 1e-9) ->
 
 def densify(path: tuple[Point, ...], max_step: float) -> tuple[Point, ...]:
     if max_step <= 0.0:
-        raise ValueError("max_step 必须大于 0")
+        raise ValueError("max_step must be greater than 0")
     if len(path) < 2:
         return path
     output: list[Point] = [path[0]]
@@ -99,7 +99,7 @@ def resample_uniform(path: tuple[Point, ...], step: float) -> tuple[Point, ...]:
     它保留给需要抑制亚尺度锯齿的场景（例如未来接入栅格搜索输出的阶梯状路径）。
     """
     if step <= 0.0:
-        raise ValueError("step 必须大于 0")
+        raise ValueError("step must be greater than 0")
     if len(path) < 2:
         return path
     line = LineString([point.as_tuple() for point in path])
@@ -210,7 +210,7 @@ def transit_breakdown(
     *,
     cell_of_work_index: tuple[int, ...] | None = None,
 ) -> TransferBreakdown:
-    """把全部非作业段按位置归入五项之一，残余必须为 0。
+    """把全部非作业段按位置归入五项之一，残余需为 0。
 
     cell_of_work_index[k] 给出第 k 个作业段所属的 cell 序号；传 None 表示单 cell
     （此时 inter_cell_m 恒为 0）。它不从 Swath 契约里读——Swath 没有 cell_id，

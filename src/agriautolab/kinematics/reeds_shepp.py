@@ -19,12 +19,12 @@ Dubins 才 6 个字就错了一个 LRL——正演闭合误差一度到 3.1e+01�
 - reflect  ：(x, y, phi) -> (x, -y, -phi)，字母 L <-> R 互换
 - backwards：解 start 在 goal 帧内的反问题，再把字序倒读
 
-陷阱：backwards 必须作为独立变换参与笛卡尔积，不能塞进某个基础式当「第 9 式」。
+陷阱：backwards 需作为独立变换参与笛卡尔积，不能塞进某个基础式当「第 9 式」。
 塞进去只能得到 CCC 的一个 backwards 字，CCSC 族的四个 backwards 字会漏——
 # Empirically verified: only 32 of 36 combinations are reachable; the missing family is identified.
 
 **闭合校验是安全网，不是装饰**：任何对称映射的代数错误都会让终点对不上，
-不闭合的候选直接丢弃（误差 > 1e-9），绝不带着错路径出门。
+不闭合的候选直接丢弃（误差 > 1e-9），不带着错路径出门。
 
 符号长度约定：负长度 = 倒车行驶该弧/直线。倒车不改变转向字母的几何意义
 （左侧圆弧倒着走仍是左侧圆弧），只改变行进方向；正演积分公式对负长度代数同一。
@@ -209,12 +209,12 @@ class ReverseCostModel:
     """倒车代价：cost = 前进长 + multiplier x 倒车长 + penalty x 换挡次数。
 
     两个参数都由协议声明（BenchmarkProtocol.reverse_cost，无默认值、进协议哈希）：
-    换了倒车偏好就是换了目标函数，两次运行在证据层必须能区分。
+    换了倒车偏好就是换了目标函数，两次运行在证据层需能区分。
 
     倒车在农艺上更慢、土壤压实更重；换挡（前进/倒车切换）本身也有固定时间成本，
     只用长度乘子表达不了「宁可多走一点也别多换一次挡」这种偏好——两个参数不是冗余。
 
-    陷阱：multiplier 极大时最优解必须退化为纯前进（Dubins）解。
+    陷阱：multiplier 极大时最优解需退化为纯前进（Dubins）解。
     这是真值 #21，与真值 #18（RS <= Dubins）成对：两条都过才说明这里
     确实多了一个自由度，而不是把 Dubins 换了个名字。
     """
@@ -225,7 +225,7 @@ class ReverseCostModel:
     def __post_init__(self) -> None:
         if self.reverse_length_multiplier < 1.0:
             raise ValueError(
-                f"reverse_length_multiplier 必须 >= 1，实际 {self.reverse_length_multiplier!r}"
+                f"reverse_length_multiplier 需 >= 1，实际 {self.reverse_length_multiplier!r}"
             )
         if self.gear_shift_penalty_m < 0.0:
             raise ValueError(f"gear_shift_penalty_m 不能为负，实际 {self.gear_shift_penalty_m!r}")
@@ -279,7 +279,7 @@ def _rs_endpoint(start: Pose2D, word: RSWord, radius: float) -> Pose2D:
 # - reflect  ：(x, y, phi) -> (x, -y, -phi)，字母 L <-> R  —— 左右镜像
 # - backwards：解反过来的问题（start 在 goal 帧内的位姿），再把字序倒读
 #
-# backwards 必须作为独立变换参与组合，不能塞进某个基础式里当「第 9 式」：
+# backwards 需作为独立变换参与组合，不能塞进某个基础式里当「第 9 式」：
 # 塞进去只会得到 CCC 的一个 backwards 字，CCSC 族的四个 backwards 字就漏了
 # Only 32 of 36 possible word families are reachable; the missing family acts as a signal.
 _BOOL_PAIR = (False, True)
@@ -333,11 +333,11 @@ def _candidate_words(start: Pose2D, goal: Pose2D, radius: float) -> list[RSWord]
 def reeds_shepp_words(start: Pose2D, goal: Pose2D, radius: float) -> tuple[RSWord, ...]:
     """返回全部通过正演闭合（< 1e-9）的候选词，按 (字母, 长度) 去重。
 
-    对称映射本身可能有代数错误，所以每个词出口前必须闭合——
+    对称映射本身可能有代数错误，所以每个词出口前需闭合——
     这条安全网正是 Dubins 那个 LRL 漏洞教出来的。
     """
     if radius <= 0.0:
-        raise KinematicModelError(f"Reeds-Shepp 半径必须大于 0，实际 {radius!r}")
+        raise KinematicModelError(f"Reeds-Shepp radius must be greater than 0, got {radius!r}")
     # 闭合容差带坐标尺度：UTM ~6.5e6 处 ULP≈9.3e-10，合法词的公式
     # Round-trip closure error measured at 1.86e-9 (≈1.3 ULP across all 48 candidates); tolerance 1e-9
     # 会把好词全拒掉（v6 的 66 crash 根因）。取 8 ULP 与 1e-9 的较大者：小坐标行为

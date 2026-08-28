@@ -4,7 +4,7 @@
 **只依赖 python3.10 标准库，不 import agriautolab。**
 
 存在的理由：换了 F2C 版本，golden 就不是同一份 golden。
-env_f2c.json 必须进证据链哈希（见 evidence/record.py 的 f2c_env_hash），
+env_f2c.json 需进证据链哈希（见 evidence/record.py 的 f2c_env_hash），
 否则「同一份 golden」这句话在证据层无法证伪。
 """
 

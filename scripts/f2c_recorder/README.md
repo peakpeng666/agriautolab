@@ -8,7 +8,7 @@ F2C 的 Python binding 由 SWIG 绑在 WSL 的 `python3.10`；agriautolab 要求
 （`src/agriautolab/contracts/geometry.py` 用了 `typing.Self`）。
 
 **不要为此重建 binding，也不要给仓库降级。** 两进程是既定架构，
-Block C 的三适配器设计（binding / subprocess / recorded CSV）就是为它准备的：
+三适配器设计（binding / subprocess / recorded CSV）就是为它准备的：
 
 ```
 WSL / py3.10                          Windows / py3.11+

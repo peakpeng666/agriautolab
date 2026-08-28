@@ -2,7 +2,7 @@
 
 
 class AgriAutoLabError(Exception):
-    """必须让调用方看见的失败的基类。"""
+    """需让调用方看见的失败的基类。"""
 
 
 class GeometryValidationError(AgriAutoLabError):

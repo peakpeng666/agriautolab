@@ -11,12 +11,12 @@ class VehicleSpec(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     working_width_m: float = Field(gt=0.0)
-    # 车体宽度与机具幅宽必须分开：碰撞和越界判定用车体，覆盖率分子用机具，
+    # 车体宽度与机具幅宽需分开：碰撞和越界判定用车体，覆盖率分子用机具，
     # 二者混用会让宽机具窄车体的配置凭空少算碰撞面积。
     body_width_m: float = Field(gt=0.0)
     body_length_m: float = Field(gt=0.0, default=1.0)
     # 允许为 0：差速车与履带车可以原地转向，gt=0 会让这两类车根本无法表达。
-    # 代价是零半径下曲率无界，必须由路径阶段自己拒绝——见 DubinsPath.run。
+    # 代价是零半径下曲率无界，需由路径阶段自己拒绝——见 DubinsPath.run。
     min_turning_radius_m: float = Field(ge=0.0)
     can_reverse: bool = False
 

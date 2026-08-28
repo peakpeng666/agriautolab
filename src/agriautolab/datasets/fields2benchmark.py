@@ -88,7 +88,7 @@ class ExportManifest:
 
 # Zenodo 14524735 把荷兰来源列为 PDOK + Nationaal Georegister，但 WKT 文件名只含国家前缀，
 # 不能逐地块反推出二者之一；因此 provenance 明确保留组合来源，而不是伪造“全部来自 PDOK”。
-# 爱沙尼亚许可链接解析到 CC BY-SA 3.0 EE。未在上游元数据出现的国家必须 UNKNOWN。
+# 爱沙尼亚许可链接解析到 CC BY-SA 3.0 EE。未在上游元数据出现的国家需 UNKNOWN。
 _SOURCE_BY_PREFIX = {
     "NL": ("PDOK/Nationaal-Georegister", DatasetLicense.PUBLIC_DOMAIN, "EPSG:28992"),
     "EE": ("INSPIRE-EE", DatasetLicense.CC_BY_SA_3_0_EE, "EPSG:3301"),
@@ -136,7 +136,7 @@ def _projected_extent(source: CRS) -> tuple[float, float, float, float] | None:
 
 
 def _verify_declared_crs(geometry: BaseGeometry, declared_crs: str) -> None:
-    """声明的 CRS 必须与坐标量程自洽，否则抛 CrsDeclarationError。
+    """声明的 CRS 需与坐标量程自洽，否则抛 CrsDeclarationError。
 
     # Observed upstream issue: F2B wkt.zip uses WGS84 lat/lon while the portal declares
     EPSG:3301/28992/3346；快速通道把 5.0 米地头当 5.0 度用，地块被内缩吃光。
@@ -201,7 +201,7 @@ def to_metric_crs(geometry: BaseGeometry, *, source_crs: str) -> tuple[BaseGeome
     声明不核对就等于没有声明——这是地头宽度可证伪性那个洞的同构体。
 
     米制投影原样保留，避免不必要的重投影误差；经纬度按地块质心选局部 UTM。
-    目标 CRS 必须进入 provenance，因为换一个投影，长度、面积与路径最优性都会一起改变。
+    目标 CRS 需进入 provenance，因为换一个投影，长度、面积与路径最优性都会一起改变。
     """
     validate_geometry(geometry)
     _verify_declared_crs(geometry, source_crs)
@@ -259,7 +259,7 @@ def _manifest_payload(records: tuple[FieldRecord, ...], filtered: tuple[str, ...
 #     Naudojimo apribojimai (Use Constraints): Autoriaus teisės (Copyright)
 #   「Use Limitation = 非商业使用」限制的是**使用**；学术研究属于非商业使用，
 #   因此 ANALYSIS 记为允许。而 Access/Use Constraints 只写「Copyright」——
-#   没有任何再分发授权，默认版权即禁止再分发，因此 REDISTRIBUTION 记为不允许。
+#   没有任何再分发授权，默认版权即不得再分发，因此 REDISTRIBUTION 记为不允许。
 # - NL：CC0 1.0 + Public Domain Mark 1.0，两项用途都允许。
 # - EE：CC BY-SA 3.0 EE，两项都允许（附署名与相同方式共享义务，由下游承担）。
 #
@@ -280,7 +280,7 @@ def export_corpus(
     allow_analysis: bool, allow_redistribution: bool,
     quarantined: tuple[QuarantinedField, ...] = (),
 ) -> ExportManifest:
-    """导出可审计的 WKT JSONL 语料；用途必须由调用方逐项显式声明。
+    """导出可审计的 WKT JSONL 语料；用途需由调用方逐项显式声明。
 
     为什么是两个开关而不是一个 allow_non_commercial：
     「用」与「发」是两件事。LT 的 113 块（占 350 的 32%）上游写的是
@@ -288,17 +288,17 @@ def export_corpus(
     **再分发**没有任何授权。一刀切成一个布尔量，等于把「不能发」误读成「不能用」，
     白白丢掉 32% 的样本（235 -> 348，样本量 +48%）。
 
-    UNKNOWN 先于用途策略检查：未知许可绝不能因为「恰好不是 NON_COMMERCIAL」而漏过。
+    UNKNOWN 先于用途策略检查：未知许可不能因为「恰好不是 NON_COMMERCIAL」而漏过。
     manifest_hash 自包含于 ledger 的首条 payload_hash，确保许可声明也进入证据链。
 
     **本函数不设默认值，且许可 -> 用途的映射是待裁定的法律解读**
-    （见 LICENSE_PERMITS_* 上方的原文摘录）。调用方必须自己声明用途，
+    （见 LICENSE_PERMITS_* 上方的原文摘录）。调用方需自己声明用途，
     代码不替任何人做法律判断。
     """
     incoming = tuple(records)
     unknown = tuple(record.field_id for record in incoming if record.license is DatasetLicense.UNKNOWN)
     if unknown:
-        raise DatasetLicenseError("许可证 UNKNOWN 的记录禁止导出：" + ", ".join(unknown))
+        raise DatasetLicenseError("records with UNKNOWN license cannot be exported: " + ", ".join(unknown))
     if not allow_analysis and not allow_redistribution:
         raise DatasetLicenseError("至少要声明一项用途：allow_analysis 与 allow_redistribution 不能都为 False")
 
