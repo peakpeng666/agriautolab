@@ -1,10 +1,10 @@
 """三层配置池契约：nominal / static-applicable / observed-OK。
 
-三层集合必须彻底分开，任何结果派生集合都不得反过来定义样本全集：
+三层集合需彻底分开，任何结果派生集合都不得反过来定义样本全集：
 
 - N（nominal）：协议声明的全部配置，与实例无关；
 - A（static-applicable）：规划前可知的适用性——问题类型 × 机具能力，
-  **不看 validator 结果**。H3 的 random_applicable 基线从这一层取期望；
+  **不看 validator 结果**。recommender 评估的 random_applicable 基线从这一层取期望；
 - O（observed-OK）：实际跑完并通过 validator 的配置（结果派生）。
 
 恒有 O ⊆ A ⊆ N。O ⊄ A 不是数据现象，而是 applicability 契约有 bug。
@@ -85,9 +85,9 @@ def census_from_runs(
 ) -> dict:
     """从语料 parquet 计算三层普查（状态一律 derived_status）。
 
-    每个 instance 必须恰好含 nominal 配置各一行。缺行、重复行、未知配置，
+    每个 instance 需恰好含 nominal 配置各一行。缺行、重复行、未知配置，
     或同一 instance 内 field/vehicle 身份不一致，都说明输入语料不完整或损坏，
-    必须在形成普查统计和证据之前失败。
+    需在形成普查统计和证据之前失败。
     """
     from agriautolab.pipeline.corpus.derived_status import derive_status
 
@@ -163,29 +163,29 @@ def census_from_runs(
 
 
 def seal_pool_census_ledger(payload: dict, ledger_path: str | Path) -> dict:
-    """把 D2 普查封为 Block D ledger index=1；重复重放必须幂等。
+    """把 pool census 封为基准结果账本 index=1；重复重放需幂等。
 
-    已有完全相同的 index=1 时直接返回；已有冲突 D2 记录、链结构异常，
-    或 D1 genesis 之外出现了别的历史时拒绝改写。
+    已有完全相同的 index=1 时直接返回；已有冲突 pool census 记录、日志结构异常，
+    或 genesis 之外出现了别的历史时拒绝改写。
     """
     ledger_file = Path(ledger_path)
     if not ledger_file.exists():
-        raise ValueError("Block D ledger 不存在；D2 不能绕过 D1 genesis")
+        raise ValueError("基准结果账本不存在；pool census 不能绕过 genesis")
     entries = jsonl_log.read_entries(ledger_file)
     jsonl_log.verify_entries(entries)
     if not entries or entries[0]["index"] != 0 or entries[0]["payload"].get("event") != _BLOCK_D_GENESIS_EVENT:
-        raise ValueError("Block D ledger 缺少合法 D1 genesis")
+        raise ValueError("基准结果账本缺少合法 genesis")
 
     census_entries = [entry for entry in entries if entry["payload"].get("artifact") == _POOL_CENSUS_ARTIFACT]
     if census_entries:
         if len(census_entries) != 1 or census_entries[0]["index"] != 1:
-            raise ValueError("Block D ledger 中 pool_census 位置/数量异常")
+            raise ValueError("基准结果账本中 pool_census 位置/数量异常")
         if census_entries[0]["payload"] != payload:
-            raise ValueError("已封存的 D2 pool_census 与当前重放 payload 冲突")
+            raise ValueError("已封存的 pool census 与当前重放 payload 冲突")
         return census_entries[0]
 
     if len(entries) != 1:
-        raise ValueError("D2 尚未封存，但 ledger 已含 D1 之后的其他事件；拒绝重排历史")
+        raise ValueError("pool census 尚未封存，但账本已含 genesis 之后的其他事件；拒绝重排历史")
     entry = jsonl_log.entry(1, payload)
     with ledger_file.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(entry, ensure_ascii=False, sort_keys=True) + "\n")

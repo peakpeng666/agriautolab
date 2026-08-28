@@ -122,7 +122,7 @@ def test_transit_components_are_reported_separately_from_path_length() -> None:
 
 
 def test_comparator_refuses_when_the_two_sides_used_different_working_crs() -> None:
-    """G-B：投影不一致时残差不可归因给算法，必须抛，不返回空报告、不静默比较。"""
+    """G-B：投影不一致时残差不可归因给算法，需抛，不返回空报告、不静默比较。"""
     with pytest.raises(CrsMismatchError) as error:
         compare_results((result(crs="EPSG:32635"),), (result(crs="EPSG:3301"),))
     message = str(error.value)
@@ -130,7 +130,7 @@ def test_comparator_refuses_when_the_two_sides_used_different_working_crs() -> N
 
 
 def test_comparator_refuses_when_the_two_sides_used_different_route_algorithms() -> None:
-    """路线阶段必须配对。这正是 −38.11% 的由来。"""
+    """路线阶段需配对。这正是 −38.11% 的由来。"""
     with pytest.raises(RouteAlgorithmMismatchError) as error:
         compare_results((result(route="boustrophedon"),), (result(route="snake"),))
     message = str(error.value)
@@ -181,7 +181,7 @@ def test_ours_side_refuses_a_route_algorithm_it_does_not_implement() -> None:
 
 
 def test_env_f2c_hash_is_required_and_sensitive(tmp_path):
-    """§3.1：golden 的录制环境指纹必须进哈希；缺失抛异常，改动任一字段哈希必变。"""
+    """§3.1：golden 的录制环境指纹需进哈希；缺失抛异常，改动任一字段哈希必变。"""
     import json
 
     from agriautolab.validation.f2c import RecordedCsvAdapter

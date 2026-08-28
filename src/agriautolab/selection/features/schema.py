@@ -1,6 +1,6 @@
 """实例特征的规范名词汇表（docs/NAMING.md 的特征部分）。
 
-wire ID（特征键、parquet 的 feature__* 列名、预注册 H2 引用的
+wire ID（特征键、parquet 的 feature__* 列名、预注册 feature-effects 引用的
 row_angle_vs_principal）是证据身份，永不改；规范名只用于 API 与
 论文叙事。L4（选择层）一律通过本表取规范名。
 """

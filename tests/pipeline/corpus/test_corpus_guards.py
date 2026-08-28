@@ -35,7 +35,7 @@ class ConstantClock:
 # ---- 折按地块分组 ----
 
 def test_all_instances_of_one_field_share_one_fold(tmp_path, c_record, c_vehicle, c_configs, c_benchmark):
-    """同地块 2 行向 x 2 行距 = 4 个实例，cv.arff 里必须同折（此前实测散布 8/10 折）。"""
+    """同地块 2 行向 x 2 行距 = 4 个实例，cv.arff 里需同折（此前实测散布 8/10 折）。"""
     corpus_protocol = CorpusProtocol(
         protocol_id="grouped-cv-test",
         benchmark_protocol_hash=c_benchmark.spec_hash(),
@@ -125,7 +125,7 @@ def test_aggregate_reports_effective_pool_degenerate_and_normalized_hv(tmp_path)
         _row("A", "c2", "ok", (12.0, 2.0, 3.0), "F1"),
         # B：只有一个 ok 配置 -> 有效池 1，前沿单点是「没得选」，排除出 singleton 统计
         _row("B", "c1", "ok", (12.0, 2.0, 3.0), "F2"),
-        # C：全部不可行 -> 有效池 0，必须单列，不许在 n_instances 里静默消失
+        # C：全部不可行 -> 有效池 0，需单列，不许在 n_instances 里静默消失
         _row("C", "c1", "not_applicable", None, "F3"),
         _row("C", "c2", "not_applicable", None, "F3"),
     ])
@@ -160,8 +160,8 @@ def test_aggregate_global_fallback_and_missing_reference(tmp_path):
 # ---- 冻结的 13 配置池 ----
 
 # 冻结哈希基线随修正案更新（RS 两槽位替换原零地头 Dubins 对照）。
-# 每次变更必须在 AUDIT_NOTE 留修正案记录——这个常量存在的意义就是让"顺手改一下"过不了测试。
-# 重钉：.gitattributes 强制 LF 后按 LF 字节重算（内容零变化，跨平台一致性；过程见 AUDIT_NOTE）。
+# 这个常量存在的意义就是让"顺手改一下"过不了测试。
+# 重钉：.gitattributes 强制 LF 后按 LF 字节重算（内容零变化，跨平台一致性）。
 # Windows 文本模式曾把文件写成 CRLF，冻结哈希钉了 CRLF 字节 → Linux 检出必炸。
 CORPUS_13_SHA256 = "502b1e9053b598d62daafa0b3a819f3cebc8385cb356aa908433582b93083a57"
 
@@ -174,9 +174,9 @@ def _load_run_corpus():
     return module
 
 
-def test_corpus_13_is_frozen_with_reasons() -> None:
-    """文件哈希是回归基线：改一个字节都必须显式改这里的常量。"""
-    path = Path(__file__).resolve().parents[3] / "configs" / "corpus_13.json"
+def test_standard_configs_is_frozen_with_reasons() -> None:
+    """文件哈希是回归基线：改一个字节都需显式改这里的常量。"""
+    path = Path(__file__).resolve().parents[3] / "configs" / "standard_configs.json"
     assert hashlib.sha256(path.read_bytes()).hexdigest() == CORPUS_13_SHA256
     items = json.loads(path.read_text(encoding="utf-8"))
     assert len(items) == 13
@@ -185,13 +185,13 @@ def test_corpus_13_is_frozen_with_reasons() -> None:
     assert len({config.config_id() for config in configs}) == 13   # 无重复配置
 
 
-def test_corpus_13_feasibility_smoke(c_benchmark, robot) -> None:
-    """全部 13 配置在标准实例上必须产出 ok：零地头槽位换 RS 后（O1 落地）已无结构性不可行组合。
+def test_standard_configs_feasibility_smoke(c_benchmark, robot) -> None:
+    """全部 13 配置在标准实例上需产出 ok：零地头槽位换 RS 后（O1 落地）已无结构性不可行组合。
 
     RS 配置用可倒车机具验证（can_reverse=True）；Dubins 配置用默认前向机具。
     """
     module = _load_run_corpus()
-    path = Path(__file__).resolve().parents[3] / "configs" / "corpus_13.json"
+    path = Path(__file__).resolve().parents[3] / "configs" / "standard_configs.json"
     configs = module._load_configs(path)
     field = PolygonSpec(geometry_id="field", exterior=(
         Point(x=0.0, y=0.0), Point(x=100.0, y=0.0), Point(x=100.0, y=50.0),
@@ -237,7 +237,7 @@ def test_zero_headland_reeds_shepp_is_feasible_and_dubins_is_not(c_benchmark, ro
 
 
 def test_reverse_segments_rejected_without_reverse_gear(c_benchmark, robot) -> None:
-    """校验器倒车闸：含 reversing 段的路径在不可倒车机具上必须 INFEASIBLE_KINEMATICS。"""
+    """校验器倒车闸：含 reversing 段的路径在不可倒车机具上需 INFEASIBLE_KINEMATICS。"""
     from agriautolab.contracts.artifacts import PathArtifact, PathSegment
     from agriautolab.contracts.enums import PathSegmentKind, RunStatus
     from agriautolab.contracts.geometry import LineStringSpec

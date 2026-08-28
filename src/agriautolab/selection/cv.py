@@ -1,4 +1,4 @@
-"""Block D 的 field-grouped CV 身份与冻结折指派。
+"""field-grouped CV 身份与冻结折指派。
 
 选择层只消费这里生成的 field -> fold 映射，不在训练时重新随机划分。
 折算法用 SHA-256(seed, field_id) 形成稳定伪随机顺序，再 round-robin 分配：
@@ -34,7 +34,7 @@ class CvFoldRecord(BaseModel):
 
 
 class CvAssignmentEvidence(BaseModel):
-    """D1 折表的机器可验身份证据。"""
+    """CV 折表（账本 genesis 记录）的机器可验身份证据。"""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -61,7 +61,7 @@ class CvAssignmentEvidence(BaseModel):
             raise ValueError("n_training_fields 与 assignments 数量不一致")
         field_ids = [item.field_id for item in self.assignments]
         if field_ids != sorted(field_ids):
-            raise ValueError("assignments 必须按 field_id 排序，保证规范序列化")
+            raise ValueError("assignments must be sorted by field_id for canonical serialization")
         if len(field_ids) != len(set(field_ids)):
             raise ValueError("同一 field_id 只能出现一次")
         if any(item.fold > self.n_folds for item in self.assignments):
@@ -77,7 +77,7 @@ class CvAssignmentEvidence(BaseModel):
         if self.assignment_hash != assignment_hash(self.assignments):
             raise ValueError("assignment_hash 与 assignments 不一致")
         if self.spec_hash != content_hash(_spec_payload(self)):
-            raise ValueError("spec_hash 与 D1 完整规范不一致")
+            raise ValueError("spec_hash 与 genesis 完整规范不一致")
         return self
 
 
@@ -102,9 +102,9 @@ def assign_grouped_folds(
     if any(not item for item in raw):
         raise ValueError("field_id 不能为空字符串")
     if len(raw) != len(set(raw)):
-        raise ValueError("field_ids 必须互异；重复输入会掩盖分组错误")
+        raise ValueError("field_ids must be distinct; duplicate input masks grouping errors")
     if n_folds < 2:
-        raise ValueError("n_folds 必须 >= 2")
+        raise ValueError("n_folds must be >= 2")
     if n_folds > len(raw):
         raise ValueError("n_folds 不能超过训练田数量")
 
@@ -132,11 +132,11 @@ def _sha256_file(path: Path) -> str:
 
 
 def field_ids_from_manifest(manifest: dict) -> tuple[str, ...]:
-    """从 v7 manifest 的许可证表恢复完整 field universe。
+    """从 dataset-split manifest 的许可证表恢复完整 field universe。
 
     不能从 effective_pool_size_by_instance 反推全集：该映射是结果摘要，零有效池
     或前处理阶段无有效实例的困难田可能不出现。`licenses` 则由导出语料逐田写入，
-    与结果无关，正好是 D1 需要的全语料身份源。
+    与结果无关，正好是 genesis 需要的全语料身份源。
     """
     licenses = manifest.get("licenses")
     if not isinstance(licenses, dict) or not licenses:
@@ -166,7 +166,7 @@ def build_cv_assignment_evidence(
     n_folds: int = CV_FOLDS,
     seed: int = CV_SEED,
 ) -> CvAssignmentEvidence:
-    """由冻结 v7 manifest + holdout seal 构造唯一 D1 折表。"""
+    """由冻结 dataset-split manifest + holdout partition 构造唯一 genesis 折表。"""
     manifest_file = Path(manifest_path)
     holdout_file = Path(holdout_path)
     manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
@@ -237,10 +237,10 @@ def register_cv_assignment(
     assignment_path: str | Path,
     ledger_path: str | Path,
 ) -> dict:
-    """把 CV 折表封为 Block D 分析账本的 genesis；重复执行只允许精确重放。
+    """把 CV 折表封为基准结果账本的 genesis；重复执行只允许精确重放。
 
-    后续 D2/D3 可在同一 JSONL 链上追加。若链已存在且第一条与当前折表不一致，
-    直接失败，禁止用“重新生成”覆盖既有分析历史。
+    后续 pool census / selection protocol 可在同一 JSONL 日志上追加。若链已存在且第一条与当前折表不一致，
+    直接失败，不得用“重新生成”覆盖既有分析历史。
     """
     ledger_file = Path(ledger_path)
     payload = cv_assignment_ledger_payload(evidence, assignment_path)

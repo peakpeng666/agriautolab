@@ -1,6 +1,6 @@
-"""derived_status：validator 事实优先于运行时归并（单一真相源，v7 复核确立）。
+"""derived_status：validator 事实优先于运行时归并（单一真相源，dataset-split 复核确立）。
 
-v7 实测背景：槽 B（no_headland+RS）在可倒车机具上 2 020 行
+实测背景：槽 B（no_headland+RS）在可倒车机具上 2 020 行
 runstatus=not_applicable 而 failure_reason=validator_rejected:outside_area——
 直接 groupby("runstatus") 会把它们读成「没跑过」。
 """
@@ -57,7 +57,7 @@ def test_diff_counts_keyed_by_class():
 
 def test_aggregation_path_branches_only_through_derived_status():
     # 结构性纪律：aggregate.py 不许拿 runstatus 直接与字面量比较分叉——
-    # 状态判断必须经过派生层，否则单一真相源在聚合路径上失守。
+    # 状态判断需经过派生层，否则单一真相源在聚合路径上失守。
     source = (SRC / "pipeline" / "corpus" / "aggregate.py").read_text(encoding="utf-8")
     forbidden = ['runstatus") ==', "runstatus\"] ==", "runstatus\") !=", "runstatus\"] !="]
     for pattern in forbidden:
@@ -66,7 +66,7 @@ def test_aggregation_path_branches_only_through_derived_status():
 
 
 def test_manifest_carries_derived_status_contract(tmp_path, c_record, c_vehicle, c_configs, c_benchmark, c_corpus_protocol):
-    # 未来运行的 manifest 必须自带派生定义与分歧计数（空 dict 也是显式的「无分歧」）
+    # 未来运行的 manifest 需自带派生定义与分歧计数（空 dict 也是显式的「无分歧」）
     from agriautolab.pipeline.corpus.runner import CodeVersion, CorpusRunner
 
     class ConstantClock:

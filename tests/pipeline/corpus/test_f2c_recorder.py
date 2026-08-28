@@ -1,8 +1,8 @@
-"""录制壳的静态守卫：它必须能在 WSL / python3.10 上跑，而这里是 Windows / 3.12。
+"""录制壳的静态守卫：它需能在 WSL / python3.10 上跑，而这里是 Windows / 3.12。
 
 跨版本兼容性没法在本进程里真跑出来，所以这组测试守的是**能静态守住的那部分**：
 不 import agriautolab、只用 3.10 兼容语法、与适配器共用同一份链路实现。
-真跑的证据在 AUDIT_NOTE 里（WSL 上的实际录制输出）。
+真跑的证据记录在 study-001-frozen tag（WSL 上的实际录制输出）。
 """
 
 import ast
@@ -83,7 +83,7 @@ def test_recorder_and_adapter_share_one_chain_implementation() -> None:
 
 
 def test_recorder_csv_columns_match_the_locked_schema() -> None:
-    """录制壳写的列必须与 RecordedCsvAdapter 认的列逐位一致，否则录完才发现读不了。"""
+    """录制壳写的列需与 RecordedCsvAdapter 认的列逐位一致，否则录完才发现读不了。"""
     from agriautolab.validation.f2c import _CSV_COLUMNS
 
     namespace: dict = {}

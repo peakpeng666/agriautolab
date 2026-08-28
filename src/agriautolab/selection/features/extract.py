@@ -1,7 +1,7 @@
 """实例特征提取：农业几何难度量，全部解析、确定性、带提取耗时。
 
 耗时与数值一起返回（ASlib 的 feature_costs）：若提取一个特征比跑满整个
-算法池还慢，推荐器就没有存在意义——这个数必须能被读者看到，
+算法池还慢，推荐器就没有存在意义——这个数需能被读者看到，
 而不是埋在实现里。
 """
 
@@ -117,7 +117,7 @@ def _elongation(free: BaseGeometry) -> float:
         math.hypot(end[0] - start[0], end[1] - start[1])
         for start, end in zip(coords, coords[1:] + coords[:1])
     ]
-    # 带洞几何的 MBR 顶点可能出现重复点，零长边必须剔除（长宽比除以 0 没有意义）
+    # 带洞几何的 MBR 顶点可能出现重复点，零长边需剔除（长宽比除以 0 没有意义）
     positive = [length for length in edge_lengths if length > 1e-12]
     if not positive:
         return 1.0

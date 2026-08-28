@@ -1,4 +1,4 @@
-"""D4 偏好条件推荐器：每个配置一个固定规格的多输出 ExtraTrees。"""
+"""偏好条件推荐器：每个配置一个固定规格的多输出 ExtraTrees。"""
 
 from __future__ import annotations
 
@@ -48,7 +48,7 @@ class PreferenceConditionedRecommender:
 
         nominal_sets = {instance.nominal for instance in instances}
         if len(nominal_sets) != 1:
-            raise ValueError("训练实例的 nominal pool 必须一致")
+            raise ValueError("training instances must share the same nominal pool")
         nominal = next(iter(nominal_sets))
         models: dict[str, object] = {}
         for config_id in sorted(nominal):
@@ -80,7 +80,7 @@ class PreferenceConditionedRecommender:
             raise ValueError("推荐器尚未 fit")
         feature_vector = tuple(float(value) for value in features)
         if len(feature_vector) != len(SELECTION_FEATURE_IDS):
-            raise ValueError(f"特征维数必须为 {len(SELECTION_FEATURE_IDS)}")
+            raise ValueError(f"feature dimension must be {len(SELECTION_FEATURE_IDS)}")
         candidates = sorted(set(applicable_config_ids))
         if not candidates:
             raise ValueError("A_x 为空，无法推荐")
@@ -98,7 +98,7 @@ class PreferenceConditionedRecommender:
 
     def recommend(self, features: Sequence[float], applicable_config_ids: Iterable[str], preference_index: int) -> str:
         if preference_index < 0 or preference_index >= 22:
-            raise ValueError("preference_index 必须在 [0, 21]")
+            raise ValueError("preference_index must be within [0, 21]")
         predictions = self.predict_regrets(features, applicable_config_ids)
         return min((values[preference_index], config_id) for config_id, values in predictions.items())[1]
 

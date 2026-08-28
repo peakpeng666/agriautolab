@@ -4,7 +4,7 @@
 
 理由（实测，2026-08-21）：F2C binding 绑在 WSL 的 python3.10，agriautolab 要求 3.11+
 （contracts/geometry.py 用了 typing.Self）。两进程是既定架构，不是障碍。
-于是链路必须能被两边同时使用：
+于是链路需能被两边同时使用：
 
 - Windows / py3.11+：`PythonBindingAdapter` 直接 import 本模块；
 - WSL / py3.10：`scripts/f2c_recorder/record_golden.py` 用 importlib
@@ -16,13 +16,13 @@
 
 陷阱：本模块里任何 3.11+ 语法（typing.Self、X | Y 的运行期求值、除
 `from __future__ import annotations` 之外的新式注解）都会让 WSL 侧录制直接 ImportError，
-而且只在录 golden 时才炸。tests/block_c/test_f2c_recorder.py 静态守住这条。
+而且只在录 golden 时才炸。tests/pipeline/corpus/test_f2c_recorder.py 静态守住这条。
 """
 
 from __future__ import annotations
 
 # 协议声明的路线算法名 -> F2C route planner 类名。
-# 只映射语义确实相同的；名字相近但访问顺序不同的绝不入表。
+# 只映射语义确实相同的；名字相近但访问顺序不同的不入表。
 F2C_ROUTE_PLANNERS = {
     "boustrophedon": "RP_Boustrophedon",
     "snake": "RP_Snake",

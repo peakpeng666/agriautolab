@@ -78,8 +78,9 @@ def test_frozen_files_untouched():
     """字节冻结件的哈希门：f2c.py 适配器与语料池文件不允许被任何重构改动。
 
     注意：f2c.py 随 cross_validation→validation 搬迁时仅改写了 3 行导入路径
-    （evidence.hashing→pipeline.hashing、cross_validation→validation），
-    适配逻辑字节未动；哈希门钉住搬迁后的新字节（旧字节哈希见 study-001-frozen tag）。
+    （evidence.hashing→pipeline.hashing、cross_validation→validation），本轮又
+    只改写了 3 处注释（移除内部代号），适配逻辑字节未动；哈希门钉住
+    改写后的新字节（旧字节哈希见 study-001-frozen tag）。
     """
     root = Path(__file__).resolve().parents[3]
     import hashlib
@@ -88,8 +89,8 @@ def test_frozen_files_untouched():
         return hashlib.sha256(path.read_bytes()).hexdigest()
 
     assert sha256(root / "src/agriautolab/validation/f2c.py") == (
-        "40e5d910ff623943ae07ada4f4183eee1e652fea38007dcdfaf8f061ddc5e3b5"
+        "365ab4d366541ee2c7d2a1eed4b5b6e6400fd03ec9a8d288f4abccb0e80e1978"
     )
-    assert sha256(root / "configs/corpus_13.json") == (
+    assert sha256(root / "configs/standard_configs.json") == (
         "502b1e9053b598d62daafa0b3a819f3cebc8385cb356aa908433582b93083a57"
     )

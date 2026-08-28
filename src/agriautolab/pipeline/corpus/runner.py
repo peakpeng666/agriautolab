@@ -67,7 +67,7 @@ def discover_code_version(root: str | Path) -> CodeVersion:
 
 
 def run_key(*, problem_hash: str, vehicle_hash: str, config_id: str, protocol_hash: str, code_version: str) -> str:
-    """唯一运行键；算法代码变了就必须变键，不能复用旧结果。"""
+    """唯一运行键；算法代码变了就需变键，不能复用旧结果。"""
     return content_hash({
         "problem_hash": problem_hash,
         "vehicle_hash": vehicle_hash,
@@ -215,7 +215,7 @@ def _failure_row(
     reference_columns: dict[str, object],
     features,
 ) -> dict[str, object]:
-    """失败行统一构造：失败按数据记录，类别必须正确，行 schema 与成功行一致。"""
+    """失败行统一构造：失败按数据记录，类别需正确，行 schema 与成功行一致。"""
     return {
         "run_key": key,
         "field_id": record.field_id,
@@ -271,7 +271,7 @@ class CorpusRunner:
             raise ValueError(
                 "CorpusProtocol 内的 vehicles_hash 与实际机具清单不一致："
                 f"协议记 {corpus_protocol.vehicles_hash[:12]}，实跑 {_ch(tuple(v.model_dump(mode='json') for v in vehicles))[:12]}。"
-                "机具清单是实验身份的一部分，改清单必须改协议"
+                "机具清单是实验身份的一部分，改清单需改协议"
             )
         root = Path(output_dir)
         root.mkdir(parents=True, exist_ok=True)
@@ -349,7 +349,7 @@ class CorpusRunner:
                                     row[f"metric__{metric.metric_id}"] = metric.value
                             except KinematicModelError as error:
                                 # 算法与机具不匹配（如 RS 之于不可倒车车辆）是 NOT_APPLICABLE
-                                # 不是崩溃：失败按数据记录，类别必须正确。
+                                # 不是崩溃：失败按数据记录，类别需正确。
                                 row = _failure_row(
                                     key, record, run_instance_id, vehicle_index, config,
                                     RunStatus.NOT_APPLICABLE, error, reference_columns, features,
@@ -384,7 +384,7 @@ class CorpusRunner:
             counts[status] = counts.get(status, 0) + 1
         # runstatus 是运行时归并决策；derived_status 由 failure_reason 派生（validator
         # 事实优先）。两者分歧逐类进 manifest：归并内容保持可见，不只记录在
-        # AUDIT_NOTE 里（v7 复核：2 020 行 not_applicable 实为 outside_area 拒绝）。
+        # 复核记录：2 020 行 not_applicable 实为 outside_area 拒绝。
         from agriautolab.pipeline.corpus.derived_status import (
             DERIVED_STATUS_DEFINITION, derive_status, status_diff_counts,
         )
@@ -439,7 +439,7 @@ class CorpusRunner:
         manifest = {**manifest_base, "manifest_hash": manifest_hash}
         (root / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
         _write_artifact_ledger(root / "ledger.jsonl", manifest_hash, selected)
-        # 跑完压缩断点（留痕见 AUDIT_NOTE）：
+        # 跑完压缩断点：
         # Include full row data to preserve path_json on resume (keys-only drops geometry columns);
         # Compress losslessly with deterministic mtime=0 for reproducible byte output.
         import gzip as _gzip

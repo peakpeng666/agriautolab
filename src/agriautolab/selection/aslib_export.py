@@ -37,11 +37,11 @@ def _write_arff(path: Path, relation: str, attributes: tuple[tuple[str, str], ..
 def _fold(group_key: str, folds: int) -> int:
     """折按地块分组。
 
-    同一地块派生出的全部实例（行方向 x 行距 x 机具）必须落在同一折。
+    同一地块派生出的全部实例（行方向 x 行距 x 机具）需落在同一折。
     理由：实例特征里绝大多数只由地块多边形决定（单机具语料下 10 个里 9 个恒定，
     多机具变幅宽时也有 7 个恒定），按实例分折等于把同一块地同时放进训练与测试，
     推荐器可以靠记住地块拿分。ASlib 的 cv 固定假设实例独立；我们的实例不独立，
-    所以必须扩展它——description.txt 里已声明这一偏离。
+    所以需扩展它——description.txt 里已声明这一偏离。
     Python hash() 每进程有随机盐，不能用；SHA-256 分折两次导出逐字节相同。
     """
     digest = hashlib.sha256(group_key.encode("utf-8")).digest()
@@ -58,13 +58,13 @@ def export_aslib_scenarios(
     """按目标拆成三个 ASlib 风格目录，并按 crossable 分层标注。
 
     ASlib 原格式假设单目标；AgriAutoLab 是三目标。这里的兼容策略是“每个目标一个
-    scenario”，并在 description.txt 明说三者来自同一运行语料。绝不把三目标加权成
+    scenario”，并在 description.txt 明说三者来自同一运行语料。不把三目标加权成
     一个伪单目标，否则下游会误以为权重是 benchmark 的标准定义。
 
     row_crossable 无默认值：crossable 不做特征、做分层。它一变，
     crossing_penalty 从有限变 inf，可行性整体改变——可穿越与不可穿越是两个问题族，
     混在一个推荐器里训练是错的。分层的载体是 CorpusProtocol.row_crossable（进协议哈希），
-    但导出目录必须自己也带上，否则两层导出的目录长得一模一样、下游无从分辨。
+    但导出目录需自己也带上，否则两层导出的目录长得一模一样、下游无从分辨。
     """
     try:
         import pyarrow.parquet as pq
@@ -77,7 +77,7 @@ def export_aslib_scenarios(
     feature_names = sorted(name for name in table.column_names if name.startswith("feature__"))
     feature_cost_names = sorted(name for name in table.column_names if name.startswith("feature_cost__"))
     instances = sorted({str(row["instance_id"]) for row in rows})
-    # 折的分组键是地块，不是实例：field_id 必须逐实例可查（run_corpus 的产物自带该列）。
+    # 折的分组键是地块，不是实例：field_id 需逐实例可查（run_corpus 的产物自带该列）。
     field_of_instance: dict[str, str] = {}
     for row in rows:
         field_of_instance.setdefault(str(row["instance_id"]), str(row["field_id"]))

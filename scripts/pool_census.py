@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""D2 普查：nominal / static-applicable / observed-OK 三层池，落盘 + Block D ledger。
+"""池普查：nominal / static-applicable / observed-OK 三层池，落盘 + 基准结果账本。
 
 用法（数据机）：
   python scripts/pool_census.py \
     --runs ~/agriautolab-data/out_v7/runs.parquet \
-    --configs configs/corpus_13.json \
+    --configs configs/standard_configs.json \
     --vehicles examples/corpus/vehicles.json \
-    --cv evidence/v7/cv_assignment.json \
+    --cv dataset_splits/cv_assignment.json \
     --output benchmarks/results/pool_census.json \
     --ledger benchmarks/results/benchmark_ledger.jsonl
 """
@@ -75,7 +75,7 @@ def main() -> None:
     hold = [field for field in fields_doc if field["split"] == "holdout"]
     doc = {
         "study_id": "AGRIPLAN-PARETO-001",
-        "stage": "D2-pool-census",
+        "stage": "pool-census",
         "sources": {
             "runs_parquet_sha256": _sha256_file(args.runs),
             "configs_sha256": _sha256_file(args.configs),
@@ -96,7 +96,7 @@ def main() -> None:
             "holdout_fields": len(hold),
             "train_mean_ok_per_instance": round(statistics.mean(field["mean_ok"] for field in train), 4),
             "holdout_mean_ok_per_instance": round(statistics.mean(field["mean_ok"] for field in hold), 4),
-            "holdout_note": "holdout 的 O 层聚合仅描述性；建模消费在 H3 开留出集前禁止",
+            "holdout_note": "holdout 的 O 层聚合仅描述性；建模消费在 recommender 评估开留出集前不得",
         },
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)

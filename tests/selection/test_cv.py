@@ -37,7 +37,7 @@ def test_seed_changes_assignment() -> None:
 
 
 def test_invalid_group_inputs_fail_loudly() -> None:
-    with pytest.raises(ValueError, match="互异"):
+    with pytest.raises(ValueError, match="distinct"):
         assign_grouped_folds(["a", "a"], n_folds=2)
     with pytest.raises(ValueError, match="超过"):
         assign_grouped_folds(["a", "b"], n_folds=3)
@@ -46,7 +46,7 @@ def test_invalid_group_inputs_fail_loudly() -> None:
 def test_field_universe_comes_from_result_independent_manifest_licenses() -> None:
     manifest = {
         "licenses": {"field_a": "cc0", "field_b": "cc0"},
-        # field_b 模拟零有效池/无摘要田：它不在 result-derived 映射里也不能被 D1 丢掉。
+        # field_b 模拟零有效池/无摘要田：它不在 result-derived 映射里也不能被 genesis 丢掉。
         "effective_pool_size_by_instance": {
             "field_a:principal_axis:0:0.75:vehicle:0": 1,
         },

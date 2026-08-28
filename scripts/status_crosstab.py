@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""config × 机具 × derived_status 交叉表 + 有效池分布（H1 前置，v7 复核 §六）。
+"""config × 机具 × derived_status 交叉表 + 有效池分布（Pareto 分析前置，dataset-split 复核）。
 
 验证器具名拒绝若在配置之间分布高度不均，前沿实际是在「事实上更小的池」上
 算出来的——这张表把每个配置-机具组合的 ok / 具名拒绝 / 配对 NA 占比摆到
 明面上，并报有效池的完整分布（不只中位：均值 6.63 vs 中位 10 的重低尾
-必须可见）与零 ok 实例计数。
+需可见）与零 ok 实例计数。
 
 状态一律取 derived_status（validator 事实优先于运行时归并）。
 用法：
   python scripts/status_crosstab.py --runs out_v7/runs.parquet \
-      --configs configs/corpus_13.json --out evidence/v7/
+      --configs configs/standard_configs.json --out dataset_splits/
 """
 
 from __future__ import annotations
@@ -45,7 +45,7 @@ def _config_names(configs_path: Path) -> dict[str, str]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--runs", type=Path, required=True)
-    parser.add_argument("--configs", type=Path, default=Path(__file__).resolve().parents[1] / "configs" / "corpus_13.json")
+    parser.add_argument("--configs", type=Path, default=Path(__file__).resolve().parents[1] / "configs" / "standard_configs.json")
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
@@ -116,7 +116,7 @@ def main() -> None:
     )
 
     lines = [
-        "# config × 机具 × derived_status 交叉表（H1 前置）", "",
+        "# config × 机具 × derived_status 交叉表（Pareto 分析前置）", "",
         f"行数 {n_rows}；derived_status 分歧：{dict(diffs) or '无'}", "",
         "| 配置 | 机具 | 行数 | ok | ok% | 具名拒绝% | NA | 事实上出池(≥80%拒) |",
         "|---|---:|---:|---:|---:|---:|---:|:--:|",

@@ -1,7 +1,7 @@
-"""CRS 声明必须可证伪。
+"""CRS 声明需可证伪。
 
 「调用方声明、系统不核对的值」是地头宽度可证伪性那个洞的同构体。
-O2 的修法是「喂真实的 source_crs=EPSG:4326」——那次跑通了，
+F2B 交叉验证的修法是「喂真实的 source_crs=EPSG:4326」——那次跑通了，
 但下次声明与实际不一致时仍然没有任何东西会响。这组测试就是让它响。
 """
 
@@ -22,7 +22,7 @@ PROJECTED_FIELD = box(470526.2, 6447507.1, 470640.5, 6447676.8)
 
 
 def test_geographic_coordinates_declared_as_projected_are_rejected() -> None:
-    """O2 事故本体：声明 EPSG:3301，实际是度。5.0 米地头会变成 5.0 度。"""
+    """事故本体：声明 EPSG:3301，实际是度。5.0 米地头会变成 5.0 度。"""
     with pytest.raises(CrsDeclarationError) as error:
         _verify_declared_crs(GEOGRAPHIC_FIELD, "EPSG:3301")
     message = str(error.value)
@@ -32,7 +32,7 @@ def test_geographic_coordinates_declared_as_projected_are_rejected() -> None:
 
 @pytest.mark.parametrize("declared", ["EPSG:3301", "EPSG:28992", "EPSG:3346"])
 def test_all_three_portal_declarations_are_rejected_on_degree_coordinates(declared: str) -> None:
-    """三个国家门户声明的投影 CRS 都必须在度坐标上被拒，不是只拦住其中一个。"""
+    """三个国家门户声明的投影 CRS 都需在度坐标上被拒，不是只拦住其中一个。"""
     with pytest.raises(CrsDeclarationError):
         _verify_declared_crs(GEOGRAPHIC_FIELD, declared)
 
@@ -44,7 +44,7 @@ def test_projected_coordinates_declared_as_geographic_are_rejected() -> None:
 
 
 def test_self_consistent_declarations_pass() -> None:
-    """真话必须放行，否则这条检查就只是个噪声源。"""
+    """真话需放行，否则这条检查就只是个噪声源。"""
     _verify_declared_crs(GEOGRAPHIC_FIELD, "EPSG:4326")
     _verify_declared_crs(PROJECTED_FIELD, "EPSG:32635")
 
@@ -66,7 +66,7 @@ def test_small_projected_field_inside_plus_minus_180_is_not_killed_by_range_alon
 
 
 def test_to_metric_crs_verifies_before_the_already_metric_fast_path() -> None:
-    """核对必须在快速通道之前：那条通道原样返回几何，错了也看不出来。"""
+    """核对需在快速通道之前：那条通道原样返回几何，错了也看不出来。"""
     with pytest.raises(CrsDeclarationError):
         to_metric_crs(GEOGRAPHIC_FIELD, source_crs="EPSG:28992")
 

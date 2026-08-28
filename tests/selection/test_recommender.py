@@ -1,4 +1,4 @@
-"""D4 推荐器与冻结 field-CV 的回归测试。"""
+"""推荐器与冻结 field-CV 的回归测试。"""
 
 import pytest
 

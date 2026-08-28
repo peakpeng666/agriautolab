@@ -1,4 +1,4 @@
-"""冻结 D1 field folds 上的 D4 交叉验证；统计单位始终是田。"""
+"""冻结 field folds 上的交叉验证；统计单位始终是田。"""
 
 from __future__ import annotations
 
@@ -132,7 +132,7 @@ def run_frozen_grouped_cv(
     cv_spec_hash: str,
     pool_hash: str,
 ) -> tuple[FoldEvaluation, ...]:
-    """严格消费 D1 已落盘的 field→fold；不接受临时重新 split。"""
+    """严格消费已落盘的 field→fold；不接受临时重新 split。"""
     if not instances:
         raise ValueError("CV 实例不能为空")
     instance_fields = {instance.field_id for instance in instances}
@@ -143,7 +143,7 @@ def run_frozen_grouped_cv(
         )
     folds = sorted(set(fold_of.values()))
     if folds != list(range(1, 11)):
-        raise ValueError(f"冻结 CV 必须恰好是 1..10 折，得到 {folds}")
+        raise ValueError(f"frozen CV must have exactly folds 1..10, got {folds}")
 
     nominal_sets = {instance.nominal for instance in instances}
     if len(nominal_sets) != 1:

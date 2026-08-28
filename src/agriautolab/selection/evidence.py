@@ -1,4 +1,4 @@
-"""D3-D4 协议与结果的 Block D 证据封存。"""
+"""selection protocol 与 CV 结果的基准结果账本封存。"""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ def write_selection_protocol(*, cv_spec_hash: str, pool_hash: str, path: str | P
 
 
 def seal_selection_protocol(*, protocol_path: str | Path, ledger_path: str | Path) -> dict:
-    """把 selection protocol 封为 Block D index=2；重复重放保持字节不变。"""
+    """把 selection protocol 封为基准结果账本 index=2；重复重放保持字节不变。"""
     protocol_file = Path(protocol_path)
     document = json.loads(protocol_file.read_text(encoding="utf-8"))
     cv_spec_hash = str(document["cv_spec_hash"])
@@ -53,7 +53,7 @@ def seal_selection_protocol(*, protocol_path: str | Path, ledger_path: str | Pat
             raise ValueError("已封存的 selection protocol 与当前重放冲突")
         return existing[0]
     if len(entries) != 2:
-        raise ValueError("selection protocol 必须紧接 D1/D2，拒绝重排 Block D 历史")
+        raise ValueError("selection protocol 必须紧接 genesis/pool census，拒绝重排基准结果历史")
     entry = jsonl_log.entry(2, payload)
     with ledger_file.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(entry, ensure_ascii=False, sort_keys=True) + "\n")

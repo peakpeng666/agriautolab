@@ -101,13 +101,13 @@ def test_headland_collapse_is_not_applicable_not_crash(tmp_path, c_benchmark):
     assert len(rows) == 2
     statuses = sorted((row["runstatus"], "塌缩" in (row["failure_reason"] or "")) for row in rows)
     assert ("not_applicable", True) in statuses
-    # 对照配置不塌缩：具名状态（ok 或任何具名失败类），且绝不能是 crash/other
+    # 对照配置不塌缩：具名状态（ok 或任何具名失败类），且不能是 crash/other
     assert any(status not in {"crash", "other"} and not collapsed
                for status, collapsed in statuses)
 
 
 def test_corpus_run_status_vocabulary_has_no_other_bucket():
-    """分类完备性：具名状态映射必须覆盖 validator 全部拒绝原因，永不产出 other。
+    """分类完备性：具名状态映射需覆盖 validator 全部拒绝原因，永不产出 other。
 
     未知原因/缺原因当场抛 ValueError（响亮失败），这是对「新增拒绝原因忘了登记」
     的结构性防御——兜底桶会把它静默吞掉。
@@ -155,7 +155,7 @@ def test_corpus_run_status_vocabulary_has_no_other_bucket():
 
 
 def test_manifest_runstatus_counts_have_no_other(tmp_path, c_record, c_vehicle, c_configs, c_benchmark, c_corpus_protocol):
-    """验收：跑一轮混合语料，manifest 的 runstatus_counts 里 other 必须为 0。"""
+    """验收：跑一轮混合语料，manifest 的 runstatus_counts 里 other 需为 0。"""
     import pyarrow.parquet as pq
 
     root = tmp_path / "runs"
@@ -169,7 +169,7 @@ def test_manifest_counts_zero_ok_instances_from_aggregator(tmp_path, c_benchmark
     """单一真相源：零 ok 实例不再静默消失，计数来自聚合器。
 
     构造：大田（有 ok）+ 12 米宽小田（两个 uniform 配置 8/12 米地头全部塌缩）→
-    小田实例有效池 0，必须被 n_instances_with_zero_ok_configs 数到。
+    小田实例有效池 0，需被 n_instances_with_zero_ok_configs 数到。
     注：不能用 no_headland 制造失败——干净矩形上零地头 Dubins 的 Pi-turn 合法
     （解析真值场景），实测 ok；塌缩才是确定性的全灭路径。
     """

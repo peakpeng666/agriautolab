@@ -1,4 +1,4 @@
-"""D3-D4 协议先于结果封存的证据测试。"""
+"""selection 协议先于结果封存的证据测试。"""
 
 import hashlib
 import json
@@ -60,7 +60,7 @@ def test_selection_protocol_sealing_is_index_two_and_idempotent(tmp_path: Path):
     entries = tuple(json.loads(line) for line in ledger.read_text(encoding="utf-8").splitlines())
     jsonl_log.verify_entries(entries)
     # 长度不硬编码：后续合法封存（训练执行 index=3 等）不应打破本测试；
-    # 结构契约 = 首三条语义固定 + 链验证 + 若有第四条必须是训练封存四哈希。
+    # 结构契约 = 首三条语义固定 + 链验证 + 若有第四条需是训练封存四哈希。
     assert entries[0]["payload"].get("event") == "cv_assignment_sealed"
     assert [e["payload"].get("artifact") for e in entries[1:3]] == ["pool_census", "benchmark_cv_protocol"]
     if len(entries) >= 4:

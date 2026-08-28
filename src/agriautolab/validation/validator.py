@@ -70,7 +70,7 @@ class PathValidator:
     ) -> ValidationResult:
         """headland 传的是地头阶段的产物，不是任意几何：分母只能来自阶段输出，或者 None 表示没跑地头。
 
-        产物本身不携带宽度，所以传了 headland 就必须同时传 headland_width_m，
+        产物本身不携带宽度，所以传了 headland 就需同时传 headland_width_m，
         否则分母 provenance 缺少地头配置、事后无法对账。
         """
         if not path.segments:
@@ -101,7 +101,7 @@ class PathValidator:
             if collision_area(segment_path, obstacle_union, body_width_m=robot.body_width_m, scale_hint=scale_hint) > protocol.area_epsilon_m2:
                 return ValidationResult(status=RunStatus.COLLISION, failure_reason="validator_rejected:collision")
 
-        # 可原地转向的车没有曲率上界；这里必须先分支，否则 1/0 会把校验器本身炸掉。
+        # 可原地转向的车没有曲率上界；这里需先分支，否则 1/0 会把校验器本身炸掉。
         curvature_limit = math.inf if robot.can_turn_in_place else 1.0 / robot.min_turning_radius_m
         if max_abs_declared_curvature(path) > curvature_limit * (1.0 + 1e-12):
             return ValidationResult(
@@ -110,7 +110,7 @@ class PathValidator:
             )
 
         # 倒车段只属于可倒车机具：Reeds-Shepp 路径含 reversing 段，纯前向车辆
-        # （can_reverse=False）开着它物理上不成立，必须在门口拒绝而不是假装可行。
+        # （can_reverse=False）开着它物理上不成立，需在门口拒绝而不是假装可行。
         if any(segment.reversing for segment in path.segments) and not robot.can_reverse:
             return ValidationResult(
                 status=RunStatus.INFEASIBLE_KINEMATICS,

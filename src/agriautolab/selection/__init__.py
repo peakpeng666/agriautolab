@@ -1,4 +1,4 @@
-"""Block D 选择层：冻结身份、评估协议与偏好条件推荐器。"""
+"""选择层：冻结身份、评估协议与偏好条件推荐器。"""
 
 from agriautolab.selection.cv import (
     CV_ASSIGNMENT_ALGORITHM,

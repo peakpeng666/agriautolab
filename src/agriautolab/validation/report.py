@@ -20,7 +20,7 @@ class Disagreement:
     ours: float
     reference: float
     abs_diff: float
-    # 有符号，分母恒为 reference（golden）。名字里带 vs_golden 是纪律不是修辞：
+    # 有符号，分母恒为 reference（golden）。名字里的 vs_golden 是命名约束：
     # 本项目已三次因百分比分母产生歧义（round−mitre 的 0.5033/0.5008、超体积归一化、
     # 以及 6.3451%/−5.2953% 这一次）。口头约定留不住，只能写进列名。
     rel_diff_vs_golden: float
@@ -41,7 +41,7 @@ class CrossValidationReport:
 
 
 def _require_same_working_crs(left: dict[str, F2CResult], right: dict[str, F2CResult]) -> str:
-    """两侧必须在同一 working CRS 里录制，否则拒绝比较。
+    """两侧需在同一 working CRS 里录制，否则拒绝比较。
 
     照 available()=False 时抛异常的先例：不返回空报告、不静默比较。
     投影差异会以百分之几的形式渗进所有长度，与算法差异同量级且不可分辨——
@@ -64,7 +64,7 @@ def _require_same_working_crs(left: dict[str, F2CResult], right: dict[str, F2CRe
 
 
 def _require_same_route_algorithm(left: dict[str, F2CResult], right: dict[str, F2CResult]) -> str:
-    """两侧必须跑同名路线算法，否则拒绝比较（Block C 规格 §3.5）。
+    """两侧需跑同名路线算法，否则拒绝比较（交叉验证规格）。
 
     地头阶段早就配对了（CW ↔ uniform_headland），路线阶段一直没配。
     实测代价：F2C RP_Snake 访问顺序 [0,2,4,…,20,19,17,…,3,1]（隔行+回扫）
@@ -105,7 +105,7 @@ def compare_results(
     route_algorithm = _require_same_route_algorithm(left, right)
     reports = []
     # 分量拆解纪律：path_length = work + transit，work 已对齐而 transit 没有时，
-    # 只报 path_length 会把 −38% 稀释成 −6%（差 6 倍）。转移分量必须单列。
+    # 只报 path_length 会把 −38% 稀释成 −6%（差 6 倍）。转移分量需单列。
     for metric in (
         "path_length", "swath_count", "swath_length_sum", "main_field_area",
         "transit_entry_leg_m", "transit_turn_total_m", "transit_turn_count",

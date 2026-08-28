@@ -1,4 +1,4 @@
-"""derived_status：分析层的唯一状态真相，由 failure_reason 派生（v7 复核确立）。
+"""derived_status：分析层的唯一状态真相，由 failure_reason 派生（语料复核确立）。
 
 runstatus 是**运行时**的分类决策，含规则性归并（如零地头 carve：
 no_headland 下 CONSTRAINT_VIOLATION 归 not_applicable——那是「算法族-地形
@@ -49,7 +49,7 @@ def status_diff_counts(rows) -> dict[str, int]:
     """逐类计数 runstatus 与 derived_status 的分歧（空 dict = 无分歧）。
 
     键形如 "not_applicable->outside_area"：跑了、被验证器拒了，
-    但被运行时规则归并成了 not_applicable 的行——读语料的人必须能看见。
+    但被运行时规则归并成了 not_applicable 的行——读语料的人需能看见。
     """
     diffs: dict[str, int] = {}
     for row in rows:

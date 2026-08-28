@@ -32,7 +32,7 @@ class F2CSchemaError(ValueError):
 class RouteAlgorithmMismatchError(ValueError):
     """两侧路线算法不同名，或某一侧没有该名字的实现。
 
-    存在的理由（2026-08-21 实测）：Block C 规格 §3.5 要求交叉验证配对同名算法，
+    存在的理由（2026-08-21 实测）：交叉验证规格要求配对同名路线算法，
     地头阶段配了（CW ↔ uniform_headland），路线阶段没配。后果是
     F2C 跑 RP_Snake（访问顺序 [0,2,4,…,20,19,17,…,3,1]，隔行 + 回扫），
     我方跑 boustrophedon_order（相邻），两侧 transit 中位差 −38.11%，
@@ -47,7 +47,7 @@ class RouteAlgorithmMismatchError(ValueError):
 class CrsMismatchError(ValueError):
     """两侧录制在不同的 working CRS 里，任何残差都无法归因给算法。
 
-    存在的理由（O2 事故，2026-08-21）：F2B wkt.zip 实为 WGS84 经纬度，
+    存在的理由（2026-08-21 事故）：F2B wkt.zip 实为 WGS84 经纬度，
     门户声明 EPSG:3301/28992/3346，to_metric_crs 走了「已是米制」快速通道，
     5.0 米地头被当 5.0 度用，地块被内缩吃光。那次响了是因为地块归零，很吵。
     但把 EPSG:28992 误报成 EPSG:3301 是静默的——只让所有长度差几个百分点，
@@ -67,7 +67,7 @@ class F2CRequest:
     # field_wkt 所在的米制 CRS。故意不给默认值：录制端必须显式声明自己在哪个投影里
     # 干活，否则「忘记声明」和「确实同一投影」在 CSV 里长得一模一样。
     working_crs: str
-    # 请求指定的路线算法。Block C 规格 §3.5 要求交叉验证配对同名算法，
+    # 请求指定的路线算法。交叉验证规格要求配对同名路线算法，
     # 地头阶段早就配了（CW ↔ uniform_headland），路线阶段一直没配——
     # 实测后果：F2C 的 RP_Snake 访问顺序是 [0,2,4,…,20,19,17,…,3,1]（隔行+回扫），
     # 我方 boustrophedon_order 是相邻，两侧 transit 中位差 −38.11%。

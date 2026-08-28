@@ -42,7 +42,7 @@ def test_aslib_three_scenarios_and_fixed_cv(tmp_path, c_record, c_vehicle, c_con
 
 
 def test_crossable_strata_export_to_separate_trees(tmp_path, c_record, c_vehicle, c_configs, c_benchmark, c_corpus_protocol):
-    """crossable 做分层不做特征——两层的 scenario 目录与 id 必须能分辨。"""
+    """crossable 做分层不做特征——两层的 scenario 目录与 id 需能分辨。"""
     corpus = _corpus(tmp_path, c_record, c_vehicle, c_configs, c_benchmark, c_corpus_protocol)
     out = tmp_path / "aslib-strata"
     crossable = export_aslib_scenarios(corpus / "runs.parquet", out, cv_folds=3, row_crossable=True)

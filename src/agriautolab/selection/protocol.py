@@ -9,7 +9,7 @@ SELECTION_PROTOCOL_VERSION = 1
 SELECTION_STUDY_ID = "AGRIPLAN-PARETO-001"
 SELECTION_SEED = 20260822
 
-# wire feature ID 是 v7 parquet 的证据身份；顺序进入模型协议哈希。
+# wire feature ID 是 dataset-split parquet 的证据身份；顺序进入模型协议哈希。
 SELECTION_FEATURE_IDS: tuple[str, ...] = (
     "area_m2",
     "perimeter_area_ratio",
@@ -36,11 +36,11 @@ RECOMMENDER_PARAMS = {
     "n_jobs": 1,
 }
 
-ZERO_OK_POLICY = "regret_undefined__retain_and_block_confirmatory_h3"
+ZERO_OK_POLICY = "regret_undefined__retain_and_block_recommender_eval"
 
 
 def selection_protocol_payload(*, cv_spec_hash: str, pool_hash: str) -> dict:
-    """D3-D4 的唯一机器可验协议；不包含任何 CV 结果。"""
+    """selection 协议的唯一机器可验版本；不包含任何 CV 结果。"""
     return {
         "schema_version": SELECTION_PROTOCOL_VERSION,
         "study_id": SELECTION_STUDY_ID,
@@ -70,7 +70,7 @@ def selection_protocol_payload(*, cv_spec_hash: str, pool_hash: str) -> dict:
         },
         "cv": {
             "unit": "field_id",
-            "fold_source": "evidence/v7/cv_assignment.json",
+            "fold_source": "dataset_splits/cv_assignment.json",
             "resplitting_forbidden": True,
             "holdout_consumption": "forbidden_before_D7_H3",
         },
