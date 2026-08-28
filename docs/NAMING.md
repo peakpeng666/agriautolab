@@ -6,7 +6,7 @@
 > **证据身份永不改；规范名只存在于 API 层。**
 
 改一个已进 parquet / manifest / 预注册 / pool_hash 的字符串，等于把
-历史实验的身份换掉——v7 的 61 100 行会立刻变成「另一个实验」。
+历史实验的身份换掉——dataset-split 的 61 100 行会立刻变成「另一个实验」。
 因此：wire ID（`row_crossings`、`dubins_transit`、`runtime_ms`、
 `row_angle_vs_principal`…）永久保留；规范名以别名/属性/canonical_name
 的形式并存，新代码用规范名。
@@ -160,7 +160,7 @@ identity 仍由三元组（algorithm_id/source_code/description）决定，prove
 4. 非显然决策的原因（为什么不用显然的做法）。
 
 **不进生产源码**：日期、迭代轮次、field ID、历史实测
-数字（「0/4000」「150.7 s」）、修复过程叙事。这些住在 AUDIT_NOTE.md、
+数字（「0/4000」「150.7 s」）、修复过程叙事。这些住在历史留痕（study-001-frozen tag）、
 evidence/、tests/、docs/ 里——它们是历史，历史有专门的住所。
 
 constructive / LLM 候选代码再加一条：**注释不能替代契约**。例如“容量不会超”

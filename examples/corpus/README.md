@@ -1,12 +1,12 @@
 # 正式语料运行的最小协议样例
 
-三份文件是 v7 终语料实际使用的协议（哈希与 `evidence/v7/manifest.json`
+三份文件是 dataset-split 终语料实际使用的协议（哈希与 `dataset_splits/manifest.json`
 对账一致），可直接作为新实验的起点：
 
 ```bash
 python scripts/run_corpus.py \
   --corpus ~/agriautolab-data/corpus \
-  --configs configs/corpus_13.json \
+  --configs configs/standard_configs.json \
   --vehicles examples/corpus/vehicles.json \
   --benchmark-protocol examples/corpus/benchmark_protocol.json \
   --corpus-protocol examples/corpus/corpus_protocol.json \
@@ -21,4 +21,4 @@ python scripts/run_corpus.py \
 
 注意：参考点模板不是论文比较尺度——正式比较用逐实例解析参考点
 （runner 自动写入 `ref_*` 列）；行向扫描的偏移是实验处理变量
-（见预注册修正案 04/05 的 H2 设计）。
+（见预注册修正案 04/05 的 feature-effects 设计）。

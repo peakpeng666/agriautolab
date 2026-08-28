@@ -80,7 +80,7 @@ TSPLIB/CVRPLIB corpus、EoH reproduction、真实 LLM provenance 或农业迁移
 - 覆盖率分母由统一入口解析，并携带可复核 provenance；
 - Boustrophedon decomposition、headland、五类 swath、三类 route、Dubins 与
   Reeds-Shepp 路径连接等 **14 个算法组件**；
-- `configs/corpus_13.json` 固定 **13 个 pipeline configurations**，这与算法组件数
+- `configs/standard_configs.json` 固定 **13 个 pipeline configurations**，这与算法组件数
   不是同一概念；
 - `RowStructure`、独立 PathValidator、指标注册表与农业三目标
   `path_length / headland_turn_count / row_crossing_equivalent`；
@@ -88,7 +88,7 @@ TSPLIB/CVRPLIB corpus、EoH reproduction、真实 LLM provenance 或农业迁移
 - Fields2Benchmark 数据接入、Fields2Cover 数值对账、断点续跑语料运行器；
 - selection / confirmatory / append-only evidence discipline。
 
-Study-001 的预注册、H1/H2/H3 结果、corrigendum 与历史 ledger 均属于冻结研究事实；
+历史研究的预注册、评估结果与历史 ledger 均属于冻结研究事实（完整副本见 study-001-frozen tag）；
 后续方法学扩展不得通过重写它们来获得“更漂亮”的叙事。
 
 ## 4. 标准组合优化验证能力

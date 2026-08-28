@@ -79,7 +79,7 @@ coverage component，因此不使用 `CoverageStage` 分类。
 
 ## 5. 研究纪律
 
-- Study-001 的预注册、封存证据与历史 ledger 不因该扩展而改写；
+- 历史研究的预注册、封存证据与历史 ledger 不因该扩展而改写（副本见 study-001-frozen tag）；
 - 标准问题上的目标由独立 evaluator 复算；
 - 新 API 从第一版使用规范名与单位后缀，不制造新的 legacy debt；
 - 后续真实 LLM/EoH 实验必须另行记录模型、prompt、采样参数、父代、operator、
