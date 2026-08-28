@@ -39,6 +39,12 @@ def test_recorded_f2c_self_check() -> None:
     assert "self-check: ok" in result.stdout
 
 
+def test_report_coverage_distribution_self_check() -> None:
+    result = _run_script("scripts/report_coverage_distribution.py", "--self-check")
+    assert result.returncode == 0, result.stderr
+    assert "self-check: ok" in result.stdout
+
+
 def test_evaluation_scripts_import_and_report_code_identity() -> None:
     """The three evaluation scripts must import and run _code_identity() without error.
 
