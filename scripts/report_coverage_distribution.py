@@ -61,6 +61,33 @@ def _distribution(values: Sequence[float]) -> dict:
     return {"n": len(s), "min": s[0], **ps, "max": s[-1]}
 
 
+def _config_stages(pool_path: Path | None = None) -> dict[str, dict[str, str]]:
+    """Map config_id to its five stage ids, read from the frozen configuration pool.
+
+    Returns an empty mapping when the pool is unreadable, so the report still
+    renders (with bare hashes) outside a full checkout.
+    """
+    path = pool_path or Path(__file__).resolve().parents[1] / "configs" / "standard_configs.json"
+    try:
+        from agriautolab.pipeline.config import PipelineConfig
+
+        items = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+    out: dict[str, dict[str, str]] = {}
+    for item in items:
+        cfg = PipelineConfig(**{k: v for k, v in item.items() if k != "reason"})
+        out[cfg.config_id()] = {
+            "decomposition": cfg.decomposition,
+            "headland": cfg.headland,
+            "swath": cfg.swath,
+            "route": cfg.route,
+            "path": cfg.path,
+        }
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Core analysis
 # ---------------------------------------------------------------------------
@@ -100,6 +127,11 @@ def _analyse(table) -> dict:
     }
 
     # -- 3. By config_id (OK only) -------------------------------------------
+    # Stage names come from the frozen configuration pool: a bare config_id hash
+    # hides which stage combination produced a row, and the headland stage is
+    # what bounds coverage_ratio_field from above (see _stage_summary).
+    stages = _config_stages()
+
     config_cov: dict[str, list[float]] = {}
     for i in range(n_rows):
         if runstatus[i] == "ok" and cov_field[i] is not None:
@@ -110,7 +142,26 @@ def _analyse(table) -> dict:
         vals = config_cov[c]
         d = _distribution(vals)
         d["below_0.99"] = sum(1 for v in vals if v < 0.99)
+        d["stages"] = stages.get(c)
         config_dist[c] = d
+
+    # Configurations in the frozen pool that produced no OK row at all are
+    # absent from config_dist; listing them explicitly keeps the pool accounted
+    # for instead of silently shrinking it from 13 to however many succeeded.
+    rows_per_config = Counter(config_ids)
+    zero_ok_configs = {
+        c: {"rows": rows_per_config.get(c, 0), "stages": s}
+        for c, s in sorted(stages.items())
+        if c not in config_cov
+    }
+
+    # -- 3b. By headland stage (OK only) -------------------------------------
+    headland_cov: dict[str, list[float]] = {}
+    for i in range(n_rows):
+        if runstatus[i] == "ok" and cov_field[i] is not None:
+            st = stages.get(config_ids[i])
+            headland_cov.setdefault(st["headland"] if st else "unknown", []).append(cov_field[i])
+    headland_dist = {k: _distribution(v) for k, v in sorted(headland_cov.items())}
 
     # -- 4. Low-coverage OK rows: top configs and fields ---------------------
     low_by_config: Counter[str] = Counter()
@@ -181,11 +232,28 @@ def _analyse(table) -> dict:
         if runstatus[i] == "not_applicable":
             na_by_reason[_simplify_reason(failure_reasons[i], runstatus[i])] += 1
 
+    # Row-level accounting must close against the parquet row count. A flow that
+    # only reports OK rows plus zero-OK-field rows silently drops every failed
+    # run that happened inside a field which succeeded elsewhere.
+    zero_ok_set = set(zero_ok_fields)
+    rows_in_zero_ok_fields = sum(1 for f in field_ids if f in zero_ok_set)
+    rows_ok = sum(1 for s in runstatus if s == "ok")
+    rows_non_ok_in_ok_fields = n_rows - rows_ok - rows_in_zero_ok_fields
+
+    row_flow = {
+        "total_rows": n_rows,
+        "ok_rows": rows_ok,
+        "non_ok_rows_in_fields_with_some_ok": rows_non_ok_in_ok_fields,
+        "rows_in_fields_with_zero_ok": rows_in_zero_ok_fields,
+        "closes": rows_ok + rows_non_ok_in_ok_fields + rows_in_zero_ok_fields == n_rows,
+    }
+
     exclusion = {
         "total_fields": len(all_fields),
         "fields_with_at_least_one_ok": len(all_fields) - len(zero_ok_fields),
         "fields_with_zero_ok": len(zero_ok_fields),
         "zero_ok_field_ids": zero_ok_fields,
+        "row_flow": row_flow,
         "zero_ok_row_counts_by_category": dict(zero_ok_category_counts.most_common()),
         "runstatus_row_counts": dict(status_counts.most_common()),
         "not_applicable_row_counts_by_category": dict(na_by_reason.most_common()),
@@ -197,6 +265,8 @@ def _analyse(table) -> dict:
         "coverage_ratio_field_by_runstatus": status_dist,
         "ok_threshold_counts": thresholds,
         "coverage_ratio_field_by_config_id": config_dist,
+        "configs_with_zero_ok_rows": zero_ok_configs,
+        "coverage_ratio_field_by_headland_stage": headland_dist,
         "low_coverage_ok_by_config_id": dict(low_by_config.most_common()),
         "low_coverage_ok_by_field_id_top20": dict(low_by_field.most_common(20)),
         "field_vs_main": field_vs_main,
@@ -250,13 +320,44 @@ def _render_md(result: dict, sha256: str) -> str:
         a(f"- {key}: {c['count']:,} ({c['pct']:.2f}%)")
     a("")
 
+    # By headland stage
+    a("## coverage\\_ratio\\_field by headland stage (OK rows)")
+    a("")
+    a("| headland | n | min | p50 | max |")
+    a("|---|---:|---:|---:|---:|")
+    for stage, d in result["coverage_ratio_field_by_headland_stage"].items():
+        if not d.get("n"):
+            continue
+        a(f"| {stage} | {d['n']:,} | {d['min']:.4f} | {d['p50']:.4f} | {d['max']:.4f} |")
+    a("")
+
     # By config
     a("## coverage\\_ratio\\_field by config\\_id (OK rows)")
     a("")
-    a("| config\\_id | n | min | p50 | max | <0.99 |")
-    a("|---|---:|---:|---:|---:|---:|")
+    a("| config\\_id | headland | swath | n | min | p50 | max | <0.99 |")
+    a("|---|---|---|---:|---:|---:|---:|---:|")
     for c, d in result["coverage_ratio_field_by_config_id"].items():
-        a(f"| `{c[:12]}…` | {d['n']:,} | {d['min']:.4f} | {d['p50']:.4f} | {d['max']:.4f} | {d['below_0.99']:,} |")
+        st = d.get("stages") or {}
+        a(
+            f"| `{c[:12]}…` | {st.get('headland', '?')} | {st.get('swath', '?')} | "
+            f"{d['n']:,} | {d['min']:.4f} | {d['p50']:.4f} | {d['max']:.4f} | {d['below_0.99']:,} |"
+        )
+    a("")
+
+    zero_cfg = result.get("configs_with_zero_ok_rows") or {}
+    a("### Configurations in the frozen pool with zero OK rows")
+    a("")
+    if not zero_cfg:
+        a("None: every configuration produced at least one OK row.")
+    else:
+        a("| config\\_id | headland | swath | route | path | rows |")
+        a("|---|---|---|---|---|---:|")
+        for c, info in zero_cfg.items():
+            st = info.get("stages") or {}
+            a(
+                f"| `{c[:12]}…` | {st.get('headland', '?')} | {st.get('swath', '?')} | "
+                f"{st.get('route', '?')} | {st.get('path', '?')} | {info['rows']:,} |"
+            )
     a("")
 
     # Field vs main
@@ -279,6 +380,19 @@ def _render_md(result: dict, sha256: str) -> str:
     a(f"- Input fields: {ex['total_fields']}")
     a(f"- Fields with ≥ 1 OK instance: {ex['fields_with_at_least_one_ok']}")
     a(f"- Fields with zero OK instances: {ex['fields_with_zero_ok']}")
+    a("")
+
+    rf = ex["row_flow"]
+    a("### Row accounting")
+    a("")
+    a("```")
+    a(f"{rf['total_rows']:,} planner runs")
+    a(f"├─ {rf['ok_rows']:,}  ok")
+    a(f"├─ {rf['non_ok_rows_in_fields_with_some_ok']:,}  not ok, in a field that succeeded elsewhere")
+    a(f"└─ {rf['rows_in_fields_with_zero_ok']:,}  every run of a field with zero ok")
+    a("```")
+    a("")
+    a(f"Sums to the parquet row count: {rf['closes']}")
     a("")
     a("### Zero-OK field failure categories (row counts)")
     a("")
