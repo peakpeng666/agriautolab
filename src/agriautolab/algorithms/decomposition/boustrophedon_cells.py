@@ -135,8 +135,8 @@ class BoustrophedonDecomposition:
                         y_low, y_high = mid_iv[channel]
                         for x_probe in (events[i] + epsilon, events[i + 1] - epsilon):
                             column = _cross_section(component, x_probe)
-                            # 端点列的通道配置必须与中点一致才能用来细化边界：
-                            # nl_field_191476 实测——洞尖藏在段内时端点只见 1 个通道，
+                            # 端点列的通道配置需与中点一致才能用来细化边界：
+                            # When a hole vertex lies inside a sweep band, only one channel endpoint is visible;
                             # 把整带 y 界灌进通道 0 会与通道 1 重叠 1357 m^2（cells 并集
                             # 正确而两两重叠）。配置不一致就跳过该列：宁欠勿重，
                             # 欠覆盖的尖角由相邻组（配置已变）的箱接住。
@@ -148,8 +148,8 @@ class BoustrophedonDecomposition:
                         continue
                     cells.append(robust_union(tuple(pieces), scale_hint=scale_hint))
         # 真实地块实测在回转阶段暴露三类数值伪影，处置原则：归一化只作用于
-        # **我们自己的箱并集**（无洞、面积良定义），绝不作用于带洞自由空间的交——
-        # nl_field_191476 实测：对含洞 cell 做 buffer(0) 会把洞并进外环，面积虚增 1357 m^2
+        # **我们自己的箱并集**（无洞、面积良定义），不作用于带洞自由空间的交——
+        # buffer(0) on a holed cell merges the hole into the outer ring, inflating area;
         # 恰等于洞面积。因此顺序是：箱并集转回原 frame -> （必要时）归一化并面积对账
         # -> 与原始 free 求交，洞由求交天然保留。
         specs: list[PolygonSpec] = []
@@ -171,7 +171,7 @@ class BoustrophedonDecomposition:
             for part in parts:
                 if part.geom_type == "Polygon" and not part.is_empty and part.area > 0.0:
                     # BCD cell 的定义是自由空间的一个**划分**。真实地块上通道数在组边界
-                    # 抖动（2<->3）时，后组的箱会覆盖前组已占的区域（nl_field_191476 实测
+                    # When bin count fluctuates, later group boxes overlap previously occupied regions;
                     # 两两重叠 1357 m^2 恰为洞面积）。按序做差集互斥化：cell 减去此前
                     # 所有 cell 的并——精确集合运算，不是几何修复；划分语义由此构造保证。
                     # 逐个对已分配 cell 做差集（不用增量 robust_union：235 实测三块地在

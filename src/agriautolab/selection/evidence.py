@@ -1,4 +1,4 @@
-"""D3-D4 协议与结果的 Block D 证据封存。"""
+"""selection protocol 与 CV 结果的基准结果账本封存。"""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from agriautolab.evidence.ledger import artifact_chain_entry, verify_artifact_chain
+from agriautolab.pipeline import jsonl_log
 from agriautolab.selection.protocol import selection_protocol_hash, selection_protocol_payload
 
 
@@ -25,7 +25,7 @@ def write_selection_protocol(*, cv_spec_hash: str, pool_hash: str, path: str | P
 
 
 def seal_selection_protocol(*, protocol_path: str | Path, ledger_path: str | Path) -> dict:
-    """把 selection protocol 封为 Block D index=2；重复重放保持字节不变。"""
+    """把 selection protocol 封为基准结果账本 index=2；重复重放保持字节不变。"""
     protocol_file = Path(protocol_path)
     document = json.loads(protocol_file.read_text(encoding="utf-8"))
     cv_spec_hash = str(document["cv_spec_hash"])
@@ -37,31 +37,27 @@ def seal_selection_protocol(*, protocol_path: str | Path, ledger_path: str | Pat
         raise ValueError("selection protocol 文档与代码生成的完整冻结规范不一致")
 
     ledger_file = Path(ledger_path)
-    entries = tuple(
-        json.loads(line)
-        for line in ledger_file.read_text(encoding="utf-8").splitlines()
-        if line.strip()
-    )
-    verify_artifact_chain(entries)
+    entries = jsonl_log.read_entries(ledger_file)
+    jsonl_log.verify_entries(entries)
     payload = {
-        "artifact": "selection_protocol_v1",
+        "artifact": "benchmark_cv_protocol",
         "file_sha256": _sha256_file(protocol_file),
         "spec_hash": expected_hash,
         "cv_spec_hash": cv_spec_hash,
         "pool_hash": pool_hash,
         "preference_grid_hash": document["preference_grid"]["hash"],
     }
-    existing = [entry for entry in entries if entry["payload"].get("artifact") == "selection_protocol_v1"]
+    existing = [entry for entry in entries if entry["payload"].get("artifact") == "benchmark_cv_protocol"]
     if existing:
         if len(existing) != 1 or existing[0]["index"] != 2 or existing[0]["payload"] != payload:
             raise ValueError("已封存的 selection protocol 与当前重放冲突")
         return existing[0]
     if len(entries) != 2:
-        raise ValueError("selection protocol 必须紧接 D1/D2，拒绝重排 Block D 历史")
-    entry = artifact_chain_entry(2, entries[-1]["entry_hash"], payload)
+        raise ValueError("selection protocol 必须紧接 genesis/pool census，拒绝重排基准结果历史")
+    entry = jsonl_log.build_next_entry(entries, payload)
     with ledger_file.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(entry, ensure_ascii=False, sort_keys=True) + "\n")
-    verify_artifact_chain(entries + (entry,))
+    jsonl_log.verify_entries(entries + (entry,))
     return entry
 
 
@@ -86,12 +82,8 @@ def seal_selection_cv_result(
         raise ValueError("recommender metadata 的 protocol_hash 与 CV 结果协议不一致")
 
     ledger_file = Path(ledger_path)
-    entries = tuple(
-        json.loads(line)
-        for line in ledger_file.read_text(encoding="utf-8").splitlines()
-        if line.strip()
-    )
-    verify_artifact_chain(entries)
+    entries = jsonl_log.read_entries(ledger_file)
+    jsonl_log.verify_entries(entries)
     payload = {
         "artifact": "selection_cv_result",
         "cv_file_sha256": _sha256_file(result_file),
@@ -104,12 +96,12 @@ def seal_selection_cv_result(
         if len(existing) != 1 or existing[0]["index"] != 3 or existing[0]["payload"] != payload:
             raise ValueError("已封存的 selection CV/model 产物与当前重放冲突")
         return existing[0]
-    if len(entries) != 3 or entries[2]["payload"].get("artifact") != "selection_protocol_v1":
+    if len(entries) != 3 or entries[2]["payload"].get("artifact") != "benchmark_cv_protocol":
         raise ValueError("CV/model 结果只能在已封 selection protocol 之后追加")
     if entries[2]["payload"].get("spec_hash") != protocol_hash:
         raise ValueError("CV/model 结果声明的 protocol_hash 与 ledger index=2 不一致")
-    entry = artifact_chain_entry(3, entries[-1]["entry_hash"], payload)
+    entry = jsonl_log.build_next_entry(entries, payload)
     with ledger_file.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(entry, ensure_ascii=False, sort_keys=True) + "\n")
-    verify_artifact_chain(entries + (entry,))
+    jsonl_log.verify_entries(entries + (entry,))
     return entry

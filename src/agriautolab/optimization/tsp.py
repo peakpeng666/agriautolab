@@ -82,13 +82,13 @@ def evaluate_tsp_tour(problem: TSPProblem, tour: TSPTour) -> TSPEvaluation:
     """验证 Hamiltonian cycle 后独立复算欧氏总长度。"""
     expected_node_ids = {node.node_id for node in problem.nodes}
     if len(tour.node_ids) != len(problem.nodes) + 1:
-        raise ValueError("TSP 回路长度必须等于节点数 + 1（闭合起点）")
+        raise ValueError("TSP tour length must equal node count + 1 (closed start)")
     if tour.node_ids[0] != problem.start_node_id or tour.node_ids[-1] != problem.start_node_id:
-        raise ValueError("TSP 回路必须从 start_node_id 出发并回到该节点")
+        raise ValueError("TSP tour must start at start_node_id and return to it")
 
     visited_once = tour.node_ids[:-1]
     if set(visited_once) != expected_node_ids or len(set(visited_once)) != len(problem.nodes):
-        raise ValueError("TSP 回路必须且只能访问每个节点一次")
+        raise ValueError("a TSP tour must visit every node exactly once")
 
     nodes_by_id = {node.node_id: node for node in problem.nodes}
     return TSPEvaluation(tour_length_m=route_length_m(nodes_by_id, tour.node_ids))

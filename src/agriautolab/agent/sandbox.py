@@ -1,9 +1,4 @@
-"""生成代码的执行沙箱：AST 静态扫描 + 受限 exec。
-
-受限 exec 不构成安全边界，无法阻止刻意绕过。
-它挡的是「模型顺手写了个 open('/etc/passwd')」。真正的隔离是进程/容器级，本项目不做。
-（沿用任务书原话；不得将其表述为安全保证。）
-"""
+"""AST static scanner and restricted execution environment for generated code."""
 
 from __future__ import annotations
 
@@ -13,10 +8,10 @@ from typing import Any
 
 
 class SandboxViolation(Exception):
-    """候选代码命中静态扫描禁令。"""
+    """Static AST scanner violation in candidate code."""
 
 
-# __builtins__ 白名单：只有纯计算原语；名字不在表里的内建一律不可见。
+# Allowed builtins: pure computational primitives only.
 _ALLOWED_BUILTINS = {
     "math": math,
     "len": len,
@@ -45,14 +40,14 @@ def scan_source(source: str) -> None:
     try:
         tree = ast.parse(source)
     except SyntaxError as error:
-        raise SandboxViolation(f"候选代码语法错误：{error}") from error
+        raise SandboxViolation(f"Syntax error in candidate code: {error}") from error
     for node in ast.walk(tree):
         if isinstance(node, (ast.Import, ast.ImportFrom)):
-            raise SandboxViolation("候选代码禁止 import：依赖必须在白名单内自足")
+            raise SandboxViolation("Imports forbidden in candidate code; dependencies must be self-contained")
         if isinstance(node, ast.Name) and node.id in _FORBIDDEN_NAMES:
-            raise SandboxViolation(f"候选代码禁止使用 {node.id}")
+            raise SandboxViolation(f"Forbidden call: {node.id}")
         if isinstance(node, ast.Attribute) and node.attr.startswith("__"):
-            raise SandboxViolation(f"候选代码禁止访问双下划线属性：{node.attr}")
+            raise SandboxViolation(f"Dunder attribute access forbidden: {node.attr}")
 
 
 def run_sandboxed(source: str) -> dict[str, Any]:

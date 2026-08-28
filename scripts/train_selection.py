@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""D3-D4：只消费冻结训练田，跑 10 折 CV 并拟合最终偏好条件推荐器。"""
+"""只消费冻结训练田，跑 10 折 CV 并拟合最终偏好条件推荐器。"""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ import json
 from pathlib import Path
 
 from agriautolab.contracts.vehicle import VehicleSpec
-from agriautolab.pareto.front import pool_hash
+from agriautolab.pipeline.pareto.front import pool_hash
 from agriautolab.pipeline.config import PipelineConfig
-from agriautolab.evidence.atomic import commit_guarded
+from agriautolab.pipeline import jsonl_log
 from agriautolab.selection.evidence import seal_selection_cv_result
 from agriautolab.selection.evaluation import load_selection_instances
 from agriautolab.selection.experiment import run_frozen_grouped_cv
@@ -50,7 +50,7 @@ def main() -> None:
     if protocol["spec_hash"] != expected_protocol_hash:
         raise ValueError("selection protocol hash 不一致")
 
-    # 关键纪律：loader 接到的只有 D1 training fields；holdout field_id 不进入扫描条件。
+    # loader 接到的只有冻结 training fields；holdout field_id 不进入扫描条件。
     instances = load_selection_instances(args.runs, training_fields, configs, vehicles)
     folds = run_frozen_grouped_cv(
         instances,
@@ -67,7 +67,7 @@ def main() -> None:
     ]
     result = {
         "study_id": "AGRIPLAN-PARETO-001",
-        "stage": "D3-D4-training-cv",
+        "stage": "training-cv",
         "protocol_hash": expected_protocol_hash,
         "cv_spec_hash": cv["spec_hash"],
         "pool_hash": actual_pool_hash,
@@ -86,7 +86,7 @@ def main() -> None:
         }),
         "zero_ok_note": (
             "regret oracle is undefined when O_x is empty; these instances remain counted and are not silently excluded. "
-            "This training-side CV is not the confirmatory H3 test."
+            "This training-side CV is not the confirmatory recommender evaluation."
         ),
         "folds": fold_documents,
     }
@@ -108,9 +108,9 @@ def main() -> None:
     # 三个产物先过封存守卫再落位：与已封存字节不一致时在覆盖前拒绝
     model_path = args.output_dir / "recommender.joblib"
     metadata_path = args.output_dir / "recommender_metadata.json"
-    commit_guarded(tmp_result, result_path, args.ledger, "selection_cv_result", "cv_file_sha256")
-    commit_guarded(tmp_model, model_path, args.ledger, "selection_cv_result", "model_file_sha256")
-    commit_guarded(tmp_metadata, metadata_path, args.ledger, "selection_cv_result", "metadata_file_sha256")
+    jsonl_log.replace_unless_sealed(tmp_result, result_path, args.ledger, "selection_cv_result", "cv_file_sha256")
+    jsonl_log.replace_unless_sealed(tmp_model, model_path, args.ledger, "selection_cv_result", "model_file_sha256")
+    jsonl_log.replace_unless_sealed(tmp_metadata, metadata_path, args.ledger, "selection_cv_result", "metadata_file_sha256")
     entry = seal_selection_cv_result(
         result_path=result_path,
         model_path=model_path,

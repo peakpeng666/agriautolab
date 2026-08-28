@@ -1,4 +1,4 @@
-"""Block D 选择层：冻结身份、评估协议与偏好条件推荐器。"""
+"""选择层：冻结身份、评估协议与偏好条件推荐器。"""
 
 from agriautolab.selection.cv import (
     CV_ASSIGNMENT_ALGORITHM,
@@ -9,7 +9,7 @@ from agriautolab.selection.cv import (
     assign_grouped_folds,
     build_cv_assignment_evidence,
     field_ids_from_manifest,
-    seal_cv_assignment_in_block_d_ledger,
+    register_cv_assignment,
     write_cv_assignment,
 )
 from agriautolab.selection.evaluation import SelectionInstance, load_selection_instances, select_sbs
@@ -29,7 +29,7 @@ __all__ = [
     "build_cv_assignment_evidence",
     "field_ids_from_manifest",
     "load_selection_instances",
-    "seal_cv_assignment_in_block_d_ledger",
+    "register_cv_assignment",
     "select_sbs",
     "selection_protocol_hash",
     "selection_protocol_payload",

@@ -1,7 +1,7 @@
 """带面积自检的多边形并集。
 
 不要改成 shapely.unary_union。它在某些坐标配置下会静默丢弃整块多边形：
-实测 500 组随机刚体+相似变换中错 21 次，最大相对误差 40.0%；
+# Benchmarked over 500 random rigid+similarity transforms: 21 failures, max rel error 40%.
 且只在特定旋转角发生，会让「不同 swath angle 的配置」之间凭空产生系统性差异。
 """
 
@@ -24,7 +24,7 @@ def _area_bounds_ok(result: BaseGeometry, pieces: tuple[BaseGeometry, ...], tole
 
 def robust_union(pieces: tuple[BaseGeometry, ...], *, scale_hint: float) -> BaseGeometry:
     if scale_hint <= 0.0:
-        raise ValueError("scale_hint 必须大于 0")
+        raise ValueError("scale_hint must be greater than 0")
     if not pieces:
         return GeometryCollection()
 
@@ -36,8 +36,8 @@ def robust_union(pieces: tuple[BaseGeometry, ...], *, scale_hint: float) -> Base
     tolerance = max(1.0, sum(piece.area for piece in ordered)) * 1e-12
     snapped_ok = _area_bounds_ok(snapped, ordered, tolerance)
 
-    # 平衡树归约（性能修复，留痕见 AUDIT_NOTE）：左结合 reduce 在
-    # 数百片时每步重并累积大几何，实测 574 片 150.7 s；树归约结果由并集结合律
+    # 平衡树归约（性能修复）：左结合 reduce 在
+    # Naive sequential union accumulates large geometry; tree reduction exploits associativity
     # 与左结合完全一致（集合与面积），作为面积交叉校验的职责不变。
     layer = list(ordered)
     while len(layer) > 1:

@@ -68,7 +68,7 @@ def _result_for(prompt: str, *, response: str = SOURCE) -> CompletionResult:
 
 
 class _EchoClient:
-    """正确的假后端：把**本次实际收到的 prompt** 原样带进 provenance。"""
+    """Mock client returning matching prompt provenance."""
 
     def __init__(self, response: str = SOURCE) -> None:
         self._response = response
@@ -82,10 +82,10 @@ class _EchoClient:
 
 
 class _StalePromptClient:
-    """故障后端：返回的 provenance 携带另一次调用的 prompt。"""
+    """Faulty mock client returning stale prompt provenance."""
 
     def complete(self, prompt: str) -> CompletionResult:
-        return _result_for("另一次调用的 prompt")
+        return _result_for("stale prompt from another call")
 
 
 def _context() -> ProposalContext:
@@ -103,7 +103,7 @@ def test_propose_records_provenance_and_replay_matches_identity() -> None:
     result = client.last_result
     assert online.provenance is result
     assert online.source_code == result.response
-    # provenance 必须对应**本次实际发出**的 prompt，不是任意字符串
+    # Provenance must match the exact sent prompt
     assert result.prompt == proposer.build_prompt(stage=CoverageStage.SWATH, context=_context())
     # identity（三元组）逐位与 replay 相等——provenance 不进 identity
     replay = replay_candidate(0, result)
@@ -112,14 +112,9 @@ def test_propose_records_provenance_and_replay_matches_identity() -> None:
 
 
 def test_propose_rejects_completion_for_a_different_prompt() -> None:
-    """后端返回的 prompt 与本次发出的不一致 → fail closed。
-
-    【证伪力】修复前 propose 从不校验 result.prompt，本测试的故障后端会被静默
-    接受，账本记下另一次调用的 prompt。旧测试的假 client 恰好也返回固定
-    prompt="PROMPT"，等于把这个缺陷写进了测试——所以 673 全绿也没暴露。
-    """
+    """Proposer rejects completion when prompt provenance mismatches."""
     proposer = LLMProposer(client=_StalePromptClient())
-    with pytest.raises(ValueError, match="与本次发出的 prompt 不一致"):
+    with pytest.raises(ValueError, match="does not match"):
         proposer.propose(
             stage=CoverageStage.SWATH, context=_context(), rng=np.random.default_rng(0),
         )
@@ -135,7 +130,7 @@ def test_completion_result_is_immutable_after_construction() -> None:
     """
     result = _result_for("p")
     for field, value in (
-        ("prompt", "改写的 prompt"),
+        ("prompt", "tampered prompt"),
         ("response", "改写的 response"),
         ("cost", 999.0),
         ("model_id", "另一个模型"),
@@ -182,7 +177,7 @@ def test_ledger_verify_passes_with_provenance_records() -> None:
 
 
 def test_ledger_provenance_mirrors_completion_validation() -> None:
-    """账本里的 ProvenanceRecord 必须与 CompletionResult 同样严格。
+    """账本里的 ProvenanceRecord 需与 CompletionResult 同样严格。
 
     【证伪力】不加约束时，直接构造或从 JSON 还原的记录可以携带 top_p=1.5、
     负 token 数、负成本——`append()` 照样对这些有限值算哈希、`verify()` 照样通过，
@@ -214,7 +209,7 @@ def test_ledger_provenance_mirrors_completion_validation() -> None:
 def test_ledger_provenance_cannot_be_mutated_through_records() -> None:
     """账本里的 provenance 深度不可变——嵌套赋值不能悄悄破坏 entry hash。
 
-    【证伪力】修复前 provenance 是普通 dict，而 pydantic 的 frozen=True 只禁止
+    【证伪力】修复前 provenance 是普通 dict，而 pydantic 的 frozen=True 只不得
     属性赋值、不阻止嵌套容器被改。调用方拿到 ledger.records 后写
     record.provenance["prompt"] = ... 就能改掉已经参与 entry hash 计算的内容，
     于是账本在寻常嵌套赋值之后**自发 verify() 失败**——与同一条记录里
@@ -227,16 +222,16 @@ def test_ledger_provenance_cannot_be_mutated_through_records() -> None:
 
     record = ledger.records[0]
     with pytest.raises((TypeError, ValueError, AttributeError)):
-        record.provenance.prompt = "改写的 prompt"
+        record.provenance.prompt = "tampered prompt"
     with pytest.raises(TypeError):
-        record.provenance["prompt"] = "改写的 prompt"   # 不再是 dict
+        record.provenance["prompt"] = "tampered prompt"   # 不再是 dict
 
     assert record.provenance.prompt == "p"
     ledger.verify()   # 仍然自洽
 
 
 def test_provenance_must_match_the_candidate_source() -> None:
-    """入账前必须校验 provenance.response 与候选源码一致。
+    """入账前需校验 provenance.response 与候选源码一致。
 
     【证伪力】`HeuristicProposer` 是公开协议，任何注入实现都能构造
     `ProposalCandidate`。此前 `evolve.py` 直接把 provenance 投影入账、不校验关系，

@@ -13,16 +13,16 @@ from conftest import targets_from_geometry
 from agriautolab.contracts.artifacts import PathArtifact, PathSegment
 from agriautolab.contracts.enums import PathSegmentKind, ScaleBehavior
 from agriautolab.contracts.geometry import LineStringSpec, Point
-from agriautolab.metrics.constraints import collision_area, outside_area
-from agriautolab.metrics.coverage import (
+from agriautolab.pipeline.metrics.constraints import collision_area, outside_area
+from agriautolab.pipeline.metrics.coverage import (
     coverage_stats, eta_l, headland_area_ratio, l_area, nonwork_normalized,
     path_length_breakdown, swath_count, turning_overhead_ratio,
 )
-from agriautolab.metrics.path import (
+from agriautolab.pipeline.metrics.path import (
     aol, cusp_count, headland_turn_count, median_clearance, min_clearance, path_length,
     row_crossings, total_heading_change, tortuosity, transit_length,
 )
-from agriautolab.metrics.registry import METRIC_REGISTRY
+from agriautolab.pipeline.metrics.registry import METRIC_REGISTRY
 
 
 def _transform_point(point: Point, *, theta: float, scale: float, tx: float, ty: float) -> Point:
@@ -56,7 +56,7 @@ def _path_artifact(theta: float, scale: float, tx: float, ty: float) -> PathArti
 
 
 def _evaluate(metric_id: str, *, theta: float = 0.0, scale: float = 1.0, tx: float = 0.0, ty: float = 0.0) -> float:
-    """按注册表里的 metric_id 求值。新增指标必须在这里给出算法，否则最后一行会直接失败。"""
+    """按注册表里的 metric_id 求值。新增指标需在这里给出算法，否则最后一行会直接失败。"""
     base_points = (
         Point(x=0.0, y=0.0),
         Point(x=4.0, y=0.0),
@@ -80,7 +80,7 @@ def _evaluate(metric_id: str, *, theta: float = 0.0, scale: float = 1.0, tx: flo
         for y in (3.0, 7.0)
     )
     if metric_id in {"coverage_ratio_field", "coverage_ratio_main", "overlap_ratio"}:
-        # 没跑地头阶段，主田即原田；两个比值在这里必须给出同一个数，
+        # 没跑地头阶段，主田即原田；两个比值在这里需给出同一个数，
         # 否则说明分母解析器在无地头时凭空造出了第二个域。
         stats = coverage_stats(lines, working_width_m=6.0 * scale, targets=targets_from_geometry(field_region))
         if metric_id == "coverage_ratio_field":

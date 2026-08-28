@@ -1,4 +1,4 @@
-"""演化循环的语义真值（非仅确定性）：正 ΔHV 候选必须被保留。
+"""演化循环的语义真值（非仅确定性）：正 ΔHV 候选需被保留。
 
 历史缺陷：evolve_pool 曾把「已含本候选」的合并池当基线传入
 hypervolume_delta，HV(P∪{c}∪{c}) − HV(P∪{c}) 恒为 0，候选永不可能晋升
@@ -10,7 +10,7 @@ import numpy as np
 from agriautolab.agent.evolve import KeepRule, evolve_pool, hypervolume_delta
 from agriautolab.agent.proposer import MockProposer
 from agriautolab.contracts.protocol import HypervolumeReference
-from agriautolab.pareto.front import ObjectiveVector
+from agriautolab.pipeline.pareto.front import ObjectiveVector
 
 from tests.agent.test_agent import base_pool, make_instance, make_protocol
 

@@ -19,7 +19,7 @@ from pathlib import Path
 import numpy as np
 import shapely
 
-from agriautolab.corpus.protocol import DEFAULT_RECONCILIATION_SAMPLING, ReconciliationSamplingSpec
+from agriautolab.pipeline.corpus.protocol import DEFAULT_RECONCILIATION_SAMPLING, ReconciliationSamplingSpec
 
 DEFAULT_PARAMS = {
     "robot_width_m": 2.0,
@@ -27,7 +27,7 @@ DEFAULT_PARAMS = {
     "min_turning_radius_m": 2.0,
     "headland_width_m": 5.0,
     "swath_angle_rad": 1.5707963267948966,
-    # 路线阶段必须显式配对（路线配对规格）。写死 snake 那次的代价是
+    # 路线阶段需显式配对（路线配对规格）。写死 snake 那次的代价是
     # 两侧跑了不同路线、transit 差 −38.11%，被读成了「我方路径更短」。
     "route_algorithm": "boustrophedon",
 }

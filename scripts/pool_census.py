@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""D2 普查：nominal / static-applicable / observed-OK 三层池，落盘 + Block D ledger。
+"""池普查：nominal / static-applicable / observed-OK 三层池，落盘 + 基准结果账本。
 
 用法（数据机）：
   python scripts/pool_census.py \
     --runs ~/agriautolab-data/out_v7/runs.parquet \
-    --configs configs/corpus_13.json \
+    --configs configs/standard_configs.json \
     --vehicles examples/corpus/vehicles.json \
-    --cv evidence/v7/cv_assignment.json \
-    --output evidence/block_d/pool_census.json \
-    --ledger evidence/block_d/ledger.jsonl
+    --cv dataset_splits/cv_assignment.json \
+    --output benchmarks/results/pool_census.json \
+    --ledger benchmarks/results/benchmark_ledger.jsonl
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from pathlib import Path
 
 from agriautolab.contracts.vehicle import VehicleSpec
 from agriautolab.pipeline.config import PipelineConfig
-from agriautolab.evidence.atomic import commit_guarded
+from agriautolab.pipeline import jsonl_log
 from agriautolab.selection.pools import census_from_runs, seal_pool_census_ledger
 
 
@@ -75,7 +75,7 @@ def main() -> None:
     hold = [field for field in fields_doc if field["split"] == "holdout"]
     doc = {
         "study_id": "AGRIPLAN-PARETO-001",
-        "stage": "D2-pool-census",
+        "stage": "pool-census",
         "sources": {
             "runs_parquet_sha256": _sha256_file(args.runs),
             "configs_sha256": _sha256_file(args.configs),
@@ -96,13 +96,13 @@ def main() -> None:
             "holdout_fields": len(hold),
             "train_mean_ok_per_instance": round(statistics.mean(field["mean_ok"] for field in train), 4),
             "holdout_mean_ok_per_instance": round(statistics.mean(field["mean_ok"] for field in hold), 4),
-            "holdout_note": "holdout 的 O 层聚合仅描述性；建模消费在 H3 开留出集前禁止",
+            "holdout_note": "holdout 的 O 层聚合仅描述性；建模消费在 recommender 评估开留出集前不得",
         },
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     tmp = args.output.with_name(args.output.name + ".tmp")
     tmp.write_text(json.dumps(doc, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-    commit_guarded(tmp, args.output, args.ledger, "pool_census", "file_sha256")
+    jsonl_log.replace_unless_sealed(tmp, args.output, args.ledger, "pool_census", "file_sha256")
 
     payload = {
         "artifact": "pool_census",

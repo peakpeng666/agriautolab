@@ -1,4 +1,4 @@
-"""集中存放构成兼容性与证据边界的封闭词表。散落的字符串常量会让这些边界在 review 时不可见。"""
+"""Enumerated vocabulary for domain tasks, problem kinds, stages, and metrics."""
 
 from enum import Enum
 
@@ -16,7 +16,7 @@ class ScenarioDynamics(str, Enum):
 
 
 class ProblemKind(str, Enum):
-    """决定算法兼容性的具体问题族，而不是宽泛任务标签。"""
+    """Specific problem family for algorithm compatibility."""
 
     GRID_P2P_2D = "grid_p2p_2d"
     POLYGON_COVERAGE_2D = "polygon_coverage_2d"
@@ -47,7 +47,7 @@ class PathSegmentKind(str, Enum):
 
 
 class CoverageStage(str, Enum):
-    """农业覆盖流水线的领域阶段；不得拿来给 TSP/CVRP 等通用算法强行分类。"""
+    """Pipeline stages for agricultural coverage path planning."""
 
     DECOMPOSITION = "decomposition"
     HEADLAND = "headland"
@@ -62,7 +62,7 @@ class SwathDirection(str, Enum):
 
 
 class CoverageTarget(str, Enum):
-    """覆盖率的分母定义。必须由协议指定，不能由调用方临时决定。
+    """覆盖率的分母定义。需由协议指定，不能由调用方临时决定。
 
     陷阱：地头宽度是被比较的对象之一。若各配置各用各的主田做分母，
     100x50 田块地头开到 18 米时对主田覆盖率仍是 1.0，而实际只覆盖了原田的 17.9%。

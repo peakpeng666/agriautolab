@@ -1,10 +1,10 @@
-"""演化账本：哈希链式相连的演化历史，被淘汰的候选也必须记录。
+"""演化账本：哈希链式相连的演化历史，被淘汰的候选也需记录。
 
 只记成功候选就是发表偏倚——「演化找到了 3 个好启发式」和
 「演化试了 40 个、37 个被闸门否决」是两个完全不同的主张，
 后者才是可复现实验该有的记录。
 evidence 层的 EvidenceLedger 与 EvidenceRecord 强类型绑定（运行证据），
-演化记录字段不同，这里按同一哈希链纪律单独建账。
+Separate ledger maintained per benchmark run using the same hash-chain structure.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from collections.abc import Sequence
 from pydantic import BaseModel, ConfigDict, Field
 
 from agriautolab.contracts.errors import EvidenceChainError
-from agriautolab.evidence.hashing import content_hash
+from agriautolab.pipeline.hashing import content_hash
 
 
 class GateRecord(BaseModel):
@@ -28,7 +28,7 @@ class GateRecord(BaseModel):
 class ProvenanceRecord(BaseModel):
     """LLM 单次调用的 provenance，作为**深度不可变**的强类型模型入账。
 
-    此前这里存的是普通 `dict`。pydantic 的 `frozen=True` 只禁止属性赋值，
+    此前这里存的是普通 `dict`。pydantic 的 `frozen=True` 只不得属性赋值，
     不阻止嵌套容器被改：拿到 `ledger.records` 的调用方写
     `record.provenance["prompt"] = ...` 就能改掉已经参与 entry hash 计算的内容，
     于是一个公开暴露的账本会在寻常的嵌套赋值之后**自发 verify() 失败**——
@@ -45,7 +45,7 @@ class ProvenanceRecord(BaseModel):
     # 直接构造或从 JSON 还原的记录可以携带 top_p=1.5、负 token 数、负成本——
     # append() 照样对这些有限值算哈希、verify() 照样通过，证据链于是为一份
     # **违反公开 completion 契约、无法重建成合法 CompletionResult** 的 provenance
-    # 背书。校验必须在两处都成立，不能只靠上游。
+    # 背书。校验需在两处都成立，不能只靠上游。
     model_id: str = Field(min_length=1)
     prompt: str
     response: str
@@ -77,7 +77,7 @@ class EvolutionRecord(BaseModel):
     hypervolume_delta: float | None = None
     kept: bool
     # 记录 append 时刻的全程累计真实 run_pipeline 调用数（含轮前基线池 I×P、
-    # 闸门 1+2+0、候选逐实例评估）。这是 Study-002 预算口径的唯一来源。
+    # gate counts (1 contract, 2 validation, 0 skipped) per candidate evaluation.
     evaluations_used: int = 0
     # 迄今各轮 hypervolume_delta 非 None 值的 running max，单调不减；
     # 任何 delta 仍为 None 时也保持上轮值。口径是 COCO/IOHprofiler 式的

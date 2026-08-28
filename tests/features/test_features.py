@@ -16,8 +16,8 @@ from shapely.affinity import translate as shp_translate
 from agriautolab.contracts.problem import CoverageProblem
 from agriautolab.contracts.rows import RowStructure
 from agriautolab.contracts.vehicle import VehicleSpec
-from agriautolab.features.extract import extract_instance_features, reflex_vertex_count
-from agriautolab.features.invariance import FEATURE_INVARIANCE
+from agriautolab.selection.features.extract import extract_instance_features, reflex_vertex_count
+from agriautolab.selection.features.invariance import FEATURE_INVARIANCE
 from agriautolab.geometry.validate import polygon_to_spec
 
 
@@ -42,7 +42,7 @@ def build_problem(theta: float = 0.0, scale: float = 1.0, tx: float = 0.0, ty: f
 
 
 def vehicle(scale: float = 1.0) -> VehicleSpec:
-    # 幅宽取 9.7： swath_count = ceil(span/width) 在整比处不连续，测试几何必须避开边界
+    # 幅宽取 9.7： swath_count = ceil(span/width) 在整比处不连续，测试几何需避开边界
     return VehicleSpec(working_width_m=9.7 * scale, body_width_m=2.0 * scale, min_turning_radius_m=3.0 * scale)
 
 

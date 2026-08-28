@@ -8,7 +8,7 @@ from shapely.affinity import rotate, scale
 
 from agriautolab.contracts.geometry import Point
 from agriautolab.geometry.robust import robust_union
-from agriautolab.metrics.path import aol, path_length, total_heading_change, tortuosity
+from agriautolab.pipeline.metrics.path import aol, path_length, total_heading_change, tortuosity
 
 
 def test_known_theta_1_9_scale_3_union_keeps_all_disjoint_pieces() -> None:

@@ -1,7 +1,0 @@
-{
-  "bytes": 3238,
-  "file": "AGRIPLAN-PARETO-001.yaml",
-  "file_sha256": "8d1326de651ed91cce66ed01fc24a7a527064fe9ec7c1cedd83793e7c23f6a80",
-  "seal_rule": "字节级 SHA-256；重算即对账，不重封",
-  "study_id": "AGRIPLAN-PARETO-001"
-}

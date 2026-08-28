@@ -47,7 +47,7 @@ def main() -> None:
         return
     if (args.wkt_zip is None or args.output is None
             or args.allow_analysis is None or args.allow_redistribution is None):
-        parser.error("正式导入必须显式给 --wkt-zip、--output、"
+        parser.error("正式导入需显式给 --wkt-zip、--output、"
                      "--allow-analysis/--no-allow-analysis 与 "
                      "--allow-redistribution/--no-allow-redistribution")
     records, quarantined = load_fields2benchmark_wkt_zip_with_quarantine(args.wkt_zip)

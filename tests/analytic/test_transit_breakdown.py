@@ -8,7 +8,7 @@ from agriautolab.contracts.artifacts import PathArtifact, PathSegment
 from agriautolab.contracts.enums import PathSegmentKind
 from agriautolab.contracts.errors import TransitDecompositionError
 from agriautolab.contracts.geometry import LineStringSpec, Point
-from agriautolab.metrics.path import headland_turn_count, transit_breakdown
+from agriautolab.pipeline.metrics.path import headland_turn_count, transit_breakdown
 
 
 def segment(sid: str, kind: PathSegmentKind, *points: tuple[float, float]) -> PathSegment:
@@ -98,7 +98,7 @@ def test_turn_plus_inter_cell_count_always_equals_headland_turn_count(cells, exp
 
 
 def test_path_without_any_work_segment_is_rejected() -> None:
-    """一条作业段都没有时无法区分首腿尾腿，必须抛而不是默默记成进场腿。"""
+    """一条作业段都没有时无法区分首腿尾腿，需抛而不是默默记成进场腿。"""
     path = PathArtifact(segments=(
         segment("t0", PathSegmentKind.TRANSIT, (0.0, 0.0), (0.0, 10.0)),
     ))

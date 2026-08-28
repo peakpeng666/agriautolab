@@ -183,7 +183,7 @@ def evaluate_cvrp_solution(problem: CVRPProblem, solution: CVRPSolution) -> CVRP
     route_lengths_m: list[float] = []
     for route_index, route in enumerate(solution.routes):
         if len(route) < 3 or route[0] != depot_id or route[-1] != depot_id:
-            raise ValueError(f"CVRP 路线 {route_index} 必须从仓库出发并回仓")
+            raise ValueError(f"CVRP route {route_index} must start and end at the depot")
 
         customer_ids = route[1:-1]
         if any(node_id not in customers_by_id for node_id in customer_ids):
@@ -201,7 +201,7 @@ def evaluate_cvrp_solution(problem: CVRPProblem, solution: CVRPSolution) -> CVRP
         set(visited_customer_ids) != expected_customer_ids
         or len(visited_customer_ids) != len(expected_customer_ids)
     ):
-        raise ValueError("CVRP 解必须且只能服务每个客户一次")
+        raise ValueError("a CVRP solution must serve every customer exactly once")
 
     return CVRPEvaluation(
         total_distance_m=sum_distances_m(route_lengths_m),

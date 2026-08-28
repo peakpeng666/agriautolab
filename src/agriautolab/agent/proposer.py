@@ -184,21 +184,21 @@ class CompletionResult:
             try:
                 f = float(value)
             except (TypeError, ValueError) as error:
-                raise ValueError(f"CompletionResult.{name} 必须是有限浮点：{value!r}") from error
+                raise ValueError(f"CompletionResult.{name} must be a finite float: {value!r}") from error
             if not (0.0 <= f <= 1.0) or not _isfinite(f):
-                raise ValueError(f"CompletionResult.{name} 必须在 [0,1] 且有限：{f!r}")
+                raise ValueError(f"CompletionResult.{name} must be finite and within [0,1]: {f!r}")
         for name, value in (("prompt_tokens", prompt_tokens), ("completion_tokens", completion_tokens)):
             if not isinstance(value, int) or isinstance(value, bool) or value < 0:
-                raise ValueError(f"CompletionResult.{name} 必须为 int >= 0：{value!r}")
+                raise ValueError(f"CompletionResult.{name} must be an int >= 0: {value!r}")
         for name, value in (("cost", cost), ("latency_ms", latency_ms)):
             try:
                 f = float(value)
             except (TypeError, ValueError) as error:
-                raise ValueError(f"CompletionResult.{name} 必须是有限浮点：{value!r}") from error
+                raise ValueError(f"CompletionResult.{name} must be a finite float: {value!r}") from error
             if not _isfinite(f) or f < 0.0:
-                raise ValueError(f"CompletionResult.{name} 必须 >= 0 且有限：{f!r}")
+                raise ValueError(f"CompletionResult.{name} must be finite and >= 0: {f!r}")
         if not isinstance(seed, int) or isinstance(seed, bool):
-            raise ValueError(f"CompletionResult.seed 必须为 int：{seed!r}")
+            raise ValueError(f"CompletionResult.seed must be an int: {seed!r}")
         # 经 object.__setattr__ 落字段：本类的 __setattr__ 一律拒绝，
         # 构造之后 provenance 不可变（见类 docstring 的不可变性契约）。
         for name, coerced in (
@@ -269,9 +269,9 @@ area_m2, perimeter_area_ratio, convexity_deficiency, elongation,
 reflex_vertex_count, obstacle_count, obstacle_area_ratio,
 row_angle_vs_principal, turning_ratio, swath_count_at_minwidth。
 
-返回值：相对地块 PCA 主轴的扫掠角偏移（弧度），必须在 [-pi/2, pi/2] 内且有限。
+返回值：相对地块 PCA 主轴的扫掠角偏移（弧度），需在 [-pi/2, pi/2] 内且有限。
 可用内建：math, len, range, min, max, abs, sum, enumerate, sorted, tuple, list, float, int。
-禁止 import、open、eval、exec、双下划线属性。代码会在受限沙箱里执行并过四道闸。
+Imports, eval/exec, and dunder attributes are forbidden. Code executes in a sandbox.
 目标：让 Pareto 前沿的超体积增大（造互补性，不是造单项冠军）。
 """,
     "route_order": """你在一个农业覆盖路径规划的算法演化循环里担任启发式提议者。
@@ -290,9 +290,9 @@ row_angle_vs_principal, turning_ratio, swath_count_at_minwidth。
   candidate: distance_norm（出口到条带入口欧氏距离 / min_turning_radius）、
              axis_offset_norm（条带中心在主轴法向的投影 / working_width）
 
-返回值：浮点分数，越小优先级越高；必须有限。
+返回值：浮点分数，越小优先级越高；需有限。
 可用内建：math, len, range, min, max, abs, sum, enumerate, sorted, tuple, list, float, int。
-禁止 import、open、eval、exec、双下划线属性。代码会在受限沙箱里执行并过四道闸。
+Imports, eval/exec, and dunder attributes are forbidden. Code executes in a sandbox.
 目标：让 Pareto 前沿的超体积增大（造互补性，不是造单项冠军）。
 """,
 }
@@ -327,13 +327,13 @@ class LLMProposer:
         prompt = self.build_prompt(stage=stage, context=context)
         result = self._client.complete(prompt)
         if result.prompt != prompt:
-            # fail closed：后端返回的 provenance 必须对应本次实际发出的请求。
-            # 否则账本记下的是另一次调用的 prompt，离线重放会喂错输入，
+            # fail closed：后端返回的 provenance 需对应本次实际发出的请求。
+            # Ensure provenance prompt matches the prompt sent to the model.
             # 「哪个请求产生了这个响应」这一主张就无法成立。
             raise ValueError(
-                "模型后端返回的 CompletionResult.prompt 与本次发出的 prompt 不一致："
+                "CompletionResult.prompt does not match sent prompt: "
                 f"request_id={result.request_id!r}，"
-                f"发出 {len(prompt)} 字符、返回 {len(result.prompt)} 字符"
+                f"Sent {len(prompt)} chars, received {len(result.prompt)} chars"
             )
         return _candidate_from_completion(context.round_index, result)
 
@@ -354,7 +354,7 @@ def _candidate_from_completion(round_index: int, result: CompletionResult) -> Pr
 def replay_candidate(round_index: int, result: CompletionResult) -> ProposalCandidate:
     """离线重放：直接委托 _candidate_from_completion，docstring 明言无网络、确定性。
 
-    重放时 result.response 与 result.prompt 必须与在线调用逐位相同；replay 与
+    Deterministic replay requirement: prompt and response must match byte-for-byte.
     在线产生的 ProposalCandidate 在 identity（三元组 algorithm_id/source_code/
     description）上逐位相等。
     """

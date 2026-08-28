@@ -16,9 +16,9 @@ from agriautolab.contracts.protocol import (
     ReverseCostSpec,
 )
 from agriautolab.contracts.vehicle import VehicleSpec
-from agriautolab.evidence.hashing import content_hash
-from agriautolab.corpus.protocol import CorpusProtocol
-from agriautolab.corpus.runner import CodeVersion, CorpusRunner, discover_code_version
+from agriautolab.pipeline.hashing import content_hash
+from agriautolab.pipeline.corpus.protocol import CorpusProtocol
+from agriautolab.pipeline.corpus.runner import CodeVersion, CorpusRunner, discover_code_version
 from agriautolab.datasets.fields2benchmark import DatasetLicense, FieldRecord, load_exported_corpus
 from agriautolab.pipeline.config import PipelineConfig
 
@@ -74,7 +74,7 @@ def _self_check() -> None:
 
 
 def _load_configs(path: Path) -> tuple[PipelineConfig, ...]:
-    """读取冻结的 13 配置清单；每个条目必须带 reason，理由与配置同文件同审计。"""
+    """读取冻结的 13 配置清单；每个条目需带 reason，理由与配置同文件同审计。"""
     import hashlib
 
     items = json.loads(path.read_text(encoding="utf-8"))
@@ -94,17 +94,17 @@ def _seal_holdout(records, output_dir: Path, *, fraction: float, seed: int) -> N
     """跑之前先封存留出集，按 field_id 分组。
 
     顺序不能反：跑完再封存，等于看过结果之后再决定留出谁。
-    已存在封存文件则只对账不重封——「重新封存」就是换留出集（HoldoutVault 的既定语义）。
+    已存在封存文件则只对账不重封——「重新封存」就是换留出集（HoldoutPartition 的既定语义）。
     """
-    from agriautolab.evidence.holdout import HoldoutVault, field_level_holdout
+    from agriautolab.selection.holdout_partition import HoldoutPartition, field_level_holdout
 
     field_ids = tuple(record.field_id for record in records)
     holdout = field_level_holdout(field_ids, fraction=fraction, seed=seed)
     root = Path(output_dir)
     root.mkdir(parents=True, exist_ok=True)
     seal_path = root / "holdout_seal.json"
-    vault = HoldoutVault()
-    seal = vault.seal_holdout(holdout, seed=seed)
+    partition = HoldoutPartition()
+    seal = partition.seal_holdout(holdout, seed=seed)
     if seal_path.exists():
         existing = json.loads(seal_path.read_text(encoding="utf-8"))
         if existing["seal_hash"] != seal.seal_hash:
@@ -129,12 +129,12 @@ def _seal_holdout(records, output_dir: Path, *, fraction: float, seed: int) -> N
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--corpus", type=Path)
-    parser.add_argument("--configs", type=Path, default=Path(__file__).resolve().parents[1] / "configs" / "corpus_13.json")
+    parser.add_argument("--configs", type=Path, default=Path(__file__).resolve().parents[1] / "configs" / "standard_configs.json")
     parser.add_argument("--vehicles", type=Path)
     parser.add_argument("--benchmark-protocol", type=Path)
     parser.add_argument("--corpus-protocol", type=Path)
     parser.add_argument("--output", type=Path)
-    # 必须先封存再跑。预注册参数 field 级 30%、seed 20260821。
+    # 需先封存再跑。预注册参数 field 级 30%、seed 20260821。
     parser.add_argument("--holdout-fraction", type=float, default=0.3)
     parser.add_argument("--holdout-seed", type=int, default=20260821)
     parser.add_argument("--self-check", action="store_true")
@@ -144,7 +144,7 @@ def main() -> None:
         return
     required = (args.corpus, args.vehicles, args.benchmark_protocol, args.corpus_protocol, args.output)
     if any(value is None for value in required):
-        parser.error("正式运行必须给 corpus/vehicles/benchmark-protocol/corpus-protocol/output")
+        parser.error("正式运行需给 corpus/vehicles/benchmark-protocol/corpus-protocol/output")
     records = load_exported_corpus(args.corpus)
     _seal_holdout(records, args.output, fraction=args.holdout_fraction, seed=args.holdout_seed)
     configs = _load_configs(args.configs)

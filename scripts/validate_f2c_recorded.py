@@ -8,7 +8,7 @@ import csv
 import tempfile
 from pathlib import Path
 
-from agriautolab.cross_validation import F2CRequest, RecordedCsvAdapter, compare_results
+from agriautolab.validation import F2CRequest, RecordedCsvAdapter, compare_results
 
 
 def _request(request_id: str) -> F2CRequest:

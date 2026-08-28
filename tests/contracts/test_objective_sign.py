@@ -1,8 +1,8 @@
-"""最大化目标必须在 objective 内部翻成最小化代价，优化器一侧不允许出现方向分支。"""
+"""最大化目标需在 objective 内部翻成最小化代价，优化器一侧不允许出现方向分支。"""
 
 from agriautolab.contracts.artifacts import CellsArtifact
 from agriautolab.contracts.enums import CoverageStage, ObjectiveRole
-from agriautolab.coverage.objectives import Artifact, Objective
+from agriautolab.pipeline.objectives import Artifact, Objective
 
 
 class MaxObjective(Objective):

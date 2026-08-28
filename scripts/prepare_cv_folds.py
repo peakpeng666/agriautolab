@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""从冻结 v7 manifest + holdout seal 生成 Block D 的 field-grouped CV 折表。"""
+"""从冻结 dataset-split manifest + holdout partition 生成 field-grouped CV 折表。"""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from agriautolab.selection.cv import (
     CV_FOLDS,
     CV_SEED,
     build_cv_assignment_evidence,
-    seal_cv_assignment_in_block_d_ledger,
+    register_cv_assignment,
     write_cv_assignment,
 )
 
@@ -21,7 +21,7 @@ def main() -> None:
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--holdout", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--ledger", type=Path, help="可选：把折表封为 Block D 分析账本 genesis")
+    parser.add_argument("--ledger", type=Path, help="可选：把折表封为基准结果账本 genesis")
     parser.add_argument("--folds", type=int, default=CV_FOLDS)
     parser.add_argument("--seed", type=int, default=CV_SEED)
     parser.add_argument("--print-json", action="store_true", help="审计/CI 用：把完整规范 JSON 打到 stdout")
@@ -35,19 +35,19 @@ def main() -> None:
     )
     if args.ledger is not None and args.output.exists():
         # 已封存重跑：先在临时位置渲染，与封存哈希不一致时覆盖前拒绝
-        from agriautolab.evidence.atomic import commit_guarded, sealed_sha_for
+        from agriautolab.pipeline import jsonl_log
 
-        if sealed_sha_for(args.ledger, "cv_assignment", "cv_assignment_file_sha256") is not None:
+        if jsonl_log.read_sealed_sha256(args.ledger, "cv_assignment", "cv_assignment_file_sha256") is not None:
             tmp = args.output.with_name(args.output.name + ".tmp")
             write_cv_assignment(evidence, tmp)
-            commit_guarded(tmp, args.output, args.ledger, "cv_assignment", "cv_assignment_file_sha256")
+            jsonl_log.replace_unless_sealed(tmp, args.output, args.ledger, "cv_assignment", "cv_assignment_file_sha256")
         else:
             write_cv_assignment(evidence, args.output)
     else:
         write_cv_assignment(evidence, args.output)
     ledger_entry = None
     if args.ledger is not None:
-        ledger_entry = seal_cv_assignment_in_block_d_ledger(evidence, args.output, args.ledger)
+        ledger_entry = register_cv_assignment(evidence, args.output, args.ledger)
     print(
         "cv assignment: "
         f"all={evidence.n_all_fields}, holdout={evidence.n_holdout_fields}, "

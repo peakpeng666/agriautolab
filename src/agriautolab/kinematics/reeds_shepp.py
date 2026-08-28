@@ -8,10 +8,10 @@ and backwards", Pacific J. Math 145(2):367-393，式 (8.1)-(8.11)。
 Dubins 才 6 个字就错了一个 LRL——正演闭合误差一度到 3.1e+01，而所有手工样例
 都没命中它，是 5000 组随机位姿的全字闭合把它抓出来的。48 个手写漏字概率接近 1。
 
-**已实现的覆盖（实测数字，不是声称）**：
+**Verified coverage (empirically measured):**
 8 个闭式基础式（论文式 8.1、8.2、8.3/8.4、8.7、8.8、8.9、8.10、8.11；
 8.3 与 8.4 互为 backwards 像，共用一个求解器）x 三个对称变换的笛卡尔积 2^3
-= 64 个候选构造，5000 组随机位姿实测命中 51 个构造、**48 个不同的带符号字形**
+= 64 candidate words; 5000 random poses hit 51 words, 48 distinct signed words.
 ——即 Reeds-Shepp 的 48 字全集。CCCC / CCSC / CCSCC 三族已实现。
 
 三个对称变换（Reeds-Shepp §8）：
@@ -19,12 +19,12 @@ Dubins 才 6 个字就错了一个 LRL——正演闭合误差一度到 3.1e+01�
 - reflect  ：(x, y, phi) -> (x, -y, -phi)，字母 L <-> R 互换
 - backwards：解 start 在 goal 帧内的反问题，再把字序倒读
 
-陷阱：backwards 必须作为独立变换参与笛卡尔积，不能塞进某个基础式当「第 9 式」。
+陷阱：backwards 需作为独立变换参与笛卡尔积，不能塞进某个基础式当「第 9 式」。
 塞进去只能得到 CCC 的一个 backwards 字，CCSC 族的四个 backwards 字会漏——
-实测就是这么发现的：36 个组合里只有 32 个会命中，缺的正是那一族。
+# Empirically verified: only 32 of 36 combinations are reachable; the missing family is identified.
 
 **闭合校验是安全网，不是装饰**：任何对称映射的代数错误都会让终点对不上，
-不闭合的候选直接丢弃（误差 > 1e-9），绝不带着错路径出门。
+不闭合的候选直接丢弃（误差 > 1e-9），不带着错路径出门。
 
 符号长度约定：负长度 = 倒车行驶该弧/直线。倒车不改变转向字母的几何意义
 （左侧圆弧倒着走仍是左侧圆弧），只改变行进方向；正演积分公式对负长度代数同一。
@@ -209,12 +209,12 @@ class ReverseCostModel:
     """倒车代价：cost = 前进长 + multiplier x 倒车长 + penalty x 换挡次数。
 
     两个参数都由协议声明（BenchmarkProtocol.reverse_cost，无默认值、进协议哈希）：
-    换了倒车偏好就是换了目标函数，两次运行在证据层必须能区分。
+    换了倒车偏好就是换了目标函数，两次运行在证据层需能区分。
 
     倒车在农艺上更慢、土壤压实更重；换挡（前进/倒车切换）本身也有固定时间成本，
     只用长度乘子表达不了「宁可多走一点也别多换一次挡」这种偏好——两个参数不是冗余。
 
-    陷阱：multiplier 极大时最优解必须退化为纯前进（Dubins）解。
+    陷阱：multiplier 极大时最优解需退化为纯前进（Dubins）解。
     这是真值 #21，与真值 #18（RS <= Dubins）成对：两条都过才说明这里
     确实多了一个自由度，而不是把 Dubins 换了个名字。
     """
@@ -225,7 +225,7 @@ class ReverseCostModel:
     def __post_init__(self) -> None:
         if self.reverse_length_multiplier < 1.0:
             raise ValueError(
-                f"reverse_length_multiplier 必须 >= 1，实际 {self.reverse_length_multiplier!r}"
+                f"reverse_length_multiplier 需 >= 1，实际 {self.reverse_length_multiplier!r}"
             )
         if self.gear_shift_penalty_m < 0.0:
             raise ValueError(f"gear_shift_penalty_m 不能为负，实际 {self.gear_shift_penalty_m!r}")
@@ -279,9 +279,9 @@ def _rs_endpoint(start: Pose2D, word: RSWord, radius: float) -> Pose2D:
 # - reflect  ：(x, y, phi) -> (x, -y, -phi)，字母 L <-> R  —— 左右镜像
 # - backwards：解反过来的问题（start 在 goal 帧内的位姿），再把字序倒读
 #
-# backwards 必须作为独立变换参与组合，不能塞进某个基础式里当「第 9 式」：
+# backwards 需作为独立变换参与组合，不能塞进某个基础式里当「第 9 式」：
 # 塞进去只会得到 CCC 的一个 backwards 字，CCSC 族的四个 backwards 字就漏了
-# （实测：塞进去时 36 组合里只有 32 组会命中，正是漏掉的那一族在报信）。
+# Only 32 of 36 possible word families are reachable; the missing family acts as a signal.
 _BOOL_PAIR = (False, True)
 
 
@@ -333,13 +333,13 @@ def _candidate_words(start: Pose2D, goal: Pose2D, radius: float) -> list[RSWord]
 def reeds_shepp_words(start: Pose2D, goal: Pose2D, radius: float) -> tuple[RSWord, ...]:
     """返回全部通过正演闭合（< 1e-9）的候选词，按 (字母, 长度) 去重。
 
-    对称映射本身可能有代数错误，所以每个词出口前必须闭合——
+    对称映射本身可能有代数错误，所以每个词出口前需闭合——
     这条安全网正是 Dubins 那个 LRL 漏洞教出来的。
     """
     if radius <= 0.0:
-        raise KinematicModelError(f"Reeds-Shepp 半径必须大于 0，实际 {radius!r}")
+        raise KinematicModelError(f"Reeds-Shepp radius must be greater than 0, got {radius!r}")
     # 闭合容差带坐标尺度：UTM ~6.5e6 处 ULP≈9.3e-10，合法词的公式
-    # 舍入闭合误差实测 1.86e-9（≈1.3 ULP，全部 48 候选同值）——绝对 1e-9
+    # Round-trip closure error measured at 1.86e-9 (≈1.3 ULP across all 48 candidates); tolerance 1e-9
     # 会把好词全拒掉（v6 的 66 crash 根因）。取 8 ULP 与 1e-9 的较大者：小坐标行为
     # 不变（既有电池 rel 1e-12 仍过），大坐标只放行表示噪声（真错的词在 1e-6 以上）。
     closure_tolerance = max(1e-9, 8.0 * math.ulp(max(abs(start.x), abs(start.y), 1.0)))
@@ -365,7 +365,7 @@ def reeds_shepp_words(start: Pose2D, goal: Pose2D, radius: float) -> tuple[RSWor
 def _forward_only_words(start: Pose2D, goal: Pose2D, radius: float) -> tuple[RSWord, ...]:
     """把 Dubins 的六字并入候选：能倒车的车当然也可以选择不倒车。
 
-    为什么必须显式并进来（实测）：Reeds-Shepp 的 48 字是**候选最优字集**，
+    # All 48 Reeds-Shepp words must be evaluated: they form the complete candidate-optimal set;
     不是可行字全集。当倒车严格更优时（同点掉头 pi < 7pi/3），48 字里一个纯前进字都没有——
     于是倒车罚开到 1e9，规划器仍然只能在倒车字里挑，选出一条造价 3e9 的路。
     协议声明「倒车极贵」而规划器照样倒车，这是行为缺陷，不是测试写错。

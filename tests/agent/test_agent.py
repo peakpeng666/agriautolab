@@ -21,7 +21,7 @@ from agriautolab.contracts.problem import CoverageProblem
 from agriautolab.contracts.protocol import BenchmarkProtocol
 from agriautolab.contracts.rows import RowStructure
 from agriautolab.contracts.vehicle import VehicleSpec
-from agriautolab.pareto.hypervolume import analytic_reference
+from agriautolab.pipeline.pareto.hypervolume import analytic_reference
 from agriautolab.pipeline.config import PipelineConfig
 
 
@@ -79,7 +79,7 @@ def test_sandbox_runs_whitelisted_code() -> None:
 
 
 def test_sandbox_hides_non_whitelisted_builtins() -> None:
-    # pow 不在静态禁令表里（静态层不拦），但不在白名单里——运行时必须 NameError。
+    # pow 不在静态禁令表里（静态层不拦），但不在白名单里——运行时需 NameError。
     # 这证明白名单是真实的执行约束，不只是扫描器的说辞。
     namespace = run_sandboxed("def probe():\n    return pow(2, 3)\n")
     with pytest.raises(NameError):
@@ -116,7 +116,7 @@ def test_reviewers_default_to_refuted_only_with_concrete_probes() -> None:
     for reviewer in DEFAULT_REVIEWERS:
         verdict = reviewer.review(MOCK_CANDIDATES[1], function)
         assert not verdict.refuted
-        assert verdict.reasons          # refuted=False 必须附带具体探针结果
+        assert verdict.reasons          # refuted=False 需附带具体探针结果
     assert not majority_refuted(tuple(
         reviewer.review(MOCK_CANDIDATES[1], function) for reviewer in DEFAULT_REVIEWERS
     ))

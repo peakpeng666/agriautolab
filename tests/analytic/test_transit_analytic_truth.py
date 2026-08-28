@@ -21,7 +21,7 @@ from agriautolab.contracts.problem import CoverageProblem
 from agriautolab.contracts.vehicle import VehicleSpec
 from agriautolab.geometry.validate import polygon_to_spec
 from agriautolab.kinematics.dubins import dubins_length, dubins_word
-from agriautolab.metrics.path import transit_breakdown
+from agriautolab.pipeline.metrics.path import transit_breakdown
 
 
 def pi_turn_analytic(radius: float, spacing: float) -> float:
@@ -60,7 +60,7 @@ def test_pi_turn_closed_form_matches_dubins_solver(radius: float, spacing: float
 def test_boustrophedon_turn_on_rectangle_hits_the_analytic_minimum(
     radius: float, spacing: float, expected: float
 ) -> None:
-    """矩形地块、无障碍、相邻牛耕：每次掉头的转移长度必须落在解析最短上。
+    """矩形地块、无障碍、相邻牛耕：每次掉头的转移长度需落在解析最短上。
 
     采样折线比真弧短：弦差每段约 theta^2/24（theta = step/R），
     step=0.25 时整体约 5e-4 —— 因此这里用 2e-3 的相对容差钉「等于解析值」，
@@ -84,7 +84,7 @@ def test_boustrophedon_turn_on_rectangle_hits_the_analytic_minimum(
     assert breakdown.inter_cell_m == 0.0
     assert breakdown.other_m == 0.0
     assert breakdown.mean_turn_m == pytest.approx(expected, rel=2e-3)
-    # 采样只会让折线比弧短，绝不会更长。
+    # 采样只会让折线比弧短，不会更长。
     assert breakdown.mean_turn_m <= expected
 
 
@@ -123,7 +123,7 @@ def test_bulge_region_lengths_are_pinned(ratio: float, expected_over_radius: flo
     """d < 2R：直线段塌缩，最短解走 CCC 字；这三点把整个鼓包区钉住。
 
     规格给 d/R=1.0 的参考值是 6.032484，实测是 6.032529644843455（相对差 7.6e-6）。
-    规格原话是「实测钉住即可」，故按实测钉。
+    Empirical benchmark reference value.
     """
     radius = 1.0
     goal = (0.0, ratio * radius, math.pi)
@@ -139,7 +139,7 @@ def test_bulge_region_lengths_are_pinned(ratio: float, expected_over_radius: flo
 
 
 def test_bulge_and_pi_turn_agree_at_the_d_equals_2r_boundary() -> None:
-    """两个区在 d=2R 处必须接上：pi·R + d − 2R 在此退化为 pi·R。"""
+    """两个区在 d=2R 处需接上：pi·R + d − 2R 在此退化为 pi·R。"""
     radius = 2.0
     assert pi_turn_analytic(radius, 2.0 * radius) == pytest.approx(math.pi * radius, rel=1e-15)
     assert dubins_length((0.0, 0.0, 0.0), (0.0, 2.0 * radius, math.pi), radius) == pytest.approx(
@@ -148,6 +148,6 @@ def test_bulge_and_pi_turn_agree_at_the_d_equals_2r_boundary() -> None:
 
 
 def test_pi_turn_formula_refuses_the_bulge_region() -> None:
-    """作用域有效性：d < 2R 时本式不成立，必须拒绝求值而不是给一个偏小的数。"""
+    """作用域有效性：d < 2R 时本式不成立，需拒绝求值而不是给一个偏小的数。"""
     with pytest.raises(ValueError):
         pi_turn_analytic(2.0, 3.9)

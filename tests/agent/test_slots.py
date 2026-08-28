@@ -1,6 +1,6 @@
 """候选槽位抽象真值：SLOTS 注册表、默认槽位等价性与黄金 config_id 钉住。
 
-真值标准（docs/OPTIMIZATION_FOUNDATIONS.md §4：断言必须在旧实现下失败）：
+真值标准（docs/OPTIMIZATION_FOUNDATIONS.md §4：断言需在旧实现下失败）：
 旧的硬编码单槽位实现没有 slots 模块、闸门没有 slot 参数、evolve_pool 没有
 slot 关键字、账本没有 slot_id 字段——下面的注册表/分派/fail-closed 断言
 在那个实现下全部无法通过。
@@ -45,7 +45,7 @@ GOLDEN_CONFIG_ID_OFFSET_PI_OVER_6 = "ee57b34caaafa4498cb89f687d25982955cbe29bb22
 
 def test_slots_registry_exposes_swath_angle_as_default() -> None:
     # 旧实现没有注册表：单槽位硬编码在 gates 里，无从谈起 SLOTS/DEFAULT_SLOT_ID。
-    # 多槽位时代收紧为「swath_angle 必须登记且作为默认槽位」；不再断言 SLOTS
+    # 多槽位时代收紧为「swath_angle 需登记且作为默认槽位」；不再断言 SLOTS
     # 只含 swath_angle（任务 3 提交二新增 route_order）。
     assert DEFAULT_SLOT_ID == "swath_angle"
     assert "swath_angle" in set(SLOTS)
@@ -59,7 +59,7 @@ def test_slots_registry_exposes_swath_angle_as_default() -> None:
 
 
 def test_slot_registries_stay_in_sync() -> None:
-    # 三张按槽位分派的表必须同键：SLOTS（闸门/演化语义）、MOCK_CANDIDATES_BY_SLOT
+    # 三张按槽位分派的表需同键：SLOTS（闸门/演化语义）、MOCK_CANDIDATES_BY_SLOT
     # 与 PROMPT_TEMPLATES（proposer 分派表）。新增槽位漏登记任何一张时，报错点
     # 前移到这里，而不是等到 evolve_pool 的 ValueError 或 propose/build_prompt 的 KeyError。
     assert set(SLOTS) == set(MOCK_CANDIDATES_BY_SLOT) == set(PROMPT_TEMPLATES)
@@ -74,13 +74,13 @@ def test_golden_config_ids_pinned_through_slot_build_config() -> None:
     sixth = slot.build_config(lambda features: math.pi / 6.0, reference_problem(), reference_vehicle())
     assert half.config_id() == GOLDEN_CONFIG_ID_OFFSET_HALF
     assert sixth.config_id() == GOLDEN_CONFIG_ID_OFFSET_PI_OVER_6
-    # gates 的兼容入口与槽位实现同源：同输入必须同 config_id
+    # gates 的兼容入口与槽位实现同源：同输入需同 config_id
     assert candidate_config(0.5).config_id() == GOLDEN_CONFIG_ID_OFFSET_HALF
     assert candidate_config(math.pi / 6.0).config_id() == GOLDEN_CONFIG_ID_OFFSET_PI_OVER_6
 
 
 def test_gates_default_slot_equals_explicit_swath_slot() -> None:
-    # 不传 slot（旧调用点形态）与显式传 SLOTS["swath_angle"] 必须逐位等价。
+    # 不传 slot（旧调用点形态）与显式传 SLOTS["swath_angle"] 需逐位等价。
     instance = make_instance()
     protocol = make_protocol(instance)
     slot = SLOTS["swath_angle"]
@@ -159,7 +159,7 @@ def test_registry_key_must_match_slot_id() -> None:
 
 def test_proposer_dispatches_prompt_and_mocks_by_slot_id() -> None:
     # 提示词模板按槽位登记：单槽位时代的公开名 PROMPT_TEMPLATE 是其中一个值。
-    # 多槽位时代改为 "swath_angle 必须存在"；不再断言严格唯一（任务 3 提交二
+    # 多槽位时代改为 "swath_angle 需存在"；不再断言严格唯一（任务 3 提交二
     # 新增 route_order）。
     assert "swath_angle" in set(PROMPT_TEMPLATES)
     assert PROMPT_TEMPLATE == PROMPT_TEMPLATES["swath_angle"]
@@ -281,7 +281,7 @@ def test_evolve_pool_rejects_slot_id_mismatch() -> None:
 
 
 def test_evolve_pool_rejects_missing_proposer_template() -> None:
-    """c. 缺 PROMPT_TEMPLATES 登记：必须 ValueError（fail-closed），不静默。"""
+    """c. 缺 PROMPT_TEMPLATES 登记：需 ValueError（fail-closed），不静默。"""
     instance = make_instance()
     protocol = make_protocol(instance)
     from agriautolab.agent.proposer import PROMPT_TEMPLATES as _PT
@@ -299,7 +299,7 @@ def test_evolve_pool_rejects_missing_proposer_template() -> None:
 
 
 def test_evolve_pool_rejects_missing_proposer_mock_candidates() -> None:
-    """c'. 缺 MOCK_CANDIDATES_BY_SLOT 登记：必须 ValueError（fail-closed）。"""
+    """c'. 缺 MOCK_CANDIDATES_BY_SLOT 登记：需 ValueError（fail-closed）。"""
     instance = make_instance()
     protocol = make_protocol(instance)
     from agriautolab.agent.proposer import MOCK_CANDIDATES_BY_SLOT as _MCS
@@ -317,7 +317,7 @@ def test_evolve_pool_rejects_missing_proposer_mock_candidates() -> None:
 
 
 def test_evolve_pool_rejects_slot_missing_protocol_member() -> None:
-    """d. 协议缺成员（缺 build_config）：必须 ValueError（防止闸门 except 静默吞）。"""
+    """d. 协议缺成员（缺 build_config）：需 ValueError（防止闸门 except 静默吞）。"""
     instance = make_instance()
     protocol = make_protocol(instance)
 

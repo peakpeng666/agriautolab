@@ -1,6 +1,6 @@
 """规划问题的公共 schema 边界。
 
-不兼容字段必须在构造时失败：覆盖问题不能混入 point-to-point 字段，标准路由问题也
+不兼容字段需在构造时失败：覆盖问题不能混入 point-to-point 字段，标准路由问题也
 不应借用农业 field/vehicle 语义。TSP/CVRP 的专有契约放在 `contracts.routing`。
 """
 

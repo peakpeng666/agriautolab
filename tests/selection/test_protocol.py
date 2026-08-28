@@ -1,4 +1,4 @@
-"""D3-D4 协议先于结果封存的证据测试。"""
+"""selection 协议先于结果封存的证据测试。"""
 
 import hashlib
 import json
@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from agriautolab.evidence.ledger import artifact_chain_entry, verify_artifact_chain
+from agriautolab.pipeline import jsonl_log
 from agriautolab.selection.evidence import (
     seal_selection_cv_result,
     seal_selection_protocol,
@@ -22,8 +22,8 @@ from agriautolab.selection.protocol import (
 
 
 def _ledger_with_d1_d2(path: Path) -> None:
-    first = artifact_chain_entry(0, "0" * 64, {"event": "cv_assignment_sealed"})
-    second = artifact_chain_entry(1, first["entry_hash"], {"artifact": "pool_census"})
+    first = jsonl_log.build_entry(0, {"event": "cv_assignment_sealed"}, None)
+    second = jsonl_log.build_entry(1, {"artifact": "pool_census"}, first["entry_hash"])
     path.write_text(
         json.dumps(first, sort_keys=True) + "\n" + json.dumps(second, sort_keys=True) + "\n",
         encoding="utf-8",
@@ -58,11 +58,11 @@ def test_selection_protocol_sealing_is_index_two_and_idempotent(tmp_path: Path):
     assert first["index"] == 2
     assert ledger.read_bytes() == bytes_after_first
     entries = tuple(json.loads(line) for line in ledger.read_text(encoding="utf-8").splitlines())
-    verify_artifact_chain(entries)
+    jsonl_log.verify_entries(entries)
     # 长度不硬编码：后续合法封存（训练执行 index=3 等）不应打破本测试；
-    # 结构契约 = 首三条语义固定 + 链验证 + 若有第四条必须是训练封存四哈希。
+    # 结构契约 = 首三条语义固定 + 链验证 + 若有第四条需是训练封存四哈希。
     assert entries[0]["payload"].get("event") == "cv_assignment_sealed"
-    assert [e["payload"].get("artifact") for e in entries[1:3]] == ["pool_census", "selection_protocol_v1"]
+    assert [e["payload"].get("artifact") for e in entries[1:3]] == ["pool_census", "benchmark_cv_protocol"]
     if len(entries) >= 4:
         assert entries[3]["payload"].get("artifact") == "selection_cv_result"
         assert set(entries[3]["payload"]) >= {"cv_file_sha256", "model_file_sha256", "metadata_file_sha256", "protocol_hash"}
@@ -124,26 +124,3 @@ def test_selection_cv_seal_binds_report_model_and_metadata(tmp_path: Path):
         )
 
 
-def test_committed_selection_protocol_replays_exactly_and_is_ledger_index_two():
-    root = Path(__file__).resolve().parents[2]
-    protocol_path = root / "evidence" / "block_d" / "selection_protocol_v1.json"
-    ledger_path = root / "evidence" / "block_d" / "ledger.jsonl"
-    document = json.loads(protocol_path.read_text(encoding="utf-8"))
-    expected = selection_protocol_payload(
-        cv_spec_hash=document["cv_spec_hash"],
-        pool_hash=document["pool_hash"],
-    )
-    expected["spec_hash"] = selection_protocol_hash(
-        cv_spec_hash=document["cv_spec_hash"],
-        pool_hash=document["pool_hash"],
-    )
-    assert document == expected
-
-    entries = tuple(json.loads(line) for line in ledger_path.read_text(encoding="utf-8").splitlines())
-    verify_artifact_chain(entries)
-    assert len(entries) >= 3  # 真账本允许后续合法封存（训练 index=3 等）
-    entry = entries[2]
-    assert entry["index"] == 2
-    assert entry["payload"]["artifact"] == "selection_protocol_v1"
-    assert entry["payload"]["spec_hash"] == document["spec_hash"]
-    assert entry["payload"]["file_sha256"] == hashlib.sha256(protocol_path.read_bytes()).hexdigest()

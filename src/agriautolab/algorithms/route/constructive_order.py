@@ -9,16 +9,16 @@
   ActionT   = dict              候选条带的 swath_id + 旋转平移不变键
   SolutionT = tuple[str, ...]   完整访问序列
   feasible_actions(state) = 未访问条带按 swath_id 稳定排序（协议硬要求）
-  apply_action(state, action)  action 必须 ∈ feasible，否则 ValueError（fail-closed）
+  apply_action(state, action)  action 需 ∈ feasible，否则 ValueError（fail-closed）
 
 **行进方向与端点（关键）**：第 i 个访问（0 基）偶数 FORWARD、奇数 REVERSE，
 与 `RankedSwathOrderPlanner` 及 `BoustrophedonRoutePlanner` 同源。因此：
   FORWARD 从 centerline.points[0] 进、points[-1] 出；
   REVERSE 从 centerline.points[-1] 进、points[0] 出。
-入口/出口必须按访问序奇偶取端点——否则候选评的转移几何与路线实际走的不是同一条，
+入口/出口需按访问序奇偶取端点——否则候选评的转移几何与路线实际走的不是同一条，
 `distance_norm` 会从错误的一端量起。
 
-投影键（都必须旋转+平移不变）：
+投影键（都需旋转+平移不变）：
   distance_norm   = 上一条带出口 → 本条带入口 的欧氏距离 / min_turning_radius_m
   axis_offset_norm = |（条带中心 − 地块质心）在主轴法向上的投影| / working_width_m
                     减去质心是平移不变的前提：不减则整体平移会给所有投影加同一常数，
@@ -69,7 +69,7 @@ def center_of(endpoints: SwathEndpoints) -> tuple[float, float]:
 def project_state(state: tuple[str, ...], *, total_swath_count: int) -> dict[str, float]:
     """状态投影：已访问 / 未访问计数（无量纲，刚体变换与缩放全不变）。
 
-    候选契约函数 `next_swath_score(state, candidate)` 拿到的 state **必须**是本函数
+    候选契约函数 `next_swath_score(state, candidate)` 拿到的 state **需**是本函数
     的输出，而不是原始 `tuple[str, ...]`——否则任何使用 `state.get(...)` 的候选都会
     在构造期抛异常并被闸门淘汰，槽位静默退化成 action-only 启发式。
     """
@@ -81,7 +81,7 @@ def project_state(state: tuple[str, ...], *, total_swath_count: int) -> dict[str
 
 #: 契约向候选承诺的键。`swath_id` **不在其中**——它是上游生成器按坐标顺序分配的
 #: 序号，随刚体变换重排，用它排序等于用坐标 artifact 排序。动作字典要带 swath_id
-#: 供 problem 做身份判定，但交给候选之前必须过 `candidate_features` 剥掉。
+#: 供 problem 做身份判定，但交给候选之前需过 `candidate_features` 剥掉。
 CANDIDATE_FEATURE_KEYS = ("distance_norm", "axis_offset_norm")
 
 
@@ -147,9 +147,9 @@ class RouteOrderProblem(ConstructiveProblem[tuple[str, ...], dict, tuple[str, ..
         if not swath_endpoints:
             raise ValueError("swath_endpoints 不能为空")
         if min_turning_radius_m <= 0.0:
-            raise ValueError("min_turning_radius_m 必须 > 0")
+            raise ValueError("min_turning_radius_m must be > 0")
         if working_width_m <= 0.0:
-            raise ValueError("working_width_m 必须 > 0")
+            raise ValueError("working_width_m must be > 0")
         nx, ny = principal_normal
         norm = math.hypot(nx, ny)
         if norm == 0.0:

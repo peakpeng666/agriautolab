@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict
 from shapely.geometry import GeometryCollection
@@ -10,20 +11,22 @@ from shapely.geometry import GeometryCollection
 from agriautolab.contracts.artifacts import HeadlandArtifact, PathArtifact
 from agriautolab.contracts.enums import RunStatus
 from agriautolab.contracts.problem import CoverageProblem
-from agriautolab.contracts.protocol import BenchmarkProtocol
 from agriautolab.contracts.vehicle import VehicleSpec
 from agriautolab.geometry.kernel import FieldGeometry
 from agriautolab.geometry.robust import robust_union
 from agriautolab.geometry.validate import line_from_spec, polygon_from_spec
-from agriautolab.metrics.constraints import collision_area, max_abs_declared_curvature, outside_area
-from agriautolab.metrics.coverage import (
+from agriautolab.pipeline.metrics.constraints import collision_area, max_abs_declared_curvature, outside_area
+from agriautolab.pipeline.metrics.coverage import (
     coverage_stats, eta_l, l_area, nonwork_normalized, path_length_breakdown,
     path_work_lines, resolve_coverage_targets, swath_count, turning_overhead_ratio,
 )
-from agriautolab.metrics.path import (
+from agriautolab.pipeline.metrics.path import (
     aol, cusp_count, headland_turn_count, path_length, row_crossings,
     total_heading_change, tortuosity, transit_length,
 )
+
+if TYPE_CHECKING:
+    from agriautolab.contracts.protocol import BenchmarkProtocol
 
 
 class MetricValue(BaseModel):
@@ -67,7 +70,7 @@ class PathValidator:
     ) -> ValidationResult:
         """headland 传的是地头阶段的产物，不是任意几何：分母只能来自阶段输出，或者 None 表示没跑地头。
 
-        产物本身不携带宽度，所以传了 headland 就必须同时传 headland_width_m，
+        产物本身不携带宽度，所以传了 headland 就需同时传 headland_width_m，
         否则分母 provenance 缺少地头配置、事后无法对账。
         """
         if not path.segments:
@@ -98,7 +101,7 @@ class PathValidator:
             if collision_area(segment_path, obstacle_union, body_width_m=robot.body_width_m, scale_hint=scale_hint) > protocol.area_epsilon_m2:
                 return ValidationResult(status=RunStatus.COLLISION, failure_reason="validator_rejected:collision")
 
-        # 可原地转向的车没有曲率上界；这里必须先分支，否则 1/0 会把校验器本身炸掉。
+        # 可原地转向的车没有曲率上界；这里需先分支，否则 1/0 会把校验器本身炸掉。
         curvature_limit = math.inf if robot.can_turn_in_place else 1.0 / robot.min_turning_radius_m
         if max_abs_declared_curvature(path) > curvature_limit * (1.0 + 1e-12):
             return ValidationResult(
@@ -107,7 +110,7 @@ class PathValidator:
             )
 
         # 倒车段只属于可倒车机具：Reeds-Shepp 路径含 reversing 段，纯前向车辆
-        # （can_reverse=False）开着它物理上不成立，必须在门口拒绝而不是假装可行。
+        # （can_reverse=False）开着它物理上不成立，需在门口拒绝而不是假装可行。
         if any(segment.reversing for segment in path.segments) and not robot.can_reverse:
             return ValidationResult(
                 status=RunStatus.INFEASIBLE_KINEMATICS,

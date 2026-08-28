@@ -15,7 +15,7 @@ from agriautolab.algorithms.swath.longest_edge import longest_edge_direction
 from agriautolab.contracts.geometry import Point, PolygonSpec
 from agriautolab.contracts.problem import CoverageProblem
 from agriautolab.contracts.vehicle import VehicleSpec
-from agriautolab.pareto.hypervolume import analytic_reference
+from agriautolab.pipeline.pareto.hypervolume import analytic_reference
 from agriautolab.pipeline.config import PipelineConfig
 from agriautolab.pipeline.run import StageMemo, run_pipeline
 from agriautolab.geometry.validate import polygon_from_spec
@@ -44,7 +44,7 @@ def make_protocol(problem, vehicle) -> BenchmarkProtocol:
 
 def feasible_config(**overrides) -> PipelineConfig:
     # 地头 8 米：前进 Dubins 掉头向 swath 端点外鼓出约 2R（R=3），地头 6 米在
-    # L 形的窄段零余量、数值上必越界——掉头空间必须大于鼓包量，这是物理不是容差问题。
+    # L 形的窄段零余量、数值上必越界——掉头空间需大于鼓包量，这是物理不是容差问题。
     values = dict(
         decomposition="no_decomposition", headland="uniform_headland", swath="min_width",
         route="boustrophedon_order", path="dubins_transit", params={"headland_width_m": 8.0},
@@ -127,7 +127,7 @@ def test_row_aligned_objective_tradeoff_is_visible() -> None:
 
 def test_row_aligned_without_row_structure_is_rejected() -> None:
     from agriautolab.algorithms.swath.row_aligned import RowAlignedSwath
-    from agriautolab.coverage.stages.decomposition import NoDecomposition
+    from agriautolab.algorithms.stages.decomposition import NoDecomposition
 
     problem = CoverageProblem(problem_id="p", field=rect_field())
     cells = NoDecomposition().run(problem)

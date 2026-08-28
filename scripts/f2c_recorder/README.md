@@ -8,7 +8,7 @@ F2C 的 Python binding 由 SWIG 绑在 WSL 的 `python3.10`；agriautolab 要求
 （`src/agriautolab/contracts/geometry.py` 用了 `typing.Self`）。
 
 **不要为此重建 binding，也不要给仓库降级。** 两进程是既定架构，
-Block C 的三适配器设计（binding / subprocess / recorded CSV）就是为它准备的：
+三适配器设计（binding / subprocess / recorded CSV）就是为它准备的：
 
 ```
 WSL / py3.10                          Windows / py3.11+
@@ -19,7 +19,7 @@ scripts/f2c_recorder  ──emit──>  golden_f2c.csv  ──read──>  Reco
 
 本目录下的脚本**只依赖 python3.10 + fields2cover + shapely**，
 不 import 任何 agriautolab 内容。链路实现按文件路径加载
-`src/agriautolab/cross_validation/f2c_chain.py` —— 那个模块同样不 import agriautolab、
+`src/agriautolab/validation/f2c_chain.py` —— 那个模块同样不 import agriautolab、
 只用 3.10 兼容语法，因此录制壳与 `PythonBindingAdapter` **共用同一份链路实现**，
 等价性由构造保证，不靠事后比对两份输出。
 
@@ -32,8 +32,8 @@ scripts/f2c_recorder  ──emit──>  golden_f2c.csv  ──read──>  Reco
 仓库经 `/mnt/d` 挂载。以下把 `REPO` 与 `WORK` 设成你自己的路径。
 
 ```bash
-export REPO=/mnt/d/Peak/Desktop/URP/agriautolab-blockC/agriautolab-blockC
-export WORK=/mnt/d/Peak/Desktop/URP/o2_workspace
+export REPO=.
+export WORK=./build/f2c_workspace
 ```
 
 ### 1. 环境指纹（先录，它要进证据链）
@@ -57,7 +57,7 @@ python3 "$REPO/scripts/f2c_recorder/record_golden.py" --requests "$WORK/requests
 ### 3. 从 Windows 侧一键调用（可选）
 
 ```bash
-python -c "from agriautolab.cross_validation.f2c import SubprocessAdapter; print(SubprocessAdapter.wsl_command('/mnt/d/.../record_golden.py'))"
+python -c "from agriautolab.validation.f2c import SubprocessAdapter; print(SubprocessAdapter.wsl_command('/mnt/d/.../record_golden.py'))"
 ```
 
 `SubprocessAdapter(wsl_command=...)` 会用 `wsl.exe -e python3 ...` 跨过去调用，

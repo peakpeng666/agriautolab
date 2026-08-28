@@ -3,13 +3,14 @@
 本仓库存在两套词汇：**规范名（canonical）**面向新代码与论文叙事，
 **证据名（wire/legacy ID）**是已落盘证据的身份。规则只有一条总纲：
 
-> **证据身份永不改；规范名只存在于 API 层。**
+> **进入内容哈希的字符串永不改；规范名只存在于 API 层。**
 
-改一个已进 parquet / manifest / 预注册 / pool_hash 的字符串，等于把
-历史实验的身份换掉——v7 的 61 100 行会立刻变成「另一个实验」。
-因此：wire ID（`row_crossings`、`dubins_transit`、`runtime_ms`、
-`row_angle_vs_principal`…）永久保留；规范名以别名/属性/canonical_name
-的形式并存，新代码用规范名。
+改一个进 `config_id` / `pool_hash` / parquet 列名的字符串，等于把既有
+实验的身份换掉——dataset-split 的 61,100 行会立刻变成「另一个实验」。
+第一轮冻结研究的完整证据链已归档到 `study-001-frozen` tag，但 13 个冻结
+pipeline configuration 的 `config_id` 仍以五个阶段槽位字符串为哈希输入，
+因此这些 wire ID（`dubins_transit`、`min_width`、`no_headland`…）在主干
+同样不可改。规范名以别名/属性/canonical_name 的形式并存，新代码用规范名。
 
 ## 1. 词汇规则
 
@@ -53,10 +54,10 @@
 | `row_angle_vs_principal` | `crop_row_angle_to_principal_axis_rad` |
 
 指标规范名经 `MetricSpec.canonical_name` 声明（`registry.metric_by_canonical`
-可反查）；特征规范名集中在 `features/schema.py`；`ObjectiveVector` 字段用
-规范名（`headland_turn_count` / `row_crossing_equivalent`），同时永久接受
-legacy 关键字与属性。参数键 `path_sample_step_m` 优先，`dubins_sample_step_m`
-作为 legacy 键继续被接受。
+可反查）；特征规范名集中在 `selection/features/schema.py`；`ObjectiveVector`
+字段用规范名（`headland_turn_count` / `row_crossing_equivalent`），同时永久
+接受 legacy 关键字与属性。参数键 `path_sample_step_m` 优先，
+`dubins_sample_step_m` 作为 legacy 键继续被接受。
 
 ## 3. 类名与算法身份
 
@@ -77,7 +78,7 @@ heuristic candidates` 是三种不同计数，文档与论文中不得简写成�
 
 agent 层候选槽位抽象使用角色明确的规范名：`CandidateSlot`（协议）、
 `SwathAngleSlot`（swath 槽位实现）、`SLOTS`（注册表字典）与
-`DEFAULT_SLOT_ID`。槽位 id（当前仅 `swath_angle`）进入
+`DEFAULT_SLOT_ID`。槽位 id（当前 `swath_angle` / `route_order`）进入
 `ProposalContext.slot_id` 与 `EvolutionRecord.slot_id`，按总纲属于将来的
 证据身份：演化账本一旦开始落盘，已用的 slot id 即为 wire ID 永不改。
 
@@ -87,7 +88,7 @@ agent 层候选槽位抽象使用角色明确的规范名：`CandidateSlot`（�
 字段为「真实 run_pipeline 调用累计数」与「迄今各轮 hypervolume_delta 非 None
 值的 running max」；`anytime_curve` 按这两个字段返回 COCO/IOHprofiler 式的
 "评估次数 → 当前最优"采样点，O(n)。口径与 `evaluations_used` 字段 docstring
-一致，是 Study-002 预算公式的唯一来源。
+一致，Standard evaluation budget accounting.
 
 TSPLIB / CVRPLIB 标准实例接入：`agriautolab.datasets.tsplib` 的
 `load_tsplib_tsp(source)` / `load_tsplib_cvrp(source, *, max_vehicles=None)`
@@ -103,7 +104,7 @@ capacity，并提供 `node_id(i)` 与 `tsplib_index(node_id)` 双向映射）、
 任何与公开最优值比较的 gap 只能用后者。节点 id 形如 `n01`（零填充到维数宽度），
 使字典序与数值序一致——构造式问题按 node_id 排序枚举可行动作。
 
-route 阶段条带访问序槽位（任务 3 提交二）：`RouteOrderSlot`（八成员协议实现，
+route 阶段条带访问序槽位：`RouteOrderSlot`（八成员协议实现，
 slot_id="route_order"）、`agriautolab.algorithms.route.constructive_order.RouteOrderProblem`
 （公共 ConstructiveProblem 的领域 adapter，放农业侧以遵守
 optimization/ 不得 import 农业的依赖纪律）、`evaluate_route_order(swaths, visit_order, start_position)`
@@ -120,7 +121,7 @@ SWATH_REVIEWERS 的 |v|≤π/2 假设）；4 个 mock 候选源码以 dict-get �
 有符号投影随之反号，因此不是不变量。契约只暴露到主轴的无符号距离。
 候选可见特征由 `CANDIDATE_FEATURE_KEYS` 定义，`candidate_features()` 负责在
 交给候选前剥掉 `swath_id`——那是上游按坐标分配的序号，用它排序可绕过全部不变性要求。
-LLM provenance（任务 4）：`agriautolab.agent.proposer.CompletionResult`
+LLM provenance：`agriautolab.agent.proposer.CompletionResult`
 （十一必填字段 + `to_dict()` JSON 序列化入口；以 `__setattr__` / `__delattr__`
 守卫做到构造后不可变——pydantic 的 `frozen=True` 只禁属性赋值、不阻止嵌套容器被改）、
 `agriautolab.agent.proposer.replay_candidate(round_index, result)`
@@ -135,17 +136,33 @@ identity 仍由三元组（algorithm_id/source_code/description）决定，prove
 作 evidence 链附加字段。`ModelClient` 协议改 `complete(prompt) -> CompletionResult`，
 本模块仍然零网络（注入由调用方接入）。
 
+实验日志的行结构同样是证据身份：`agriautolab.pipeline.jsonl_log` 每行 JSON 的四个键
+`index` / `payload` / `prev_hash` / `entry_hash` 直接进入 `content_hash`
+（`json.dumps(..., sort_keys=True)` 连键名一起哈希），与 `EvolutionRecord.slot_id`
+同理——日志一旦落盘，这四个键名即为 wire ID 永不改；增删键同理，任何改动都会让
+既有日志的 `verify_entries()` 全部失配。函数名（`build_entry` /
+`build_next_entry` / `read_sealed_sha256` / `replace_unless_sealed`）不进哈希，
+属于 API 层，按 §1 的动词规则命名与演进。
+
 ## 4. 包结构命名
 
 当前真实包名就是文档事实，不再维护“计划中的 canonical 幽灵目录”：
 
 - `contracts/`：跨模块强类型数据契约；`routing.py` 放 TSP/CVRP 输入契约；
+- `geometry/` / `kinematics/`：几何内核与运动学原语；
+- `algorithms/`：农业五阶段算法 + 阶段协议（`stages/`）；`constructive/`
+  放标准问题的人工 constructive baselines；
 - `optimization/`：constructive problem / heuristic / evaluator 方法学验证层；
-- `algorithms/constructive/`：标准问题的人工 constructive baselines；
-- `pipeline/`：农业 CPP 五阶段组合与执行；
-- `corpus/`：真实语料批量运行与产物；
-- `cross_validation/`：历史名称虽不完美，但含字节冻结 F2C 适配器，原路径保留；
-- `selection/`、`confirmatory/`、`evidence/`：分别承担推荐、确证统计和证据纪律。
+- `pipeline/`：农业 CPP 五阶段组合与执行、指标（`metrics/`）、Pareto
+  （`pareto/`）、语料运行（`corpus/`）、内容哈希与 JSONL 实验日志
+  （`hashing.py` / `jsonl_log.py`）；
+- `selection/`：特征（`features/`）、冻结 CV、偏好条件推荐器与评估、
+  holdout 划分（`holdout_partition.py`）、ASlib 导出（`aslib_export.py`）；
+- `evaluation/`：确证统计（Pareto 前沿、行角效应、推荐器评估与前检）
+  与结果封存（`records.py`）；
+- `datasets/`：Fields2Benchmark 接入与 TSPLIB/CVRPLIB 标准实例；
+- `agent/`：农业 swath 启发式演化循环；
+- `validation/`：独立路径校验器 + F2C/F2B 交叉验证对账（`f2c.py` 字节冻结）。
 
 若未来确需改包名，必须以兼容入口 + 明确迁移期完成，不允许只改 README 先制造
 第二套“逻辑目录”。
@@ -159,9 +176,9 @@ identity 仍由三元组（algorithm_id/source_code/description）决定，prove
 3. 状态与不变量的含义；
 4. 非显然决策的原因（为什么不用显然的做法）。
 
-**不进生产源码**：日期、迭代轮次（Block A/B/C）、field ID、历史实测
-数字（「0/4000」「150.7 s」）、修复过程叙事。这些住在 AUDIT_NOTE.md、
-evidence/、tests/、docs/ 里——它们是历史，历史有专门的住所。
+**不进生产源码**：日期、迭代轮次、field ID、历史实测
+数字、修复过程叙事。这些住在历史留痕（`study-001-frozen` tag）、
+`evidence/`、`tests/`、`docs/` 里——它们是历史，历史有专门的住所。
 
 constructive / LLM 候选代码再加一条：**注释不能替代契约**。例如“容量不会超”
 必须由 `feasible_actions` / evaluator 证明，不能靠 heuristic docstring 声明。

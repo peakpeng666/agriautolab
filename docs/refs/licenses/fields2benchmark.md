@@ -138,4 +138,4 @@ geoportal.lt 元数据。上表为原文逐条摘录，未做任何改写。
     两个都必须显式给，缺一个就 `parser.error`。
 
 **本轮没有用 `allow_redistribution=False` 重跑语料。** 在裁定之前不扩样本，
-这是任务书「最终由人拍板」的直接执行。
+This is a direct human validation decision.

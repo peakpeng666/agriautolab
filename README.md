@@ -5,21 +5,19 @@
 <!-- DOI badge placeholder: replace after Zenodo archival release -->
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.XXXXXXX-lightgrey)](https://doi.org/10.5281/zenodo.XXXXXXX)
 
-面向农业覆盖路径规划（Coverage Path Planning, CPP）的**研究级基准、分析与算法设计实验框架**。
-当前农业主线以 13 个冻结 pipeline configuration 在 235 块真实农田上完成
-61,100 次全量运行（零崩溃、零未分类失败），量化「路程 / 地头掉头 /
-作物行横穿等价量」三目标权衡，并在冻结证据纪律下研究偏好条件算法选择。
+面向农业覆盖路径规划（Coverage Path Planning, CPP）的研究级基准、分析与算法设计实验框架。
+农业主线以 13 个冻结 pipeline configuration 在 235 块真实农田上完成 61,100 次全量运行
+（零崩溃、零未分类失败），量化「路程 / 地头掉头 / 作物行横穿等价量」三目标权衡，并在
+冻结证据纪律下研究偏好条件算法选择。
 
-TSP/CVRP 作为**方法学验证层**进入正式主包：用强类型问题契约、constructive heuristic
-协议与独立 evaluator 验证后续算法设计方法的公共边界。当前只实现人工基线与语义真值；
-TSPLIB/CVRPLIB、EoH/LLM reproduction 与农业迁移仍是后续工作，不能把它们写成已完成能力。
-标准问题服务于农业 CPP 主研究对象，不与其并列改写项目定位，也不改写 Study-001 的任何冻结证据。
+TSP/CVRP 作为方法学验证层进入正式主包：用强类型问题契约、constructive heuristic 协议与
+独立 evaluator 验证后续算法设计方法的公共边界。当前只实现人工基线与语义真值；
+TSPLIB/CVRPLIB、EoH/LLM reproduction 与农业迁移仍是后续工作，不写成已完成能力。
+标准问题服务于农业 CPP 主研究对象，不与其并列改写项目定位。
 
 分层与依赖方向见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)，组合优化公共边界见
-[docs/OPTIMIZATION_FOUNDATIONS.md](docs/OPTIMIZATION_FOUNDATIONS.md)。选择层的阶段性进度以
-[evidence/block_d/](evidence/block_d/) 的分析账本为准（每一步封存条目即事实，不在
-README 复述过程状态）。三目标第三维历史 wire ID 为 `row_crossings`，规范语义名为
-`row_crossing_equivalent`；它表达连续跨行等价量，不冒充实际逐行整数计数。
+[docs/OPTIMIZATION_FOUNDATIONS.md](docs/OPTIMIZATION_FOUNDATIONS.md)。基准结果账本
+（`benchmarks/results/benchmark_ledger.jsonl`）的每一步封存条目即事实，README 不复述过程状态。
 
 ## 快速开始
 
@@ -37,42 +35,39 @@ pip install -e .[dev] "shapely==2.1.2"
 pytest -q          # 以 CI 徽章为准（计数随提交演进，不在文档硬编码）
 ```
 
-净室安装记录与九项自校验见 [docs/INSTALL_TRANSCRIPT.md](docs/INSTALL_TRANSCRIPT.md)。
+净室安装记录与自校验已随冻结研究归档：见
+[study-001-frozen tag 的 docs/INSTALL_TRANSCRIPT.md](https://github.com/peakpeng666/agriautolab/blob/study-001-frozen/docs/INSTALL_TRANSCRIPT.md)
+（主干不再携带该文档，复现方式见下节）。
 
-## 文件目录结构说明
+## 包结构
 
 ```text
-└── agriautolab
-    ├── src/agriautolab            // 主包
-    │   ├── contracts/             // 强类型问题/几何/机具/协议契约；含 TSP/CVRP 路由契约
-    │   ├── optimization/          // constructive problem/heuristic/evaluator 方法学验证层
-    │   ├── geometry/              // 几何内核：robust_union、校验、离散化
-    │   ├── kinematics/            // Dubins / Reeds-Shepp 运动学
-    │   ├── agent/                 // 农业 swath 启发式演化循环（LLM 后端注入，默认 mock）
-    │   ├── algorithms/            // 农业五阶段算法 + 标准问题人工 constructive baselines
-    │   ├── coverage/              // 冻结的阶段基线（兼容层）
-    │   ├── datasets/              // Fields2Benchmark 接入：许可过滤、CRS 守卫、隔离
-    │   ├── pipeline/              // 农业五阶段组合与执行入口
-    │   ├── validation/            // 独立路径校验器（几何/运动学/行穿越）
-    │   ├── metrics/               // 指标注册表：不可比指标进门即拒
-    │   ├── features/              // 12 个实例特征 + 规范名词汇表
-    │   ├── pareto/                // 前沿、超体积、偏好标量化与冻结偏好网格
-    │   ├── corpus/                // 语料运行器（断点续跑、清单、账本）
-    │   ├── selection/             // 冻结 CV、偏好条件推荐器与评估
-    │   ├── confirmatory/          // H1/H2/H3 确证统计 + H3 preflight 守门
-    │   ├── cross_validation/      // F2C 数值对账（f2c.py 字节冻结）
-    │   ├── aslib/                 // ASlib 格式导出（每目标一个 scenario）
-    │   └── evidence/              // 内容哈希、哈希链账本、留出集封存
-    ├── configs/corpus_13.json     // 13 个冻结 pipeline configuration
-    ├── prereg/                    // 原预注册永不回改 + 修正案 01–05（05 为最终封口）
-    ├── evidence/                  // v7 溯源、F2C 对账、Block D 分析链
-    ├── docs/                      // 架构、命名、优化方法学边界、安装/发布记录
-    ├── scripts/                   // 安装、语料运行、对账、分析入口
-    ├── tests/                     // 解析真值、不变量、确定性、证据重放、回归
-    └── AUDIT_NOTE.md              // 全部迭代与整改的完整留痕（导师可查）
+src/agriautolab/
+├── contracts/       // 强类型问题/几何/机具/协议契约；含 TSP/CVRP 路由契约
+├── geometry/        // 几何内核：robust_union、校验、离散化
+├── kinematics/      // Dubins / Reeds-Shepp 运动学
+├── algorithms/      // 五阶段算法 + 标准问题人工 constructive baselines
+├── optimization/    // constructive problem/heuristic/evaluator 方法学验证层
+├── pipeline/        // 五阶段串联执行、指标、Pareto、内容哈希、JSONL 实验日志
+├── selection/       // 特征提取、冻结 CV、偏好条件推荐器与评估
+├── evaluation/      // 确证统计：Pareto 前沿、行角效应、推荐器评估与前检
+├── datasets/        // Fields2Benchmark 接入：许可过滤、CRS 守卫、隔离；TSPLIB/CVRPLIB
+├── agent/           // 农业 swath 启发式演化循环（LLM 后端注入，默认 mock）
+└── validation/      // 独立路径校验器 + F2C/F2B 交叉验证对账
 ```
 
-## 核心数字（v7 / Study-001）
+配套数据与脚本：
+
+```text
+├── configs/standard_configs.json   // 13 个冻结 pipeline configuration
+├── dataset_splits/                 // 语料划分产物（manifest、CV 折表、holdout partition）
+├── benchmarks/results/             // 基准结果账本与封存产物
+├── docs/                           // 架构、命名、优化方法学边界、安装/发布记录
+├── scripts/                        // 安装、语料运行、对账、评估入口
+└── tests/                          // 解析真值、不变量、确定性、证据重放、回归
+```
+
+## 核心数字
 
 | 量 | 值 |
 |---|---|
@@ -81,40 +76,42 @@ pytest -q          # 以 CI 徽章为准（计数随提交演进，不在文档�
 | ok / 不适用 / 出界 / 碰撞 | 31,168 / 10,040 / 12,718 / 7,174 |
 | 兜底桶 other / 崩溃 crash | **0 / 0**（分类完备性验收） |
 | 有效池 | ≥1 OK 实例口径中位 10/13；全实例另含 924 个零 OK 实例 |
-| H1 | 193 可分析田主口径中位 3.0；42/235 零-ok 田；单侧 p=2.3921e-30，支持 |
-| H2 | 190 可分析田；n3/n4/n5=1/0/189；田内 rho 中位 0.3536；Pratt 单侧 p=1.2025e-12，支持 |
-| H3 | 70 holdout / 58 可分析；mean_D=+0.0587175；sign-flip p=0.820818；**不支持** |
-| D7.1 | 撤回“严格一次性执行”主张；原 H3 主统计量、p 值、失效判据与 Holm 结论不变 |
 
-v7 溯源件在 [evidence/v7/](evidence/v7/)，Study-001 分析哈希链从
-[evidence/block_d/](evidence/block_d/) 的 D1 genesis 开始；D7.1 的
-post-seal corrigendum 也在同一目录按 append-only 方式进入 index=7。
+冻结研究的完整结果（三条确证检验的统计量、p 值、失效判据与 Holm 结论）以封存形式保存在
+`study-001-frozen` tag，见下节。
+
+## 历史研究复现（study-001-frozen tag）
+
+本项目的第一轮完整研究（预注册、修正案、235 田全量运行、三条确证检验与封存结果）已整体
+冻结在 **`study-001-frozen`** tag（对应 commit `566748a`）：
+
+```bash
+git fetch origin study-001-frozen
+git checkout study-001-frozen     # 证据链在该 tag 上自洽可验
+```
+
+- tag 对象 SHA：`fcdd8e7faf4a1f1464636dabf9c3254fbe81e956`
+- 目标 commit SHA：`566748a7290e2a4d53f44288937a442351b5d797`
+- 该 tag 包含：预注册与修正案 01–05、`evidence/` 目录中的溯源与 F2C 对账、
+  分析账本（含全部封存结果与追加记录）、`prereg/` 与 `AUDIT_NOTE.md` 的完整历史。
+
+主干仓库不再携带这些冻结产物：分析与统计代码已按新命名体系迁移（见
+[docs/NAMING.md](docs/NAMING.md)），复现请始终从上述 tag 出发，而不是主干上的仓库内路径。
 
 ## 研究纪律
 
-原预注册不回改；修正案 01–05 只追加，其中 05 已声明为最终 confirmatory
-执行规范封口。独立统计单位为 field；H1/H2 按修正案使用冻结全语料作田级
-前沿/受控处理检验。70/235 地块 holdout 在分析前密封，D7 的 H3 主结果已于
-ledger index=6 封存。D7.1 进一步披露：D7 实际有两次执行在“评估完成后、
-写盘前”被身份守门中止，因此**严格 one-shot execution claim 已撤回**；没有
-把已知结果重新包装成新的 confirmatory run，原 `h3_result.json` 与 ledger
-index 0..6 均未回写。当前实现一旦发现 H3 已封存，会在读取其他 H3 输入前
-fail-closed 拒绝 holdout 重跑。完整说明见
-[evidence/block_d/h3_corrigendum.json](evidence/block_d/h3_corrigendum.json)。
-
-D1 训练折在任何推荐器训练之前落盘并进入独立 Block D 哈希链，后续训练不得
-重新 split。全部过程批判与整改见 [AUDIT_NOTE.md](AUDIT_NOTE.md)，命名与注释
-规则见 [docs/NAMING.md](docs/NAMING.md)，发布纪律见
-[docs/RELEASE.md](docs/RELEASE.md)，转折与执行顺序见
-[docs/TURNING_POINT.md](docs/TURNING_POINT.md)。
+预注册不回改；修正案只追加。独立统计单位为 field；Pareto 前沿与行角效应检验使用冻结
+全语料，推荐器评估使用预先密封的 70/235 地块 holdout。当前实现一旦发现推荐器结果已封存，
+会在读取其他输入前 fail-closed 拒绝 holdout 重跑。全部迭代与整改的完整留痕见
+`AUDIT_NOTE.md`（历史版本位于 `study-001-frozen` tag；主干不再维护该文件）。
+命名与注释规则见 [docs/NAMING.md](docs/NAMING.md)，发布纪律见
+[docs/RELEASE.md](docs/RELEASE.md)。
 
 ## 许可
 
 本仓库代码以 Apache License 2.0 发布：[LICENSE](LICENSE)；引用与归档元数据见
-[CITATION.cff](CITATION.cff) 与 [.zenodo.json](.zenodo.json)，证据链外部锚定见
-[docs/EVIDENCE_CHAIN.md](docs/EVIDENCE_CHAIN.md)。
+[CITATION.cff](CITATION.cff) 与 [.zenodo.json](.zenodo.json)。
 
-上游数据集（Fields2Benchmark）的许可状态仍待裁定（Zenodo 记录内 LICENSE
-文件与元数据不一致）：数据集派生物在裁定前继续按更严一方（CC BY-SA）行事，
-裁定依据与原文摘录见
+上游数据集（Fields2Benchmark）的许可状态仍待裁定（Zenodo 记录内 LICENSE 文件与元数据
+不一致）：数据集派生物在裁定前继续按更严一方（CC BY-SA）行事，裁定依据与原文摘录见
 [docs/refs/licenses/fields2benchmark.md](docs/refs/licenses/fields2benchmark.md)。

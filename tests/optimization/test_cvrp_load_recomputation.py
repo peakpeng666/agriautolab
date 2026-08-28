@@ -60,7 +60,7 @@ def test_decimal_intent_does_not_override_binary64_hard_capacity() -> None:
     adapter = CVRPConstructiveProblem(problem)
     solution = construct_solution(adapter, CVRPNearestFeasibleCustomerHeuristic(adapter))
 
-    # `0.01` 的 binary64 精确值乘 100 略大于 1.0；hard constraint 因此必须拆车。
+    # `0.01` 的 binary64 精确值乘 100 略大于 1.0；hard constraint 因此需拆车。
     assert len(solution.routes) == 2
 
     overloaded = CVRPSolution(

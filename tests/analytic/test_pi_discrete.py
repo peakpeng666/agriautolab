@@ -17,9 +17,9 @@ def test_pi_discrete_matches_inscribed_polygon_formula() -> None:
 
 
 def test_reflex_corner_round_minus_mitre_is_w_squared_times_one_minus_pi_d_over_4() -> None:
-    """AUDIT_NOTE 归档事故一：反曲角 round−mitre 差 = w^2(1 - pi_d/4) = 7.771064。
+    """归档事故一：反曲角 round−mitre 差 = w^2(1 - pi_d/4) = 7.771064。
 
-    连续 pi 会给 7.725666，与实测对不上——离散弧的面积必须用离散 pi。
+    连续 pi 会给 7.725666，与实测对不上——离散弧的面积需用离散 pi。
     """
     w = 6.0
     notch = Polygon([(0, 0), (100, 0), (100, 50), (60, 50), (60, 20), (0, 20)])   # 缺口 60x30
@@ -32,7 +32,7 @@ def test_reflex_corner_round_minus_mitre_is_w_squared_times_one_minus_pi_d_over_
 
 
 def test_obstacle_annulus_false_positive_is_perimeter_w_plus_pi_d_w_squared() -> None:
-    """AUDIT_NOTE 归档事故二：障碍环带假阳性 = 周长·w + pi_d·w^2 = 472.9157。"""
+    """归档事故二：障碍环带假阳性 = 周长·w + pi_d·w^2 = 472.9157。"""
     w = 6.0
     field = Polygon([(0, 0), (100, 0), (100, 50), (0, 50)])
     obstacle = Polygon([(40, 20), (60, 20), (60, 30), (40, 30)])

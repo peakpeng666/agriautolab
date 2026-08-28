@@ -1,6 +1,6 @@
 """route_order 槽位真值测试。
 
-每条测试都必须在「修复前的实现」下失败——不是覆盖率测试。对应
+每条测试都需在「修复前的实现」下失败——不是覆盖率测试。对应
 docs/OPTIMIZATION_FOUNDATIONS.md §4 的真值纪律。
 
 本文件钉住的缺陷（PR #28 复核发现）：
@@ -137,10 +137,10 @@ def test_nearest_neighbour_order_and_evaluator_hand_computation() -> None:
     assert total < parity_blind / 3.0
 
 
-# ---------- 缺陷 1：state 必须先投影 ----------
+# ---------- 缺陷 1：state 需先投影 ----------
 
 def test_state_dependent_candidate_survives_full_slot_path() -> None:
-    """用 state 的候选必须能走完 build_config，而不是被闸门淘汰。
+    """用 state 的候选需能走完 build_config，而不是被闸门淘汰。
 
     【证伪力】修复前 _SandboxHeuristic 把原始 tuple[str, ...] 直接传给候选，
     `state["remaining_count"]` 抛 TypeError → ConstructionError → 该候选被
@@ -172,10 +172,10 @@ def test_project_state_reports_visited_and_remaining() -> None:
     }
 
 
-# ---------- 缺陷 2：烘焙与重放必须同一分解 ----------
+# ---------- 缺陷 2：烘焙与重放需同一分解 ----------
 
 def test_baked_ranks_match_replayed_swaths_on_obstacle_field() -> None:
-    """有障碍田上，烘焙的 rank 键集合必须与重放时真实产生的条带 id 集合**精确相等**。
+    """有障碍田上，烘焙的 rank 键集合需与重放时真实产生的条带 id 集合**精确相等**。
 
     【证伪力】修复前烘焙走 BoustrophedonDecomposition、返回的 config 却声明
     no_decomposition。本例田上 BCD 产 10 条带、no_decomposition 产 7 条带。
@@ -183,7 +183,7 @@ def test_baked_ranks_match_replayed_swaths_on_obstacle_field() -> None:
     关键：两种分解的 id 都是顺序 `swath-NNNN`，10 个 id 是 7 个的**超集**，
     因此 RankedSwathOrderPlanner **不会**报「缺 rank 键」——它照跑不误，
     只是把 rank 套到几何上毫不相干的条带（Codex 警告的正是这一半）。
-    所以断言必须直接比集合，不能只看 run_pipeline 是否抛异常，
+    所以断言需直接比集合，不能只看 run_pipeline 是否抛异常，
     也不能只看 config_id 回填——那两种断言在缺陷下都会通过。
     """
     from agriautolab.algorithms.swath.principal_axis import PrincipalAxisSwathGenerator
@@ -212,7 +212,7 @@ def test_baked_ranks_match_replayed_swaths_on_obstacle_field() -> None:
     baked_ids = {k.removeprefix("rank:") for k in config.params if k.startswith("rank:")}
 
     # 按 config 自己声明的 decomposition 重放上游，取真实条带 id。
-    # 必须是**障碍感知**的分解：no_decomposition 只转发 problem.field、
+    # 需是**障碍感知**的分解：no_decomposition 只转发 problem.field、
     # 不带任何 interior，条带因此会横穿障碍（实测 interiors=0）。
     assert config.decomposition == "boustrophedon_cells"
     cells = BoustrophedonDecomposition().run(problem)
@@ -229,7 +229,7 @@ def test_baked_ranks_match_replayed_swaths_on_obstacle_field() -> None:
     )
 
 
-# ---------- 缺陷 4：投影必须减质心（平移不变） ----------
+# ---------- 缺陷 4：投影需减质心（平移不变） ----------
 
 def test_projection_is_translation_invariant() -> None:
     """整体平移后 axis_offset_norm 逐条带不变（质心随之平移）。
@@ -253,7 +253,7 @@ def test_projection_is_translation_invariant() -> None:
 
 
 def test_nearest_neighbour_order_is_rigid_transform_invariant() -> None:
-    """最近邻候选在刚体变换下访问序不变——质心与主轴法向必须一同变换。
+    """最近邻候选在刚体变换下访问序不变——质心与主轴法向需一同变换。
 
     distance_norm 是纯欧氏距离，本就刚体不变；此前测试之所以观察到"旋转后次序变"
     并改用恒定评分绕开，是因为旋转了条带却把 centroid/normal 钉死在原值
@@ -330,7 +330,7 @@ def _rect_problem(problem_id: str, exterior) -> CoverageProblem:
 
 
 def test_field_centroid_is_encoding_independent() -> None:
-    """同一矩形的两种等价编码必须烘焙出相同访问序。
+    """同一矩形的两种等价编码需烘焙出相同访问序。
 
     【证伪力】修复前用外环顶点算术平均当质心：闭合点被重复计数，插入共线冗余
     顶点又会再次改变结果。质心同时是 distance_norm 的初始出口与 axis_offset_norm
@@ -359,13 +359,13 @@ def test_field_centroid_is_encoding_independent() -> None:
 
 
 def test_invariance_gate_accepts_geometry_equivariant_candidate_on_asymmetric_field() -> None:
-    """最近邻候选是几何等变的，不变性闸必须在**非对称**田上也放行。
+    """最近邻候选是几何等变的，不变性闸需在**非对称**田上也放行。
 
     【证伪力】闸门若把刚体变换施加在**地块**上再重跑上游，测的就是
     PrincipalAxisSwathGenerator 的等变性而不是候选的不变性。实测该生成器不等变
     （见 test_swath_generator_is_not_rigid_equivariant_when_field_rotates）。
 
-    田形必须非对称才有证伪力：90×50 矩形上，"余量换端 + id 从另一侧编号 +
+    田形需非对称才有证伪力：90×50 矩形上，"余量换端 + id 从另一侧编号 +
     法向翻转"构成镜像对称，逐 id 的不变键恰好抵消，漂移只有 ~1e-14，
     地块口径也能蒙混过关。改用梯形后实测地块口径漂移 3.1（容差 1e-9）。
     L 形更极端：24 次随机变换里有 10 次连条带集合都不同。
@@ -384,12 +384,12 @@ def test_invariance_gate_accepts_geometry_equivariant_candidate_on_asymmetric_fi
 
 
 def test_invariance_gate_baseline_is_the_untransformed_geometry() -> None:
-    """基线必须来自未变换的原几何，而不是第一个随机变换的结果。
+    """基线需来自未变换的原几何，而不是第一个随机变换的结果。
 
     【证伪力】修复前 base_order 取第一次循环的结果，闸门从不与原始坐标下的路线
     比较——只在原坐标触发分支的候选可以让原始路线与八个扰动路线全都不同却过闸。
     这里统计 _order_for 的调用次数：修复后应为 1（基线）+ 8（扰动）= 9 次，
-    且第一次传入的必须是未变换端点（与 _geometry_for 的输出逐点相等）。
+    且第一次传入的需是未变换端点（与 _geometry_for 的输出逐点相等）。
     """
     slot = SLOTS["route_order"]
     function = slot.compile(
@@ -417,11 +417,11 @@ def test_invariance_gate_baseline_is_the_untransformed_geometry() -> None:
 
     assert outcome.passed, outcome.detail
     assert len(seen) == 9, f"应为 1 次基线 + 8 次扰动，实测 {len(seen)}"
-    assert seen[0] == untransformed, "第一次取分必须用未变换的几何做基线"
+    assert seen[0] == untransformed, "第一次取分需用未变换的几何做基线"
 
 
 def test_invariance_gate_rejects_non_invariant_candidate() -> None:
-    """使用绝对坐标的候选必须被不变性闸拒绝。
+    """使用绝对坐标的候选需被不变性闸拒绝。
 
     候选通过 axis_offset_norm 间接读到几何，但真正的非不变量要靠"闸门能否分辨"
     来验证。这里用一个**故意不减质心**的等效构造：候选把 distance_norm 与
@@ -526,7 +526,7 @@ def test_candidate_runtime_failure_is_a_rejection_not_a_crash() -> None:
 
 
 def test_candidate_cannot_see_swath_id() -> None:
-    """候选只能看到契约承诺的两个键；swath_id 必须被剥掉。
+    """候选只能看到契约承诺的两个键；swath_id 需被剥掉。
 
     【证伪力】修复前评分包装器把完整动作字典（含 swath_id）交给候选，
     于是 `float(candidate['swath_id'][-1])` 能过掉不带该键的探针、也能过
@@ -573,7 +573,7 @@ def test_invariance_tolerance_scales_with_score_magnitude() -> None:
 
 
 def test_gate_reproduces_canonical_axis_orientation() -> None:
-    """闸门必须复现 canonical_direction 的符号规范化，否则有符号特征会漏网。
+    """闸门需复现 canonical_direction 的符号规范化，否则有符号特征会漏网。
 
     【证伪力】真实构建的法向来自 principal_axis，而后者 return 的就是
     canonical_direction(...)（强制 ux>0）。闸门若只把基线法向旋转（R·n）而不
@@ -602,7 +602,7 @@ def test_gate_reproduces_canonical_axis_orientation() -> None:
 
 
 def test_gate_uses_canonicalised_normal_for_boundary_crossing_rotations() -> None:
-    """闸门喂给候选的法向必须是**规范化后**的，与真实构建一致。
+    """闸门喂给候选的法向需是**规范化后**的，与真实构建一致。
 
     【证伪力】直接断言闸门内部实际使用的法向。修复前它是朴素旋转 R·n；
     当旋转把主轴推过 canonical_direction 的 ux>0 边界时，真实构建拿到的是
@@ -612,7 +612,7 @@ def test_gate_uses_canonicalised_normal_for_boundary_crossing_rotations() -> Non
 
     注意：现在暴露给候选的 axis_offset_norm 取了绝对值，符号翻转对候选评分
     不可观测，因此不能靠「某候选被拒」来证伪。闸门保持忠实是为了将来任何
-    符号敏感的特征——这一条必须由本测试直接钉住。
+    符号敏感的特征——这一条需由本测试直接钉住。
     """
     from agriautolab.algorithms.swath._sweep import canonical_direction
 
@@ -666,7 +666,7 @@ def test_gate_uses_canonicalised_normal_for_boundary_crossing_rotations() -> Non
 
 
 def test_all_route_mock_candidates_pass_the_faithful_gate() -> None:
-    """四个出货 mock 候选在**忠实**闸门下都必须过。
+    """四个出货 mock 候选在**忠实**闸门下都需过。
 
     加入 canonical_direction 后，原先用**有符号** projection_norm 的两个候选
     （route_projection_order / route_mixed）立刻在梯形与矩形田上双双失败，
@@ -694,7 +694,7 @@ def test_tie_at_the_selected_minimum_is_rejected() -> None:
     【证伪力】此前的检查只拒「每一步所有动作都同分」。但 `axis_offset_norm` 取绝对
     值后，关于主轴对称的两条条带**系统性同分**，而其余条带分数不同——这类候选能过
     旧检查，可实际选中哪一条仍由 `feasible_actions` 的 swath_id 枚举序决定，
-    且该序在扫掠方向翻转时反转空间对应。判定必须落在**被选中的那一步的最小值**上。
+    且该序在扫掠方向翻转时反转空间对应。判定需落在**被选中的那一步的最小值**上。
     """
     slot = SLOTS["route_order"]
     trapezoid = _rect_problem("tie-at-min", (
@@ -788,7 +788,7 @@ def test_reviewer_does_not_invoke_the_candidate_twice() -> None:
 
 
 def test_reviewer_probes_are_fresh_per_call() -> None:
-    """复核器的探针也必须传副本，否则先跑的候选会污染后面的。"""
+    """复核器的探针也需传副本，否则先跑的候选会污染后面的。"""
     from agriautolab.agent.proposer import ProposalCandidate
     from agriautolab.agent.reviewer import ROUTE_REVIEWERS, RouteOrderCorrectnessReviewer
 
@@ -806,7 +806,7 @@ def test_reviewer_probes_are_fresh_per_call() -> None:
 def test_probe_inputs_are_fresh_per_call() -> None:
     """候选改写入参不能污染后续候选。
 
-    【证伪力】沙箱不禁止候选改写 dict 入参。此前探针直接传类级常量，
+    【证伪力】沙箱不不得候选改写 dict 入参。此前探针直接传类级常量，
     `candidate.pop("distance_norm")` 会永久掏空它，之后所有正常使用该键的候选都
     在探针上抛 KeyError 被拒——「候选能否通过」取决于它在提议序列里排第几。
     """
@@ -834,7 +834,7 @@ def test_probe_inputs_are_fresh_per_call() -> None:
 
 
 def test_overflow_during_score_coercion_is_a_rejection() -> None:
-    """float(score) 溢出必须转成拒绝，而不是穿透闸门终止实验。
+    """float(score) 溢出需转成拒绝，而不是穿透闸门终止实验。
 
     【证伪力】此前 `float(value)` 在保护块之外：候选返回 `10 ** 10000` 时两次函数
     调用都成功，却在转换处抛 OverflowError；而 contract_gate 只捕

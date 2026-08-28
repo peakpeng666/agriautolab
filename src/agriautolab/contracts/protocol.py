@@ -3,7 +3,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 
 from agriautolab.contracts.enums import CoverageTarget
-from agriautolab.evidence.hashing import content_hash
+from agriautolab.pipeline.hashing import content_hash
 
 
 class HypervolumeReference(BaseModel):
@@ -11,7 +11,7 @@ class HypervolumeReference(BaseModel):
 
     浮动的参考点 = 浮动的分母：若参考点取自观测到的最差值，换一个算法池，
     同一前沿的超体积就变了，跨池不可比——这正是 Dolan-Moré 性能剖面在
-    solver 集合变化下不稳定的同一个病。参考点必须由协议声明的解析上界导出，
+    solver 集合变化下不稳定的同一个病。参考点需由协议声明的解析上界导出，
     basis 字段记录用的是哪组公式。
     """
 
@@ -44,7 +44,7 @@ class BenchmarkProtocol(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     protocol_id: str = Field(min_length=1)
-    # 故意不给默认值：分母是协议的一部分，必须每次显式声明。
+    # 故意不给默认值：分母是协议的一部分，需每次显式声明。
     # 一旦给了默认值，"忘记指定" 和 "选择原田" 在证据里长得一模一样。
     coverage_target: CoverageTarget
     coverage_threshold: float = Field(default=0.99, ge=0.0, le=1.0)
@@ -52,11 +52,11 @@ class BenchmarkProtocol(BaseModel):
     resample_step_m: float = Field(default=0.25, gt=0.0)
     clearance_sample_step_m: float = Field(default=0.25, gt=0.0)
     # 同样故意不给默认值：超体积的尺子（参考点）换了，两次运行在前沿层面
-    # 就不可比，证据层必须能区分——与 coverage_target 同一条纪律。
+    # must be distinguishable at the evidence layer for fair comparison.
     hypervolume_reference: HypervolumeReference
-    # 同一条纪律的第三例：Reeds-Shepp 的倒车代价是目标函数的一部分。
+    # Reverse cost configuration affects the objective function.
     reverse_cost: ReverseCostSpec
 
     def spec_hash(self) -> str:
-        """协议内容哈希。coverage_target、hypervolume_reference、reverse_cost 都必须进入哈希。"""
+        """协议内容哈希。coverage_target、hypervolume_reference、reverse_cost 都需进入哈希。"""
         return content_hash(self)

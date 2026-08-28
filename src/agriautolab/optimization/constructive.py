@@ -24,7 +24,7 @@ class ConstructiveProblem(Protocol[StateT, ActionT, SolutionT]):
     `feasible_actions` 是唯一可行动作来源；constructive engine 不接受启发式直接
     返回动作，因此容量、已访问集合等硬约束始终由问题契约掌控。
 
-    `feasible_actions` 还必须返回稳定顺序。公共内核用该顺序处理评分并列，避免要求
+    `feasible_actions` 还需返回稳定顺序。公共内核用该顺序处理评分并列，避免要求
     任意 `ActionT` 自身实现比较运算，也避免依赖 set/dict 的偶然遍历顺序。
     """
 

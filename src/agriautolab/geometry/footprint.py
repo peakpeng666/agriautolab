@@ -11,8 +11,8 @@ QUAD_SEGS = 16
 
 def sweep_piece(line: BaseGeometry, width_m: float) -> BaseGeometry:
     if width_m <= 0.0:
-        raise ValueError("幅宽必须大于 0")
-    # 端部必须 flat cap：机具沿作业线扫掠的是矩形，round cap 会按分段数虚增面积。
+        raise ValueError("working width must be greater than 0")
+    # 端部需 flat cap：机具沿作业线扫掠的是矩形，round cap 会按分段数虚增面积。
     return line.buffer(
         width_m / 2.0,
         cap_style="flat",

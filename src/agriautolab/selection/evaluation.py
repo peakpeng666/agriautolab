@@ -1,4 +1,4 @@
-"""D3 选择评估：从冻结 v7 运行行构造无 oracle 泄漏的悔值表。"""
+"""选择评估：从冻结 dataset-split 运行行构造无 oracle 泄漏的悔值表。"""
 
 from __future__ import annotations
 
@@ -8,9 +8,9 @@ from pathlib import Path
 from typing import Iterable, Sequence
 
 from agriautolab.contracts.vehicle import VehicleSpec
-from agriautolab.corpus.derived_status import derive_status
+from agriautolab.pipeline.corpus.derived_status import derive_status
 from agriautolab.pipeline.config import PipelineConfig
-from agriautolab.pareto.preference_grid import PREFERENCE_GRID_V1
+from agriautolab.pipeline.pareto.preference_grid import PREFERENCE_GRID_V1
 from agriautolab.selection.pools import static_applicable
 from agriautolab.selection.protocol import SELECTION_FEATURE_IDS
 
@@ -19,9 +19,9 @@ from agriautolab.selection.protocol import SELECTION_FEATURE_IDS
 class SelectionInstance:
     """一个场景实例的特征、池身份和 22 偏好悔值。
 
-    `regrets=None` 明确表示 O_x 为空：confirmatory H3 的 oracle 未定义。
-    历史 v7 的异常失败行不保存 feature__*；若整个 O_x 为空且没有任何普通
-    运行行可恢复特征，`features=None` 也必须保留该实例，而不是把困难样本删掉。
+    `regrets=None` 明确表示 O_x 为空：confirmatory recommender 评估的 oracle 未定义。
+    历史 dataset-split 的异常失败行不保存 feature__*；若整个 O_x 为空且没有任何普通
+    运行行可恢复特征，`features=None` 也需保留该实例，而不是把困难样本删掉。
     """
 
     field_id: str
@@ -69,10 +69,10 @@ def _one_identity(rows: Sequence[dict], key: str):
 def _one_float(rows: Sequence[dict], key: str) -> float:
     values = {float(row[key]) for row in rows if row.get(key) is not None}
     if len(values) != 1:
-        raise ValueError(f"同一 instance 的 {key} 必须有且只有一个非空值，得到 {len(values)} 个")
+        raise ValueError(f"{key} for one instance must have exactly one non-null value, got {len(values)}")
     value = next(iter(values))
     if not math.isfinite(value):
-        raise ValueError(f"{key} 必须有限")
+        raise ValueError(f"{key} must be finite")
     return value
 
 
@@ -89,7 +89,7 @@ def _feature_vector(rows: Sequence[dict], *, required: bool) -> tuple[float, ...
             continue
         value = next(iter(observed))
         if not math.isfinite(value):
-            raise ValueError(f"{key} 必须有限")
+            raise ValueError(f"{key} must be finite")
         values.append(value)
     if missing:
         if required:
@@ -151,7 +151,7 @@ def build_selection_instance(
             raise ValueError(f"{instance_id}/{config_id}: derived_status=ok 但主目标缺失")
         objective = tuple(float(value) for value in raw)
         if any(not math.isfinite(value) for value in objective):
-            raise ValueError(f"{instance_id}/{config_id}: 主目标必须有限")
+            raise ValueError(f"{instance_id}/{config_id}: primary objectives must be finite")
         objectives[config_id] = objective  # type: ignore[assignment]
 
     observed_ok = frozenset(objectives)
@@ -182,7 +182,7 @@ def build_selection_instance(
         _one_float(rows, "ref_row_crossings"),
     )
     if any(value <= 0.0 for value in reference):
-        raise ValueError(f"{instance_id}: analytic reference 三维必须 >0")
+        raise ValueError(f"{instance_id}: analytic reference must be >0 in all three dimensions")
 
     scalarized: dict[str, tuple[float, ...]] = {}
     for config_id, objective in objectives.items():
@@ -229,7 +229,7 @@ def load_selection_instances(
     configs: tuple[PipelineConfig, ...],
     vehicles: tuple[VehicleSpec, ...],
 ) -> tuple[SelectionInstance, ...]:
-    """只扫描明确给定的 field 集；D4 训练入口不得读取 holdout 行。
+    """只扫描明确给定的 field 集；训练入口不得读取 holdout 行。
 
     使用 Arrow dataset predicate，而不是先把 61,100 行 materialize 后在 Python
     丢掉 holdout。返回值仍逐 instance 强制完整 nominal 矩阵。

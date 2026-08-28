@@ -1,6 +1,6 @@
 """Reeds-Shepp 转移 path 阶段：允许倒车的连接段，零地头组合的解锁件。
 
-Dubins 前向-only 掉头必须向 swath 端点外鼓出约 2R——零地头下永远越界（实测
+Dubins 前向-only 掉头需向 swath 端点外鼓出约 2R——零地头下永远越界（实测
 constraint_violation:outside_area）。倒车把掉头换成「进-退-进」的三点转向，
 鼓包收进作业走廊内，零地头才成为可行配置。词选与长度来自
 kinematics.reeds_shepp（认证等级见其 docstring：可行且不劣于 Dubins，不保证全局最优）。
@@ -118,7 +118,7 @@ def _contained_word(start: Pose2D, goal: Pose2D, radius: float, body_width_m: fl
 
     两级检查：腐蚀走廊 covers（廉价，可能因离散化漏掉贴边可接受词——只是
     少一个候选，无损正确性）→ 命中后**精确回验**一次扫掠差面积（保证返回的词
-    与未加速口径逐字同判）。任何返回词都经过精确判据，绝不因加速放水。
+    与未加速口径逐字同判）。任何返回词都经过精确判据，不因加速放水。
     """
     from shapely import LineString
     from agriautolab.geometry.footprint import QUAD_SEGS
@@ -192,7 +192,7 @@ class ReedsSheppPathPlanner:
         """cost_model 无默认值：倒车代价是协议参数（BenchmarkProtocol.reverse_cost），
         由调用方从协议里取出后显式传入。给默认值等于让阶段自己决定目标函数。"""
         if sample_step_m <= 0.0:
-            raise ValueError("采样步长必须大于 0")
+            raise ValueError("sample step must be greater than 0")
         self.sample_step_m = sample_step_m
         self.cost_model = cost_model
 
