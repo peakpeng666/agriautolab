@@ -1,0 +1,416 @@
+{
+  "parquet_rows": 61100,
+  "overall_coverage_ratio_field": {
+    "n": 31168,
+    "min": 0.14341672838374456,
+    "p5": 0.5608606586085848,
+    "p25": 0.6869373622837754,
+    "p50": 0.7590306907374598,
+    "p75": 0.8118951470110757,
+    "p95": 0.8855904871718016,
+    "max": 0.9235475502164597
+  },
+  "coverage_ratio_field_by_runstatus": {
+    "ok": {
+      "n": 31168,
+      "min": 0.14341672838374456,
+      "p5": 0.5608606586085848,
+      "p25": 0.6869373622837754,
+      "p50": 0.7590306907374598,
+      "p75": 0.8118951470110757,
+      "p95": 0.8855904871718016,
+      "max": 0.9235475502164597
+    }
+  },
+  "ok_threshold_counts": {
+    "ok_count": 31168,
+    "below_0.99": {
+      "count": 31168,
+      "pct": 100.0
+    },
+    "below_0.95": {
+      "count": 31168,
+      "pct": 100.0
+    },
+    "below_0.90": {
+      "count": 30682,
+      "pct": 98.44070841889116
+    }
+  },
+  "coverage_ratio_field_by_config_id": {
+    "0f0087b4bce0818cdddfa784d4ee1e983f02768d8e6149843f9cec8ed63106fd": {
+      "n": 2830,
+      "min": 0.5136450402867652,
+      "p5": 0.5783646204632882,
+      "p25": 0.6988626632482399,
+      "p50": 0.7624939743342798,
+      "p75": 0.8177923894096194,
+      "p95": 0.8870586261232526,
+      "max": 0.9126580973313477,
+      "below_0.99": 2830,
+      "stages": {
+        "decomposition": "no_decomposition",
+        "headland": "uniform_headland",
+        "swath": "fixed_angle",
+        "route": "boustrophedon_order",
+        "path": "dubins_transit"
+      }
+    },
+    "1e07c37de63c7e43ccbaa82f0f772b2329baa0565cd2f21317044e8981961792": {
+      "n": 3160,
+      "min": 0.40655879331139866,
+      "p5": 0.570574052303086,
+      "p25": 0.6939742385417748,
+      "p50": 0.7610457795483714,
+      "p75": 0.8173106122834577,
+      "p95": 0.8882064355439433,
+      "max": 0.917064785667612,
+      "below_0.99": 3160,
+      "stages": {
+        "decomposition": "no_decomposition",
+        "headland": "uniform_headland",
+        "swath": "longest_edge",
+        "route": "boustrophedon_order",
+        "path": "dubins_transit"
+      }
+    },
+    "28e61f9997616191d20925cb0b3703c30ac61f1f88ed8d12aa5584ca56cefc9d": {
+      "n": 2948,
+      "min": 0.4232077925056738,
+      "p5": 0.5744540671109807,
+      "p25": 0.6978116532569765,
+      "p50": 0.7628763247360092,
+      "p75": 0.8184369080399319,
+      "p95": 0.8865026795384613,
+      "max": 0.9234918031052476,
+      "below_0.99": 2948,
+      "stages": {
+        "decomposition": "no_decomposition",
+        "headland": "uniform_headland",
+        "swath": "row_aligned",
+        "route": "boustrophedon_order",
+        "path": "dubins_transit"
+      }
+    },
+    "3fade1fcd68bdd5ba8840a28b8b00947453c74d42b1ed69770d8104659de56bb": {
+      "n": 2650,
+      "min": 0.44973907444694855,
+      "p5": 0.6110069936296626,
+      "p25": 0.7127031474256309,
+      "p50": 0.770038770117511,
+      "p75": 0.8268168786432194,
+      "p95": 0.8917495863978235,
+      "max": 0.9182238947265403,
+      "below_0.99": 2650,
+      "stages": {
+        "decomposition": "no_decomposition",
+        "headland": "uniform_headland",
+        "swath": "min_width",
+        "route": "boustrophedon_order",
+        "path": "dubins_transit"
+      }
+    },
+    "4574095631bc07f0c3f495fa9add9dd604b954e62505daf723cb9e1a567c799a": {
+      "n": 2590,
+      "min": 0.4148123648019585,
+      "p5": 0.5846806610471857,
+      "p25": 0.7129404118911443,
+      "p50": 0.7638084485884836,
+      "p75": 0.8211667566223074,
+      "p95": 0.8878206732696743,
+      "max": 0.9126214099920262,
+      "below_0.99": 2590,
+      "stages": {
+        "decomposition": "no_decomposition",
+        "headland": "uniform_headland",
+        "swath": "principal_axis",
+        "route": "boustrophedon_order",
+        "path": "dubins_transit"
+      }
+    },
+    "485fccc852cf18e4a45880dfbf66df297780674ddff52e1ec061659d888650ea": {
+      "n": 3230,
+      "min": 0.4247553831845509,
+      "p5": 0.5936849562493374,
+      "p25": 0.7087377823046003,
+      "p50": 0.7636712130212372,
+      "p75": 0.8183439945715884,
+      "p95": 0.8895948890762506,
+      "max": 0.9235475502164597,
+      "below_0.99": 3230,
+      "stages": {
+        "decomposition": "no_decomposition",
+        "headland": "uniform_headland",
+        "swath": "min_width",
+        "route": "rural_postman_greedy",
+        "path": "dubins_transit"
+      }
+    },
+    "4e24c2b38e3c9c14d16f12758cdc4b5a3bd23ec36a4d72f5a6c165940204bef4": {
+      "n": 1508,
+      "min": 0.4232077925056738,
+      "p5": 0.5744540671109807,
+      "p25": 0.6989590330439224,
+      "p50": 0.762635268847284,
+      "p75": 0.8179026748457572,
+      "p95": 0.8865026795384613,
+      "max": 0.9234918031052476,
+      "below_0.99": 1508,
+      "stages": {
+        "decomposition": "no_decomposition",
+        "headland": "uniform_headland",
+        "swath": "row_aligned",
+        "route": "boustrophedon_order",
+        "path": "reeds_shepp_transit"
+      }
+    },
+    "6bdde7389b87bf7c6c6bbcda0b0dc8153f571a233823347f5124fb48a462a8e4": {
+      "n": 1120,
+      "min": 0.532163142120387,
+      "p5": 0.6162597496920603,
+      "p25": 0.7171215650610993,
+      "p50": 0.7610319210911981,
+      "p75": 0.8202203272443,
+      "p95": 0.8786171930695184,
+      "max": 0.9011042469230955,
+      "below_0.99": 1120,
+      "stages": {
+        "decomposition": "boustrophedon_cells",
+        "headland": "uniform_headland",
+        "swath": "min_width",
+        "route": "boustrophedon_order",
+        "path": "dubins_transit"
+      }
+    },
+    "7965a962930e299657c56efd85c6682038834c2453e97feaca85ff84ddd1f7be": {
+      "n": 2682,
+      "min": 0.45413727228689815,
+      "p5": 0.5871336102430963,
+      "p25": 0.7058257982394855,
+      "p50": 0.7637309033022701,
+      "p75": 0.8205101047891731,
+      "p95": 0.8869059322704047,
+      "max": 0.9234918031052474,
+      "below_0.99": 2682,
+      "stages": {
+        "decomposition": "no_decomposition",
+        "headland": "uniform_headland",
+        "swath": "row_aligned",
+        "route": "skip_one_order",
+        "path": "dubins_transit"
+      }
+    },
+    "8ce138a275e95ff97ab8b26a2964bb03c81087b5e53b78801b3df7501c6ceb32": {
+      "n": 3010,
+      "min": 0.14341672838374456,
+      "p5": 0.40232771032516595,
+      "p25": 0.5513127604371749,
+      "p50": 0.658431822106016,
+      "p75": 0.7435891641226494,
+      "p95": 0.836494264597061,
+      "max": 0.886300485589875,
+      "below_0.99": 3010,
+      "stages": {
+        "decomposition": "no_decomposition",
+        "headland": "uniform_headland",
+        "swath": "min_width",
+        "route": "boustrophedon_order",
+        "path": "dubins_transit"
+      }
+    },
+    "a331cae1f1b311f397c7c07cd49e3973488bfc9386c3c35173e75d31636f3997": {
+      "n": 2470,
+      "min": 0.44973907444694855,
+      "p5": 0.6093886439833882,
+      "p25": 0.707521635131974,
+      "p50": 0.7626031097781281,
+      "p75": 0.8278838605256515,
+      "p95": 0.8855904871718016,
+      "max": 0.91822389472654,
+      "below_0.99": 2470,
+      "stages": {
+        "decomposition": "no_decomposition",
+        "headland": "uniform_headland",
+        "swath": "min_width",
+        "route": "skip_one_order",
+        "path": "dubins_transit"
+      }
+    },
+    "adf5ed70e0f4a200370ca2dc1a7a1ffc8810a7e080986faeb36a83265bb07cf9": {
+      "n": 2970,
+      "min": 0.4243434809964055,
+      "p5": 0.5793785692985717,
+      "p25": 0.6991178829025331,
+      "p50": 0.7628801094005334,
+      "p75": 0.8176908340805246,
+      "p95": 0.8850916542793016,
+      "max": 0.9233611997424434,
+      "below_0.99": 2970,
+      "stages": {
+        "decomposition": "no_decomposition",
+        "headland": "uniform_headland",
+        "swath": "fixed_angle",
+        "route": "boustrophedon_order",
+        "path": "dubins_transit"
+      }
+    }
+  },
+  "configs_with_zero_ok_rows": {
+    "c942f952646dd6c37209c8b54305bd2632d0319004afdf9eb38e40c7e013151d": {
+      "rows": 4700,
+      "stages": {
+        "decomposition": "no_decomposition",
+        "headland": "no_headland",
+        "swath": "min_width",
+        "route": "boustrophedon_order",
+        "path": "reeds_shepp_transit"
+      }
+    }
+  },
+  "coverage_ratio_field_by_headland_stage": {
+    "uniform_headland": {
+      "n": 31168,
+      "min": 0.14341672838374456,
+      "p5": 0.5608606586085848,
+      "p25": 0.6869373622837754,
+      "p50": 0.7590306907374598,
+      "p75": 0.8118951470110757,
+      "p95": 0.8855904871718016,
+      "max": 0.9235475502164597
+    }
+  },
+  "low_coverage_ok_by_config_id": {
+    "485fccc852cf18e4a45880dfbf66df297780674ddff52e1ec061659d888650ea": 3230,
+    "1e07c37de63c7e43ccbaa82f0f772b2329baa0565cd2f21317044e8981961792": 3160,
+    "8ce138a275e95ff97ab8b26a2964bb03c81087b5e53b78801b3df7501c6ceb32": 3010,
+    "adf5ed70e0f4a200370ca2dc1a7a1ffc8810a7e080986faeb36a83265bb07cf9": 2970,
+    "28e61f9997616191d20925cb0b3703c30ac61f1f88ed8d12aa5584ca56cefc9d": 2948,
+    "0f0087b4bce0818cdddfa784d4ee1e983f02768d8e6149843f9cec8ed63106fd": 2830,
+    "7965a962930e299657c56efd85c6682038834c2453e97feaca85ff84ddd1f7be": 2682,
+    "3fade1fcd68bdd5ba8840a28b8b00947453c74d42b1ed69770d8104659de56bb": 2650,
+    "4574095631bc07f0c3f495fa9add9dd604b954e62505daf723cb9e1a567c799a": 2590,
+    "a331cae1f1b311f397c7c07cd49e3973488bfc9386c3c35173e75d31636f3997": 2470,
+    "4e24c2b38e3c9c14d16f12758cdc4b5a3bd23ec36a4d72f5a6c165940204bef4": 1508,
+    "6bdde7389b87bf7c6c6bbcda0b0dc8153f571a233823347f5124fb48a462a8e4": 1120
+  },
+  "low_coverage_ok_by_field_id_top20": {
+    "ee_field_10": 230,
+    "ee_field_147": 230,
+    "ee_field_189": 230,
+    "ee_field_217": 230,
+    "ee_field_24": 230,
+    "ee_field_27": 230,
+    "ee_field_61": 230,
+    "ee_field_77": 230,
+    "ee_field_8": 230,
+    "ee_field_90": 230,
+    "nl_field_100": 230,
+    "nl_field_109": 230,
+    "nl_field_11": 230,
+    "nl_field_110": 230,
+    "nl_field_111": 230,
+    "nl_field_113": 230,
+    "nl_field_122": 230,
+    "nl_field_134": 230,
+    "nl_field_149": 230,
+    "nl_field_159417": 230
+  },
+  "field_vs_main": {
+    "coverage_ratio_main_ok": {
+      "n": 31168,
+      "min": 0.7679949920445719,
+      "p5": 0.9687528578458198,
+      "p25": 0.9834895604045968,
+      "p50": 0.9897824368814827,
+      "p75": 0.9942104939432959,
+      "p95": 0.9994141565169499,
+      "max": 0.9999971759749231
+    },
+    "main_minus_field_ok": {
+      "n": 31168,
+      "min": 0.0722316004404755,
+      "p5": 0.10938041782276287,
+      "p25": 0.17854459953971802,
+      "p50": 0.2311073745798785,
+      "p75": 0.299037331530542,
+      "p95": 0.419019597719377,
+      "max": 0.6868039916963793
+    },
+    "all_positive": true,
+    "main_ge_0.99": 15190,
+    "main_ge_0.95": 30854
+  },
+  "exclusion_flow": {
+    "total_fields": 235,
+    "fields_with_at_least_one_ok": 193,
+    "fields_with_zero_ok": 42,
+    "zero_ok_field_ids": [
+      "ee_field_114",
+      "ee_field_117",
+      "ee_field_128",
+      "ee_field_130",
+      "ee_field_132",
+      "ee_field_138",
+      "ee_field_140",
+      "ee_field_141",
+      "ee_field_142",
+      "ee_field_148",
+      "ee_field_15",
+      "ee_field_150",
+      "ee_field_155",
+      "ee_field_163",
+      "ee_field_168",
+      "ee_field_170",
+      "ee_field_175",
+      "ee_field_176",
+      "ee_field_218",
+      "ee_field_26",
+      "ee_field_35",
+      "ee_field_37",
+      "ee_field_38",
+      "ee_field_45",
+      "ee_field_46",
+      "ee_field_64",
+      "ee_field_69",
+      "ee_field_79",
+      "ee_field_82",
+      "ee_field_9",
+      "ee_field_97",
+      "nl_field_143",
+      "nl_field_158",
+      "nl_field_162",
+      "nl_field_191476",
+      "nl_field_278678",
+      "nl_field_338399",
+      "nl_field_532603",
+      "nl_field_67",
+      "nl_field_729253",
+      "nl_field_84",
+      "nl_field_89"
+    ],
+    "row_flow": {
+      "total_rows": 61100,
+      "ok_rows": 31168,
+      "non_ok_rows_in_fields_with_some_ok": 19012,
+      "rows_in_fields_with_zero_ok": 10920,
+      "closes": true
+    },
+    "zero_ok_row_counts_by_category": {
+      "collision": 6820,
+      "outside_area": 2420,
+      "headland_collapse": 840,
+      "kinematics_mismatch": 840
+    },
+    "runstatus_row_counts": {
+      "ok": 31168,
+      "outside_area": 12718,
+      "not_applicable": 10040,
+      "collision": 7174
+    },
+    "not_applicable_row_counts_by_category": {
+      "kinematics_mismatch": 4700,
+      "headland_collapse": 3320,
+      "outside_area": 2020
+    }
+  }
+}

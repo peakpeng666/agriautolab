@@ -19,6 +19,11 @@ python scripts/run_corpus.py \
 | `benchmark_protocol.json` | 覆盖门槛、解析超体积参考点模板、倒车代价 | `benchmark_protocol_hash` 变 = 同上 |
 | `corpus_protocol.json` | 5 行角 × 2 行距 × CV 折数 + 两协议哈希锚定 | 本身即实验身份的一部分 |
 
-注意：参考点模板不是论文比较尺度——正式比较用逐实例解析参考点
-（runner 自动写入 `ref_*` 列）；行向扫描的偏移是实验处理变量
-（见预注册修正案 04/05 的 feature-effects 设计）。
+注意：
+- 参考点模板不是论文比较尺度——正式比较用逐实例解析参考点
+  （runner 自动写入 `ref_*` 列）；行向扫描的偏移是实验处理变量
+  （见 feature-effects 设计）。
+- `benchmark_protocol.json` 中的 `coverage_threshold: 0.0`：语料运行协议将覆盖率
+  （`coverage_ratio_field` 与 `coverage_ratio_main`）作为评估指标记录，而不作为可行性
+  硬门槛进行判定。该协议下 `runstatus == ok` 表示满足几何与运动学约束（无碰撞、不出界、
+  转弯合法），不代表达到完全覆盖。真实覆盖率分布见 `reports/coverage_distribution.md`。

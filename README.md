@@ -10,10 +10,10 @@
 （零崩溃、零未分类失败），量化「路程 / 地头掉头 / 作物行横穿等价量」三目标权衡，并在
 冻结证据纪律下研究偏好条件算法选择。
 
-TSP/CVRP 作为方法学验证层进入正式主包：用强类型问题契约、constructive heuristic 协议与
-独立 evaluator 验证后续算法设计方法的公共边界。当前只实现人工基线与语义真值；
-TSPLIB/CVRPLIB、EoH/LLM reproduction 与农业迁移仍是后续工作，不写成已完成能力。
-标准问题服务于农业 CPP 主研究对象，不与其并列改写项目定位。
+TSP/CVRP 作为方法学验证层进入正式主包：用强类型问题契约、constructive heuristic 协议、
+独立 evaluator 与 TSPLIB/CVRPLIB 标准格式加载器验证后续算法设计方法的公共边界。
+人工基线、解析真值与 TSPLIB 格式支持已实现；EoH/LLM reproduction 与农业迁移仍是后续工作，
+不写成已完成能力。标准问题服务于农业 CPP 主研究对象，不与其并列改写项目定位。
 
 分层与依赖方向见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)，组合优化公共边界见
 [docs/OPTIMIZATION_FOUNDATIONS.md](docs/OPTIMIZATION_FOUNDATIONS.md)。基准结果账本
